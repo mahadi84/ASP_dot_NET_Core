@@ -2,7 +2,7 @@
 ## Menu:   
 
 01. <a asp-route="Product1">Home</a> 
-Note: Using asp-route="AllProducts" is the best practice because it directly uses the name you gave the attribute route in the controller.
+Note: Using asp-route="AllProducts" is the best practice.
 
 02.<a
 asp-area=""
@@ -12,10 +12,7 @@ asp-action="ShowAll"         //Directs the request to the ShowAll() method withi
 
 
 ############## Route(Program.cs) ##############
-app.MapControllerRoute(
-    name: "Test",
-    pattern: "{controller=Test}/{action=ShowAll}"
-    );
+app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll}" );
 
 
 
