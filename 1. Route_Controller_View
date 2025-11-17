@@ -20,7 +20,14 @@ app.MapControllerRoute(
 
 
 ############ View ##############
+@{
+    ViewData["Title"] = "Home Page";
+}
+        @model string
+        @Model 
 
+            <h1>@ViewBag.message</h1>
+                <h1>@ViewBag[message]</h1>
 
 
 
@@ -29,18 +36,19 @@ public class Test : Controller{
     // GET: Test
     public ActionResult ShowAll()
     {
-         // 1. Using ViewBag
-        ViewBag.Message = "We successfully retrieved 3 products.";
+         // 1. Using ViewBag:
+        ViewBag.Message = "We successfully retrieved 3 products."; //Autometically pass it to view only call in the view @ViewBag.Message 
 
         // 2. Using ViewData
-        ViewData["LastUpdated"] = DateTime.Now.ToShortTimeString();
+        ViewData["Message"] = DateTime.Now.ToShortTimeString(); ///Autometically pass it to view only call in the view @ViewData[Message] 
 
+        //3. Using Model
         string message = "Hello! This text is returned directly.";
+       //return View(model:message);
 
-        // Return the string content with a default text/plain Content-Type header
-        return Content("We successfully retrieved 3 products.");
+
+       // return Content("We successfully retrieved 3 products."); // To show text on the brower
        //return Content(message);
-       //return View();
     }
 }
 
