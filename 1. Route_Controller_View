@@ -4,6 +4,7 @@
 01. <a asp-route="Product1">Home</a>
 
 02.<a
+asp-area=""
 asp-controller="Product1"    //Directs the request to the Product1Controller.
 asp-action="Index"         //Directs the request to the Index() method within the ProductController.
 >Home</a>
