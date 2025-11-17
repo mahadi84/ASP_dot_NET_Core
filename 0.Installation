@@ -1,0 +1,16 @@
+Date: 17 Nov 2025
+
+💻 Prerequisites and Installation
+
+
+## Install the .NET SDK:
+The .NET Software Development Kit (SDK) is the core component. 
+It contains everything required to build and run .NET applications, including the ASP.NET Core framework and the .NET Command Line Interface (CLI).
+
+Download the latest Long Term Support (LTS) or Standard Term Support (STS) version of the .NET SDK from the official Microsoft .NET website. 
+Installing the SDK automatically installs the necessary runtimes and the ASP.NET Core components.
+
+## Choose and Install an IDE(Visual Studio 2022 Community edition):
+Visual Studio (Recommended for Windows): 
+Download and install the latest version of Visual Studio (e.g., Visual Studio 2022 Community edition is free for individuals). 
+During installation, ensure you select the "ASP.NET and web development" workload to get all the templates and tools for MVC development.
