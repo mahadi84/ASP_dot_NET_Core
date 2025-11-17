@@ -1,7 +1,8 @@
 
 ## Menu:   
 
-01. <a asp-route="Product1">Home</a>
+01. <a asp-route="Product1">Home</a> 
+Note: Using asp-route="AllProducts" is the best practice because it directly uses the name you gave the attribute route in the controller.
 
 02.<a
 asp-area=""
@@ -12,14 +13,33 @@ asp-action="Index"         //Directs the request to the Index() method within th
 
 ############## Route(Program.cs) ##############
 app.MapControllerRoute(
-    name: "Product1", // <-- নতুন রুটের নাম
-    pattern: "{controller=Product1}/{action=Index}"  // আপনার পছন্দের URL প্যাটার্ন and এই রুটে সবসময় ProductController - এর Details অ্যাকশন কল হবে
-//pattern: "item/{id:int?}", // আপনার পছন্দের URL প্যাটার্ন
-//defaults: new { controller = "Product", action = "Details" } // 
-);
+    name: "Test",
+    pattern: "{controller=Test}/{action=ShowAll}"
+    );
 
 
 
 ############ View ##############
+
+public class Test : Controller{
+    // GET: Test
+    public ActionResult ShowAll()
+    {
+         // 1. Using ViewBag
+        ViewBag.Message = "We successfully retrieved 3 products.";
+
+        // 2. Using ViewData
+        ViewData["LastUpdated"] = DateTime.Now.ToShortTimeString();
+
+        string message = "Hello! This text is returned directly.";
+
+        // Return the string content with a default text/plain Content-Type header
+        return Content(message);
+
+       //return View();
+    }
+}
+
+
 ############ Controller ##############
 ############ Model ##############
