@@ -1,0 +1,24 @@
+
+## Menu:   
+
+01. <a asp-route="Product1">Home</a>
+
+02.<a
+asp-controller="Product1"    //Directs the request to the Product1Controller.
+asp-action="Index"         //Directs the request to the Index() method within the ProductController.
+>Home</a>
+
+
+############## Route(Program.cs) ##############
+app.MapControllerRoute(
+    name: "Product1", // <-- নতুন রুটের নাম
+    pattern: "{controller=Product1}/{action=Index}"  // আপনার পছন্দের URL প্যাটার্ন and এই রুটে সবসময় ProductController - এর Details অ্যাকশন কল হবে
+//pattern: "item/{id:int?}", // আপনার পছন্দের URL প্যাটার্ন
+//defaults: new { controller = "Product", action = "Details" } // 
+);
+
+
+
+############ View ##############
+############ Controller ##############
+############ Model ##############
