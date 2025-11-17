@@ -7,7 +7,7 @@ Note: Using asp-route="AllProducts" is the best practice because it directly use
 02.<a
 asp-area=""
 asp-controller="Product1"    //Directs the request to the Product1Controller.
-asp-action="Index"         //Directs the request to the Index() method within the ProductController.
+asp-action="ShowAll"         //Directs the request to the ShowAll() method within the ProductController.
 >Home</a>
 
 
@@ -21,6 +21,10 @@ app.MapControllerRoute(
 
 ############ View ##############
 
+
+
+
+############ Controller ##############
 public class Test : Controller{
     // GET: Test
     public ActionResult ShowAll()
@@ -34,12 +38,10 @@ public class Test : Controller{
         string message = "Hello! This text is returned directly.";
 
         // Return the string content with a default text/plain Content-Type header
-        return Content(message);
-
+        return Content("We successfully retrieved 3 products.");
+       //return Content(message);
        //return View();
     }
 }
 
-
-############ Controller ##############
 ############ Model ##############
