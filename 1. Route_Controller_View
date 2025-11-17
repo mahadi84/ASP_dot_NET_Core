@@ -44,7 +44,7 @@ public class Test : Controller{
 
         //3. Using Model
         string message = "Hello! This text is returned directly.";
-       //return View(model:message);
+       //return View(model:message); //pass data using model is best practice
 
 
        // return Content("We successfully retrieved 3 products."); // To show text on the brower
