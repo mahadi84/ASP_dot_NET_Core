@@ -37,12 +37,18 @@ How: "MVC তে সাধারণত IActionResult (বা এর থেকে
         উদাহরণ: আপনার Header (নেভিগেশন বার) এবং প্রাথমিক Footer-এর কোড এখানে রাখা হবে।
         > _Layout.cshtml এ <header> এবং <footer> ট্যাগ-এর মধ্যে সাধারণ ডিজাইন রাখা হয়েছে। @RenderBody() ব্যবহার করে প্রতিটি স্বতন্ত্র ভিউ-এর কন্টেন্ট (যেমন Index.cshtml) লোড করা হচ্ছে। 
 
+                @ViewData["Title"]
+                @RenderBody()
+                @await RenderSectionAsync("Scripts", required: false)
+
+
 02. পার্শিয়াল ভিউ ফাইল (Views/Shared/_FooterPartial.cshtml):
         > এগুলি হল ছোট, পুনর্ব্যবহারযোগ্য HTML কন্টেন্টের অংশ, যা একটি পেজের একটি নির্দিষ্ট সেকশন রেন্ডার করে।
         > এগুলি সাধারণত লুপ (loop) বা ডায়নামিক কন্টেন্ট প্রদর্শনের জন্য ব্যবহৃত হয়।
         উদাহরণ: আপনি একটি ছোট কপিরাইট Footer বা একটি সাইডবার মেনু তৈরি করতে একটি Partial View ব্যবহার করতে পারেন।
         _FooterPartial.cshtml:
         > Footer-এর কোডকে @await Html.PartialAsync("_FooterPartial") এর মাধ্যমে একটি আলাদা ফাইলে (_FooterPartial.cshtml) রেখে ব্যবহার করা হচ্ছে, যা কোড পুনর্ব্যবহারযোগ্য করে তোলে।
+        
         <div class="container">
             &copy; @DateTime.Now.Year - আমার ASP.NET কোর অ্যাপ - <a href="/Home/Privacy">গোপনীয়তা</a>
         </div>
