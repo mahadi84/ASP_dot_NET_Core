@@ -26,6 +26,11 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
             <h1>@ViewBag.message</h1>
                 <h1>@ViewBag[message]</h1>
 
+ @* asp-for links the input field to the Model property *@
+ <input asp-for="Username" type="text" class="form-control">
+ 
+ @* Displays the error message for the Username field only *@
+ <span asp-validation-for="Username" class="text-danger"></span>
 
 
 ############ Controller ##############
