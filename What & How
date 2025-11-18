@@ -25,6 +25,13 @@ How: "MVC তে সাধারণত IActionResult (বা এর থেকে
 
 
 
+✂️ Segregate: HTML's Header, Footer (HTML-এর Header, Footer ভাগ করা)
+
+01. লেআউট ফাইল (Views/Shared/_Layout.cshtml):
+_Layout.cshtml এ <header> এবং <footer> ট্যাগ-এর মধ্যে সাধারণ ডিজাইন রাখা হয়েছে। @RenderBody() ব্যবহার করে প্রতিটি স্বতন্ত্র ভিউ-এর কন্টেন্ট (যেমন Index.cshtml) লোড করা হচ্ছে। 
+
+02. পার্শিয়াল ভিউ ফাইল (Views/Shared/_FooterPartial.cshtml):
+Footer-এর কোডকে @await Html.PartialAsync("_FooterPartial") এর মাধ্যমে একটি আলাদা ফাইলে (_FooterPartial.cshtml) রেখে ব্যবহার করা হচ্ছে, যা কোড পুনর্ব্যবহারযোগ্য করে তোলে।
 
 
 
