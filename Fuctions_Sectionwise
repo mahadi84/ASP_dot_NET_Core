@@ -37,8 +37,8 @@ This is the presentation layer where HTML markup is combined with C# code using 
 
 ### Razor Syntax (C# in HTML)
 
-| Syntax     | Purpose             | Example                                 |
-| :--------- | :------------------ | :-------------------------------------- |
+| Syntax     | Purpose             | Example                                              |
+| :--------- | :------------------ | :--------------------------------------------------- |
 | `@model`   | Directive           | Declares the C# model type passed to the view (e.g., `@model List<Product>`). |
 | `@{...}`   | Code Block          | Executes multiple lines of C# code without rendering the output to HTML. |
 | `@`        | Implicit Expression | Renders the value of a C# variable or property (e.g., `<p>Hello, @Model.Name</p>`). |
@@ -49,14 +49,14 @@ This is the presentation layer where HTML markup is combined with C# code using 
 
 Tag Helpers are C# classes that modify standard HTML elements, making the view syntax cleaner and more intuitive than older HTML Helpers.
 
-| Tag Helper        | Target HTML Element | Common Attributes                               | Purpose |
-| :---------------- | :------------------ | :---------------------------------------------- | :---------- |
+| Tag Helper        | Target HTML Element | Common Attributes                               | Purpose                                     |
+| :---------------- | :------------------ | :---------------------------------------------- | :------------------------------------------ |
 | Anchor            | `<a ... >`          | `asp-controller`, `asp-action`, `asp-route-`    | Generates dynamic URLs for links based on controller actions and route values. |
 | Form              | `<form ... >`       | `asp-controller`, `asp-action`, `method="post"` | Generates the form's `action` URL and automatically adds the hidden anti-forgery token. |
 | Input             | `<input ... >`      | `asp-for="Model.Property"`                      | Binds the input field to a specific model property, generating `id`, `name`, and validation attributes. |
 | Validation        | `<span ... >`       | `asp-validation-for="Property"`                 | Displays the validation message for a specific model property. |
 | Validation Summary| `<div ... >`        | `asp-validation-summary="All"`                  | Displays a summary of all model validation errors. |
-| Environment       | `<environment ... >`| `include="Development"`                        | Conditionally renders content (like scripts/styles) based on the application's environment. |
+| Environment       | `<environment ... >`| `include="Development"`                         | Conditionally renders content (like scripts/styles) based on the application's environment. |
 
 ---
 
