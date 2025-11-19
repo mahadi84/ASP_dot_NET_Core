@@ -52,12 +52,6 @@ public class Test : Controller{
        //return Content(message);
     }
 
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View(); // Displays the Login.cshtml view
-        }
-        
         [HttpPost]
         public IActionResult ShowData(LoginModel m)
         {
