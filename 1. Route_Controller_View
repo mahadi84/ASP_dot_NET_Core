@@ -33,6 +33,22 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
  <span asp-validation-for="Username" class="text-danger"></span>
 
 
+
+############ Model ##############
+namespace test.Models
+{
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Username is required.")]
+        public string Username { get; set; }
+
+        [Required(ErrorMessage = "Password is required.")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long.")]
+        public string Password { get; set; }
+
+    }
+}
+
 ############ Controller ##############
 public class Test : Controller{
     // GET: Test
@@ -56,31 +72,13 @@ public class Test : Controller{
         public IActionResult ShowData(LoginModel m)
         {
             // Check if the model conforms to the validation rules (Data Annotations).
-            if (!ModelState.IsValid) {
-        
+            if (!ModelState.IsValid) {        
                 return View("login", m); //if validation fails, forward to login page with error message automatically carried back to the view.
-            }
-        
+            }        
             return View("Index", m);  // If validation succeeds:
         }
 
 }
-
-############ Model ##############
-namespace test.Models
-{
-    public class LoginModel
-    {
-        [Required(ErrorMessage = "Username is required.")]
-        public string Username { get; set; }
-
-        [Required(ErrorMessage = "Password is required.")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long.")]
-        public string Password { get; set; }
-
-    }
-}
-
 
 
 
