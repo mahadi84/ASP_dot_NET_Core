@@ -30,6 +30,18 @@ These are properties or methods used within the Controller/PageModel to manage d
 | `[ValidateAntiForgeryToken]`  | Attribute            | Ensures a form submission includes a valid anti-forgery token, protecting against Cross-Site Request Forgery (CSRF). |
 | `HttpContext.Session.Set(...)`| Property/Method      | Used to manage session state (storing small amounts of user-specific data server-side). |
 
+** C# SESSION, Method,Description
+--------------------------------------------------------------------------------------
+Set (String) | "HttpContext.Session.SetString(key, value)" | Stores a string value.
+Set (Int)    | "HttpContext.Session.SetInt32(key, value)"  | Stores an integer value.
+--------------------------------------------------------------------------------------
+Get (String) | HttpContext.Session.GetString(key)  | Retrieves a string. Returns null if the key doesn't exist.
+Get (Int)    | HttpContext.Session.GetInt32(key)   | Retrieves an integer. Returns null if the key doesn't exist or is not an Int32.
+--------------------------------------------------------------------------------------
+Remove    | HttpContext.Session.Remove(key)  | Removes a specific key-value pair.
+Clear All | HttpContext.Session.Clear()      | Removes all keys and values for the current session.
+--------------------------------------------------------------------------------------
+
 
 ## 📝 2. Razor View Layer (CSHTML Files)
 
