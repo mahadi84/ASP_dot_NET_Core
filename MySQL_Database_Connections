@@ -20,11 +20,11 @@ dotnet list package --include-transitive
 .NET CLI:(View>Terminal  Select:Developer Command Prompt)
 --------
 # Installs the matching core EF packages
-dotnet add package Microsoft.EntityFrameworkCore 
+dotnet add package Microsoft.EntityFrameworkCore  --version 9.0.0
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0
 
 # Installs the latest stable 8.x.x version for .NET 8
-dotnet add package Pomelo.EntityFrameworkCore.MySql   
+dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0
 
 OR
 
@@ -61,41 +61,10 @@ OR
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages)
 MySQL-এর সাথে EF Core-কে যুক্ত করার জন্য আপনার বিশেষ কানেক্টর প্যাকেজ লাগবে।
 
-আপনি Visual Studio-এর NuGet Package Manager Console (PMC) ব্যবহার করে এই কমান্ডগুলি চালাতে পারেন:
-
-   `Microsoft.EntityFrameworkCore.Tools`: EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-    Install-Package Microsoft.EntityFrameworkCore.Tools
-   `Microsoft.EntityFrameworkCore.Design`: ডিজাইন-টাইম সুবিধাগুলির জন্য।
-    ```bash
-    Install-Package Microsoft.EntityFrameworkCore.Design
-    ```
-   `Pomelo.EntityFrameworkCore.MySql`: MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।
-    ```bash
-    Install-Package Pomelo.EntityFrameworkCore.MySql
-    ```
-   `Microsoft.EntityFrameworkCore`: যদিও MVC প্রজেক্টে এটি প্রায়শই আগে থেকেই থাকে, নিশ্চিত হওয়ার জন্য এটি দিতে পারেন।
-    ```bash
-    Install-Package Microsoft.EntityFrameworkCore
-    ```
 
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
 অ্যাপ্লিকেশনটি যাতে ডাটাবেসের অবস্থান জানতে পারে, তার জন্য `appsettings.json` ফাইলে কানেকশন স্ট্রিং যোগ করুন।
 
-`appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=YourDatabaseName;User=YourUsername;Password=YourPassword;"
-  },
-  // অন্যান্য সেটিংস...
-}
-```
-
-   `YourDatabaseName`: আপনার MySQL ডাটাবেসের নাম।
-   `YourUsername`: MySQL ইউজারনেম (সাধারণত `root` বা অন্য কোনো ইউজার)।
-   `YourPassword`: আপনার MySQL পাসওয়ার্ড।
-   `Port`: MySQL সার্ভারের পোর্ট (ডিফল্ট হলো 3306)।
 
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
 
