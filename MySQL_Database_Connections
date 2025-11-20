@@ -41,6 +41,7 @@ OR
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
 ### ৫. পরিষেবা কনফিগারেশন (Service Configuration)
 ### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
+### ৭. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
 
 
 
