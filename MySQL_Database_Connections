@@ -21,10 +21,10 @@ dotnet list package --include-transitive
 --------
 # Installs the matching core EF packages
 dotnet add package Microsoft.EntityFrameworkCore 
-dotnet add package Microsoft.EntityFrameworkCore.Tools
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0
 
 # Installs the latest stable 8.x.x version for .NET 8
-dotnet add package Pomelo.EntityFrameworkCore.MySql    --version 8.0.3(optional)
+dotnet add package Pomelo.EntityFrameworkCore.MySql   
 
 OR
 
