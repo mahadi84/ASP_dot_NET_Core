@@ -1,6 +1,14 @@
 
 ######## 20-Nov-2025(6th Day) ######
--MySQL Database Connection
+MySQL Database Connection
+ -MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ্যাপ্লিকেশনের সাথে যুক্ত করার জন্য প্রধানত Entity Framework Core (EF Core) ব্যবহার করতে হবে।
+ -MySQL-এর সাথে EF Core-কে যুক্ত করার জন্য বিশেষ কানেক্টর প্যাকেজ লাগবে।
+ -Visual Studio-এর NuGet Package Manager Console (PMC) ব্যবহার করে এই কমান্ডগুলি চালাতে পারেন:
+  -Microsoft.EntityFrameworkCore.Tools: EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+  -Microsoft.EntityFrameworkCore.Design: ডিজাইন-টাইম সুবিধাগুলির জন্য।
+  -Pomelo.EntityFrameworkCore.MySql: MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।
+  -Microsoft.EntityFrameworkCore: যদিও MVC প্রজেক্টে এটি প্রায়শই আগে থেকেই থাকে, নিশ্চিত হওয়ার জন্য এটি দিতে পারেন।
+
 -CRUD
 
 
