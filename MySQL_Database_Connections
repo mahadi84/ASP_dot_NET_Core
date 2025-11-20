@@ -6,6 +6,10 @@ MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ
 
 
 ### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
+          CMD in project folder:
+            dotnet new mvc -n MyMvcApp
+            cd MyMvcApp
+            dotnet run
 
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) 
 
