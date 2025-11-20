@@ -7,11 +7,14 @@ MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ
 
 ### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
 
-### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages)
-          -Microsoft.EntityFrameworkCore.Tools: EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-          -Microsoft.EntityFrameworkCore.Design: ডিজাইন-টাইম সুবিধাগুলির জন্য।
-          -Pomelo.EntityFrameworkCore.MySql: MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।
-          -Microsoft.EntityFrameworkCore: যদিও MVC প্রজেক্টে এটি প্রায়শই আগে থেকেই থাকে, নিশ্চিত হওয়ার জন্য এটি দিতে পারেন।
+### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) 
+          Tools>NetGut Package Manager> Package Manager Console
+           CMD:
+             -Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+             -Install-Package Microsoft.EntityFrameworkCore.Design  **ডিজাইন-টাইম সুবিধাগুলির জন্য।                        
+             -Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
+             -Install-Package Microsoft.EntityFrameworkCore         **যদিও MVC প্রজেক্টে এটি প্রায়শই আগে থেকেই থাকে, নিশ্চিত হওয়ার জন্য এটি দিতে পারেন।
+                        
 
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
          -appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
