@@ -9,13 +9,14 @@ MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ
 
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) 
 
-.NET CLI:(View>Terminal)
+.NET CLI:(View>Terminal  Select:Developer Command Prompt)
+--------
 # Installs the matching core EF packages
 dotnet add package Microsoft.EntityFrameworkCore 
 dotnet add package Microsoft.EntityFrameworkCore.Tools
 
 # Installs the latest stable 8.x.x version for .NET 8
-dotnet add package Pomelo.EntityFrameworkCore.MySql 
+dotnet add package Pomelo.EntityFrameworkCore.MySql    --version 8.0.3(optional)
 
 OR
 
