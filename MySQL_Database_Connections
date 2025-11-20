@@ -4,6 +4,10 @@ MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ
 
 ## 💻 MySQL কে ASP.NET Core MVC-এ যুক্ত করার ধাপসমূহ
 
+**check installed packages version CMD: 
+dotnet list package 
+OR
+dotnet list package --include-transitive
 
 ### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
           CMD in project folder:
