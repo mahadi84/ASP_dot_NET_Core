@@ -1,8 +1,8 @@
-MySQL ডাটাবেসকে ASP.NET Core MVC (সংস্করণ 8) অ্যাপ্লিকেশনের সাথে যুক্ত করার জন্য আপনাকে প্রধানত Entity Framework Core (EF Core) ব্যবহার করতে হবে। এটি ধাপে ধাপে বাংলায় নিচে দেওয়া হলো।
 
------
 
 ## 💻 MySQL কে ASP.NET Core MVC-এ যুক্ত করার ধাপসমূহ
+
+**Entity Framework Core (EF Core)
 
 **check installed packages version CMD: 
 dotnet list package 
@@ -19,25 +19,19 @@ dotnet list package --include-transitive
 
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) 
 
-.NET CLI:(View>Terminal  Select:Developer Command Prompt)
---------
-# Installs the matching core EF packages
-dotnet add package Microsoft.EntityFrameworkCore  --version 9.0.0
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0
-
-# Installs the latest stable 8.x.x version for .NET 8
-dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0
+** .NET CLI:(
+View>Terminal  
+Select:Developer Command Prompt)
+dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 
 OR
 
-          **Tools>NetGut Package Manager> Package Manager Console
-            CMD:
-             -Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-             -Install-Package Microsoft.EntityFrameworkCore.Design  **NOT IMPORTANT,  ডিজাইন-টাইম সুবিধাগুলির জন্য।                       
-             -Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
-             -Install-Package Microsoft.EntityFrameworkCore         **যদিও MVC প্রজেক্টে এটি প্রায়শই আগে থেকেই থাকে, নিশ্চিত হওয়ার জন্য এটি দিতে পারেন।  
+**Tools>NetGut Package Manager> Package Manager Console
+   Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
+   Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।                     
+             
                         
-
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
          -appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
             {
