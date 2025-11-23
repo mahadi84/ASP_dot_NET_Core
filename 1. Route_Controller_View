@@ -43,6 +43,10 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
      </div>
  </form>
 
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
 
 
 ############ Model ##############
