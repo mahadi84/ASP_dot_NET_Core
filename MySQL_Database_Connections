@@ -41,7 +41,7 @@ OR
             }
 
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
-### ৫. পরিষেবা কনফিগারেশন (Service Configuration)
+### ৫. পরিষেবা কনফিগারেশন (Service Configuration) at Route(Program.cs)
           using YourProjectName.Data; // আপনার DbContext namespace
           using Microsoft.EntityFrameworkCore;
           var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -52,7 +52,7 @@ OR
           );
 ### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
      Add-Migration InitialCreate  **মাইগ্রেশন তৈরি: এটি ডাটাবেসের স্কিমা পরিবর্তনের জন্য একটি ফাইল তৈরি করবে।
-     Update-Database   **ডাটাবেস আপডেট: এটি আপনার MySQL ডাটাবেসে টেবিল তৈরি করবে।
+     Update-Database              **ডাটাবেস আপডেট: এটি আপনার MySQL ডাটাবেসে টেবিল তৈরি করবে।
     **যদি এটি সফলভাবে চলে, তবে আপনার `Item` টেবিলটি MySQL ডাটাবেসে তৈরি হয়ে যাবে।
 
 ### ৭. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
