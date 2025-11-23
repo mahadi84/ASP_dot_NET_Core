@@ -26,11 +26,22 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
             <h1>@ViewBag.message</h1>
                 <h1>@ViewBag[message]</h1>
 
- @* asp-for links the input field to the Model property *@
- <input asp-for="Username" type="text" class="form-control">
- 
- @* Displays the error message for the Username field only *@
- <span asp-validation-for="Username" class="text-danger"></span>
+ @* The form points to the POST version of the Create action *@
+ <form asp-action="CreateUser" asp-controller="Home" method="post">
+     
+     @Html.AntiForgeryToken()  @* Important for security against Cross-Site Request Forgery (CSRF) *@
+
+     <div class="form-group">
+         <label asp-for="name" class="control-label"></label>
+         <input asp-for="name" class="form-control" />
+         <span asp-validation-for="name" class="text-danger"></span>
+     </div>    
+
+     <div class="form-group mt-4">
+         <input type="submit" value="Create" class="btn btn-success" />
+         <a asp-action="User" class="btn btn-secondary ml-2">Back to List</a>
+     </div>
+ </form>
 
 
 
