@@ -30,8 +30,7 @@ OR
 **Tools>NetGut Package Manager> Package Manager Console
    Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
    Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।                     
-             
-                        
+                         
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
          -appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
             {
@@ -41,17 +40,14 @@ OR
               // অন্যান্য সেটিংস...
             }
 
-         
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
 ### ৫. পরিষেবা কনফিগারেশন (Service Configuration)
           using YourProjectName.Data; // আপনার DbContext namespace
           using Microsoft.EntityFrameworkCore;
           var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
           // MySQL প্রোভাইডার কনফিগার করুন
-          builder.Services.AddDbContext<ApplicationDbContext>(options =>
-              options.UseMySql(
-                  connectionString,
-                  ServerVersion.AutoDetect(connectionString) // MySQL সার্ভার ভার্সন অটো-ডিটেক্ট করবে
+          builder.Services.AddDbContext<ApplicationDbContext>(
+               options => options.UseMySql( connectionString, ServerVersion.AutoDetect(connectionString) // MySQL সার্ভার ভার্সন অটো-ডিটেক্ট করবে
               )
           );
 ### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
@@ -73,10 +69,8 @@ OR
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages)
 MySQL-এর সাথে EF Core-কে যুক্ত করার জন্য আপনার বিশেষ কানেক্টর প্যাকেজ লাগবে।
 
-
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
 অ্যাপ্লিকেশনটি যাতে ডাটাবেসের অবস্থান জানতে পারে, তার জন্য `appsettings.json` ফাইলে কানেকশন স্ট্রিং যোগ করুন।
-
 
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
 
@@ -86,9 +80,9 @@ MySQL-এর সাথে EF Core-কে যুক্ত করার জন্�
             {
                 public class Item
                 {
-                    public int Id { get; set; } // Primary Key
-                    public string Name { get; set; }
-                    public decimal Price { get; set; }
+                    public int id { get; set; } // Primary Key
+                    public string name { get; set; }
+                    public decimal price { get; set; }
                 }
             }
 
@@ -103,10 +97,7 @@ MySQL-এর সাথে EF Core-কে যুক্ত করার জন্�
          {
              public class ApplicationDbContext : DbContext
              {
-                 public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-                     : base(options)
-                 {
-                 }
+                 public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options){ }
          
                  // DbContext-এ আপনার টেবিল/মডেল যোগ করুন
                  public DbSet<Item> Items { get; set; }
@@ -114,7 +105,7 @@ MySQL-এর সাথে EF Core-কে যুক্ত করার জন্�
          }
 
 
-### ৫. পরিষেবা কনফিগারেশন (Service Configuration)
+### ৫. পরিষেবা কনফিগারেশন (Service Configuration) At Route(Program.cs)
 এখন `Program.cs` ফাইলে EF Core এবং MySQL প্রোভাইডারকে অ্যাপ্লিকেশন পরিষেবা হিসেবে রেজিস্টার করুন।
 `Program.cs` ফাইলটি খুলুন এবং `var builder = WebApplication.CreateBuilder(args);` লাইনের পরে নিম্নলিখিত কোড যোগ করুন:
 
@@ -133,7 +124,7 @@ public class HomeController : Controller
 {
     private readonly ApplicationDbContext _context;
 
-    public HomeController(ApplicationDbContext context) // Dependency Injection
+    public HomeController(ApplicationDbContext context) // Dependency Injection //Constructor
     {
         _context = context;
     }
@@ -141,8 +132,7 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         // ডাটাবেস থেকে সকল Item লোড করা হচ্ছে
-        var items = _context.Items.ToList(); 
-        
+        var items = _context.Items.ToList();         
         return View(items);
     }
 }
