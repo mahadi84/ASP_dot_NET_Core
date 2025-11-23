@@ -11,7 +11,7 @@ dotnet list package --include-transitive
 
 ### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
           CMD in project folder:
-            dotnet new mvc -n MyMvcApp
+            dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
             cd MyMvcApp
                 dotnet run      **(প্রয়োজনে restore+build) + অবশেষে প্রোগ্রাম চালানো
                 dotnet restore  ** নতুন প্যাকেজ অ্যাড করলে বা পুরনোটা আপডেট করলে dotnet restore দিলে সব ঠিকমতো আপডেট হয়। ** বাজার করে আনা,
