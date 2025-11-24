@@ -4,33 +4,11 @@
 
 **Entity Framework Core (EF Core)
 
-**check installed packages version CMD: 
-dotnet list package 
-OR
-dotnet list package --include-transitive
-
-### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
-          CMD in project folder:
-            dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
-            cd MyMvcApp
-                dotnet run      **(প্রয়োজনে restore+build) + অবশেষে প্রোগ্রাম চালানো
-                dotnet restore  ** নতুন প্যাকেজ অ্যাড করলে বা পুরনোটা আপডেট করলে dotnet restore দিলে সব ঠিকমতো আপডেট হয়। ** বাজার করে আনা,
-                dotnet build    ** তারপর সেই প্যাকেজগুলো নিয়ে প্রজেক্টটা সফলভাবে কম্পাইল হয় কিনা দেখে নাও (build) **রান্না করে খাবার বানানো।
+### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)       
 
 ### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) 
 
-** .NET CLI:(
-View>Terminal  
-Select:Developer Command Prompt)
-dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 
-OR
-
-**Tools>NetGut Package Manager> Package Manager Console
-   Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
-   Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।                     
-                         
 ### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
          -appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
             {
