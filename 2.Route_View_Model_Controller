@@ -65,39 +65,242 @@ namespace test.Models
 }
 
 ############ Controller ##############
-public class Test : Controller{
-    // GET: Test
-    public ActionResult ShowAll()
-    {
-         // 1. Using ViewBag:
-        ViewBag.Message = "We successfully retrieved 3 products."; //Autometically pass it to view only call in the view @ViewBag.Message 
+using CRUD.Data;
+using CRUD.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 
-        // 2. Using ViewData
-        ViewData["Message"] = DateTime.Now.ToShortTimeString(); ///Autometically pass it to view only call in the view @ViewData[Message] 
+namespace CRUD.Controllers;
 
-        //3. Using Model
-        string message = "Hello! This text is returned directly.";
-       //return View(model:message); //pass data using model is best practice
+public class HomeController : Controller
+{
+    private readonly ApplicationDbContext _context;
 
-       // return Content("We successfully retrieved 3 products."); // To show text on the brower
-       //return Content(message);
+    public HomeController(ApplicationDbContext context){ // Dependency Injection
+        _context = context;
     }
 
-        [HttpPost]
-        public IActionResult ShowData(LoginModel m)
+
+public IActionResult Index(){
+    return View();
+}
+
+    public IActionResult Employees(){
+        var emp = _context.employees.ToList();
+        return View(emp);   //return Json(c);
+    }
+
+
+
+//------------------------ Show All User  -----------------------------------
+    public IActionResult User(){
+        var u = _context.user.ToList();
+        return View(u);   //return Json(c);
+    }
+
+
+//----------------------------------- ADD User  -----------------------------------
+
+    [HttpGet] // Optional, but good practice to specify it only handles GET requests
+    public IActionResult CreateUserForm()
+    {        
+        return View(); // Searches for Views/Home/Create.cshtml
+    }
+
+
+
+    // POST: /Home/Create - Handles the form submission
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateUser(User user)
+    {
+        if (ModelState.IsValid)
         {
-            // Check if the model conforms to the validation rules (Data Annotations).
-            if (!ModelState.IsValid) {        
-                return View("login", m); //if validation fails, forward to login page with error message automatically carried back to the view.
-            }        
-            return View("Index", m);  // If validation succeeds:
+            try
+            {
+                _context.user.Add(user);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = "User created successfull!";  // সফল হলে
+                return RedirectToAction("CreateUserForm");
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)  // DbUpdateException ধরে (Catch) বার্তা পাঠানো
+            {
+                var innerException = ex.InnerException; // Inner Exception চেক করা
+
+                // MySQL প্রোভাইডার ব্যবহার করলে Inner Exceptionটি MySqlException বা তার সমতুল্য হবে।
+                // MySqlConnector বা MySQL.Data ব্যবহার করলে এরর নম্বর চেক করা যায়।
+                // MySql-এর স্ট্যান্ডার্ড ডুপ্লিকেট এন্ট্রি এরর কোড (Error Code 1062)
+                if (innerException != null && innerException.Message.Contains("Duplicate entry") && innerException.Message.Contains("for key"))
+                {
+                    TempData["ErrorMessage"] = "Role already exist";  // ডুপ্লিকেট এন্ট্রির জন্য নির্দিষ্ট বার্তা
+                    ModelState.AddModelError(string.Empty, "Role already exist");  // মডেল স্টেট-এও এরর যোগ করা ভালো
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = "Database error during creation."; // অন্যান্য ডাটাবেস এরর
+                }
+            }
+            catch (Exception ex)
+            {               
+                Console.WriteLine($"Database error during creation: {ex.Message}");  // অন্য সব সাধারণ এরর
+                TempData["ErrorMessage"] = "User created failed!";
+            }
+        }
+        return View("CreateUserForm", user); // মডেল ভ্যালিড না হলে বা এরর হলে, ভিউতে ফিরে যাওয়া
+    }
+
+
+
+
+
+    //----------------------------------- EDIT User  -----------------------------------
+    [HttpGet]
+    public async Task<IActionResult> Edit(int? id)
+    {
+        if (id == null)
+        {
+            return NotFound(); // Return 404 if no ID is provided
         }
 
+        // 1. Fetch the existing user from the database
+        var userToEdit = await _context.user.FindAsync(id);
+
+        if (userToEdit == null)
+        {
+            return NotFound(); // Return 404 if user ID is not found
+        }
+
+        // 2. Pass the fetched user object to the View
+        return View(userToEdit);
+    }
+
+
+
+
+    // --- POST ACTION: Handle Form Submission and Save Changes ---
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, User user)
+    {
+        // Check if the ID from the route matches the ID in the form data
+        if (id != user.id)
+        {
+            return NotFound();
+        }
+
+        if (ModelState.IsValid)
+        {
+            try
+            {
+                // 1. Tell EF Core that the user object has been modified
+                _context.Update(user);
+
+                // 2. Execute the UPDATE SQL command in the database
+                await _context.SaveChangesAsync();
+
+                // Set Success message using TempData
+                TempData["SuccessMessage"] = "User details updated successfully!"; // SUCCESS MESSAGE
+
+                // 3. Redirect back to the list page
+                return RedirectToAction("Edit", new { id = user.id });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Handle concurrency error
+                if (!_context.user.Any(e => e.id == user.id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                // Handle MySQL Duplicate Entry Error (Error Code 1062 often shows up in the message for MySqlConnector)
+                var innerException = ex.InnerException;
+
+                if (innerException != null && innerException.Message.Contains("Duplicate entry") && innerException.Message.Contains("for key"))
+                {
+                    // Set Duplicate Entry Error Message
+                    TempData["ErrorMessage"] = "The data entered already exists. Duplicate entry is not allowed."; // ERROR MESSAGE
+                    ModelState.AddModelError(string.Empty, "The data entered is already in use. Please use a different value."); // MODEL ERROR
+                }
+                else
+                {
+                    // General Database Error Message
+                    TempData["ErrorMessage"] = "An unexpected error occurred while saving data."; // ERROR MESSAGE
+                    ModelState.AddModelError(string.Empty, "An unknown error occurred during the update process."); // MODEL ERROR
+                }
+            }
+            
+        }
+
+        // If validation fails or an error occurs, return the form with the user's input
+        return View("Edit", user);
+    }
+
+
+
+    //----------------------------------- DELETE User  -----------------------------------
+    // The DeleteConfirmed method handles the POST request to delete a user record.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        // Find the user to be deleted based on the ID.
+        var user = await _context.user.FindAsync(id);
+
+        // 1. EXISTENCE VALIDATION: Check if the user exists.
+        if (user == null)
+        {
+            // If the user is not found (perhaps already deleted), return 404.
+            return NotFound();
+        }
+
+        try
+        {
+            // 2. Remove the user object from the tracking list
+            _context.user.Remove(user);
+
+            // 3. Execute the DELETE SQL command
+            await _context.SaveChangesAsync();
+
+            // 4. Return success status (204 No Content is standard for successful AJAX deletion)
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            // Log the error (in a real app, use ILogger.LogError)
+            Console.WriteLine($"Database error during deletion: {ex.Message}");
+
+            // Return a 500 Internal Server Error status with the error message
+            return StatusCode(500, "Error deleting the user: " + ex.Message);
+        }
+    }
+
+
+
+
+
+
+
+
+[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+public IActionResult Error(){
+    return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
 }
 
 
 
 
+
+
+
+}
 
 
 
