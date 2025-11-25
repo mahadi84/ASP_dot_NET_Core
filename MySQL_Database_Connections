@@ -19,15 +19,16 @@
             }
 
 ### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext)
+
 ### ৫. পরিষেবা কনফিগারেশন (Service Configuration) at Route(Program.cs)
           using YourProjectName.Data; // আপনার DbContext namespace
           using Microsoft.EntityFrameworkCore;
-          var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        --
+         // DbContext পরিষেবাটি যোগ করা হচ্ছে
+          var connectionString = builder.Configuration.GetConnectionString("DefaultConnection"); 
           // MySQL প্রোভাইডার কনফিগার করুন
-          builder.Services.AddDbContext<ApplicationDbContext>(
-               options => options.UseMySql( connectionString, ServerVersion.AutoDetect(connectionString) // MySQL সার্ভার ভার্সন অটো-ডিটেক্ট করবে
-              )
-          );
+          builder.Services.AddDbContext<ApplicationDbContext>( options => options.UseMySql( connectionString, ServerVersion.AutoDetect(connectionString)));
+
 ### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
      Add-Migration InitialCreate  **মাইগ্রেশন তৈরি: এটি ডাটাবেসের স্কিমা পরিবর্তনের জন্য একটি ফাইল তৈরি করবে।
      Update-Database              **ডাটাবেস আপডেট: এটি আপনার MySQL ডাটাবেসে টেবিল তৈরি করবে।
