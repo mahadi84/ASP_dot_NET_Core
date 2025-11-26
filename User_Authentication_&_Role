@@ -10,9 +10,9 @@
 
 আপনার ASP.NET Core MVC প্রজেক্টে নিম্নলিখিত NuGet প্যাকেজগুলো ইনস্টল করতে হবে:
 
-   Microsoft.AspNetCore.Identity.EntityFrameworkCore
-   Microsoft.EntityFrameworkCore.Tools
-   Pomelo.EntityFrameworkCore.MySql (MySQL ব্যবহারের জন্য এটি জনপ্রিয় এবং প্রস্তাবিত প্রোভাইডার)
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
+dotnet add package  Microsoft.EntityFrameworkCore.Tools
+dotnet add package  Pomelo.EntityFrameworkCore.MySql (MySQL ব্যবহারের জন্য এটি জনপ্রিয় এবং প্রস্তাবিত প্রোভাইডার)
 
 প্যাকেজ ম্যানেজার কনসোল (Package Manager Console) এ বা .csproj ফাইলে এগুলো যুক্ত করতে পারেন।
 
