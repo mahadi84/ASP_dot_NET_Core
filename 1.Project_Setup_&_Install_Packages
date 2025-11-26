@@ -16,7 +16,7 @@ Select:Developer Command Prompt)
 dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 
-dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore    ** For authentication
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore --version 9.0.0    ** For authentication
 
 OR
 
