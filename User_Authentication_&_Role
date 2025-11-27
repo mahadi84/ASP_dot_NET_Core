@@ -1,51 +1,35 @@
 তুমি ছবিটা পুরো খুলে ফেলেছ—**ASP.NET Core MVC 8/9 + MySQL + Identity + Login/Registration + Role-based Authorization**।
-চলো এবার পুরো সিস্টেমটাকে গেঁথে ফেলি। ব্যাখ্যাটা সহজ, পরিষ্কার আর আধুনিক .NET স্টাইলে লিখছি।
+
 
 ---
 
 # 🎯 চূড়ান্ত লক্ষ্য
 
 তোমার MVC প্রজেক্টে চাই:
-
 **Login + Register + Forgot Password + Roles + Role-based Authorization + MySQL Database**
-
 এবং সবকিছু কাজ করবে ASP.NET Core 8/9 মিনিমাল হোস্টিং মডেলে।
 
 ---
 
 # 🏗️ ধাপ ১: নতুন MVC প্রজেক্ট তৈরি
-
 Terminal / CMD / VS Package Manager:
-
 ```
 dotnet new mvc -n MyAuthProject
 cd MyAuthProject
 ```
 
----
 
 # 🧩 ধাপ ২: প্রয়োজনীয় প্যাকেজ ইনস্টল
-
 ### ✔ MySQL EF Core Provider
 
-অফিশিয়ালি Pomelo সবচেয়ে ভালো:
+dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  অফিশিয়ালি Pomelo সবচেয়ে ভালো:
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 
-```
-dotnet add package Pomelo.EntityFrameworkCore.MySql
-```
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    **সাধারণত MVC template-এ থাকে, তবু নিশ্চিত করার জন্য
+dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** For Identity UI  
 
-### ✔ Identity support
-
-(সাধারণত MVC template-এ থাকে, তবু নিশ্চিত করার জন্য):
-
-```
-dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
-```
-
----
 
 # 🧬 ধাপ ৩: ApplicationDbContext তৈরি করা
-
 **Data/ApplicationDbContext.cs**
 
 ```csharp
@@ -67,18 +51,14 @@ namespace MyAuthProject.Data
 ---
 
 # ⚙️ ধাপ ৪: appsettings.json → MySQL Connection String
-
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=MyAuthDB;User=root;Password=1234;"
+    "DefaultConnection": "Server=localhost;Database=MyAuthDB;User=root;Password=1234;" // MySQL অনুযায়ী পাসওয়ার্ড/নাম পরিবর্তন করো।
   }
 }
 ```
 
-তোমার MySQL অনুযায়ী পাসওয়ার্ড/নাম পরিবর্তন করো।
-
----
 
 # 🚀 ধাপ ৫: Program.cs কনফিগারেশন (Core 8/9 মডেল)
 
@@ -120,7 +100,6 @@ Visual Studio →
 **Right Click Project → Add → New Scaffolded Item → Identity**
 
 From the menu:
-
 * Register
 * Login
 * Logout
@@ -226,11 +205,7 @@ public IActionResult Profile() => View();
 
 সবকিছু MySQL database-এ স্বয়ংক্রিয়ভাবে তৈরি হবে।
 
+
+
+
 ---
-
-# 🔥 যদি তুমি চাও, আমি তোমার পুরো প্রজেক্ট ফোল্ডারের স্ট্রাকচার দেখে
-
-ঠিক কোথায় Register/Login পেজ মিসিং সেটা ১০ সেকেন্ডে ধরিয়ে দেব।
-
-অথবা চাইলে তোমার পুরো প্রজেক্টের Program.cs + appsettings.json + DbContext দেখে
-ডাইরেক্ট কোড ফিক্স করে দিতে পারি।
