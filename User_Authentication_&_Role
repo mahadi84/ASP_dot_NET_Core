@@ -106,24 +106,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
-builder.Services.AddControllersWithViews();
-builder.Services.AddRazorPages();
 
-var app = builder.Build();
+app.MapRazorPages(); // অবশ্যই আছে after, if (!app.Environment.IsDevelopment()))
+app.UseAuthentication(); // অবশ্যই আছে
+app.UseAuthorization(); // অবশ্যই আছে before, app.MapControllerRoute()
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapRazorPages();
-app.MapDefaultControllerRoute();
-
-app.Run();
-```
 
 ---
 
