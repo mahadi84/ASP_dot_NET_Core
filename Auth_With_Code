@@ -10,6 +10,180 @@ Create:
 -without login home page can not be visited by route or url if tried must redirect to login page first. 
 -mysql as database 
 
-
-
 ---------------------
+
+Route:
+
+
+
+
+################################ Controller:  ################################
+
+using Login.Data;
+using Login.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace Login.Controllers
+{
+    // এই কন্ট্রোলারটি লগইন এবং লগআউট হ্যান্ডেল করবে
+    public class LoginController : Controller
+    {
+        // EF Core এর মাধ্যমে ডাটাবেসের সাথে যুক্ত হওয়ার জন্য ApplicationDbContext
+        private readonly ApplicationDbContext _sqlConn;
+
+        // Dependency Injection এর মাধ্যমে DbContext ইনজেক্ট করা হলো
+        public LoginController(ApplicationDbContext sqlConn)
+        {
+            _sqlConn = sqlConn;
+        }
+
+        // --- ১. লগইন পেইজ (GET) ---
+
+        // GET: /Login/Login
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+
+
+        // --- ২. লগইন প্রসেস (POST) ---
+
+        // POST: /Login/Login
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(string username, string password)
+        {
+            // ইউজার যাচাই করা হলো
+            var user = await ValidateUser(username, password);
+
+            if (user != null)
+            {
+                // ইউজার সফল লগইন হলে
+                var claims = new List<Claim>
+                {
+                    // ইউজার ID, Username এবং Role Claims হিসেবে যোগ করা হলো (নতুন সংযোজন)
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.Username),
+                    new Claim(ClaimTypes.Role, user.Role) // <--- নতুন: ভূমিকা (Role) Claim যোগ করা হলো
+                };
+
+                // ClaimsIdentity তৈরি করা হলো
+                var claimsIdentity = new ClaimsIdentity(
+                    claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                // Authentication Properties সেট করা হলো
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = true
+                };
+
+                // ইউজারকে সাইন ইন করানো হলো (কুকি তৈরি করা)
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity),
+                    authProperties);
+
+                // --- ভূমিকার ভিত্তিতে রিডাইরেক্ট লজিক (নতুন সংযোজন) ---
+                if (user.Role == "Admin")
+                {
+                    // যদি ভূমিকা "Admin" হয়, তবে Admin কন্ট্রোলারে রিডাইরেক্ট
+                    return RedirectToAction("Index", "Admin");
+                }
+                else if (user.Role == "User")
+                {
+                    // যদি ভূমিকা "User" হয়, তবে User কন্ট্রোলারে রিডাইরেক্ট
+                    return RedirectToAction("Index", "User");
+                }
+
+                // কোনো ভূমিকা না থাকলে ডিফল্ট হোম পেইজে রিডাইরেক্ট
+                return RedirectToAction("Index", "Home");
+                // -----------------------------------------------------
+            }
+
+            // লগইন ব্যর্থ হলে
+            ViewBag.ErrorMessage = "ইউজারনেম অথবা পাসওয়ার্ড সঠিক নয়।";
+            return View();
+        }
+
+           
+        
+        
+        
+        // --- ৩. লগআউট ফাংশন (POST) ---
+
+        // POST: /Login/Logout
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            // কুকি ডিলিট করে সাইন আউট করা হলো
+            await HttpContext.SignOutAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme);
+
+            // লগইন পেইজে ফেরত পাঠানো
+            return RedirectToAction("Login", "Login");
+        }
+
+        
+              
+        
+        
+        // --- ৪. ইউজার যাচাই করার Helper ফাংশন ---
+
+        // EF Core ব্যবহার করে ডাটাবেস থেকে ইউজার (Role সহ) খোঁজা এবং পাসওয়ার্ড যাচাই
+        private async Task<User> ValidateUser(string username, string password)
+        {
+            // DbContext ব্যবহার করে ইউজার খুঁজে বের করা হলো
+            var user = await _sqlConn.User
+                // User মডেলের Role প্রপার্টি সহ সমস্ত ডাটা Fetch করা হচ্ছে
+                .FirstOrDefaultAsync(u => u.Username == username);
+
+            // ইউজার পাওয়া গেলে এবং পাসওয়ার্ড যাচাই সফল হলে
+            if (user != null && VerifyPassword(password, user.PasswordHash))
+            {
+                return user;
+            }
+
+            return null;
+        }
+
+        
+        
+  
+        
+        // --- ৫. পাসওয়ার্ড যাচাই করার Helper ফাংশন ---
+
+        // ASP.NET Identity এর PasswordHasher ব্যবহার করে পাসওয়ার্ড যাচাই করা
+        public bool VerifyPassword(string providedPassword, string storedHash)
+        {
+            var user = new User();
+            var hasher = new PasswordHasher<User>();
+
+            var result = hasher.VerifyHashedPassword(user, storedHash, providedPassword);
+
+            return result == PasswordVerificationResult.Success;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+View:
+
+
+
