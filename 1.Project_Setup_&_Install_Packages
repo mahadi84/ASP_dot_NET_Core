@@ -17,6 +17,7 @@ dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL 
 
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0  **স্কাফোল্ডিং লজিকটি চালানোর জন্য প্রয়োজন
+dotnet tool install --global dotnet-ef  --version 9.0.0
 
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
 dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** For Identity UI  
