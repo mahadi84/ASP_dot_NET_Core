@@ -70,7 +70,9 @@ dotnet ef dbcontext scaffold "Server=localhost;Database=MyProjectDB;User=root;Pa
 
 
 
-################################## SYSTEM:02: 💻 MySQL কে ASP.NET Core MVC-এ যুক্ত করার ধাপসমূহ ##################################
+################################## SYSTEM:02: 
+💻 MySQL কে ASP.NET Core MVC-এ যুক্ত করার ধাপসমূহ 
+##################################
 
 **Entity Framework Core (EF Core)
 
