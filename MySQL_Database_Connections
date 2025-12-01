@@ -115,6 +115,22 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
 
 ### ৭. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
        using YourProjectName.Data;  **add line to controller
+
+
+
+💡💡💡 লগইন করার সময় হ্যাশ যাচাই
+আপনার লগইন লজিকে (যেটি আপনি Identity ছাড়া তৈরি করছেন), আপনাকে ইনপুট করা পাসওয়ার্ডকে একই হ্যাশার ক্লাস ব্যবহার করে ডাটাবেসের হ্যাশড পাসওয়ার্ডের সাথে যাচাই করতে হবে:
+
+// UserService বা Login Controller এ
+public bool VerifyPassword(string providedPassword, string storedHash)
+{
+    var user = new User(); // শুধু হ্যাশার ব্যবহারের জন্য একটি User অবজেক্ট দরকার
+    var hasher = new PasswordHasher<User>();
+
+    var result = hasher.VerifyHashedPassword(user, storedHash, providedPassword);
+
+    return result == PasswordVerificationResult.Success;
+}
         
 
 ###################################### Details #############################
