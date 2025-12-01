@@ -43,7 +43,6 @@ dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Cor
                 {
                     public int id { get; set; } // Primary Key
                     public string name { get; set; }
-                    public decimal price { get; set; }
                 }
             }
 
@@ -52,16 +51,28 @@ dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Cor
          using Microsoft.EntityFrameworkCore;
          using YourProjectName.Models;
          
-         namespace YourProjectName.Data
-         {
-             public class ApplicationDbContext : DbContext
-             {
-                 public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options){ }
-         
-                 // DbContext-এ আপনার টেবিল/মডেল যোগ করুন
-                 public DbSet<Item> Items { get; set; }
-             }
-         }
+        namespace Login.Data {
+                                  public class ApplicationDbContext : DbContext
+                                  {
+                                      public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+                              
+                                      // DbContext-এ আপনার টেবিল/মডেল যোগ করুন
+                                      public DbSet<User> user { get; set; }
+
+                                     // ** ডামি ডেটা ঢোকানো হচ্ছে**
+                                      protected override void OnModelCreating(ModelBuilder modelBuilder)
+                                      {
+                                          base.OnModelCreating(modelBuilder);
+                              
+                                          // **এখানে ডামি ডেটা ঢোকানো হচ্ছে**
+                                          modelBuilder.Entity<User>().HasData(
+                                              new User { id = 1, name = "Laptop Bag" },
+                                              new User { id = 2, name = "Wireless Mouse"},
+                                              new User { id = 3, name = "USB C Cable", }
+                                          );
+                                      }
+                                  }
+                    }
 
 
 
