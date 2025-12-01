@@ -1,0 +1,15 @@
+
+Create:
+-controller, model and view step by step for asp.net core mvc version 9  
+-for login and logout 
+-project name is Login
+-without any ef like identity
+-password with hash 
+-login page will be redirected first 
+-after successful login redirect to home page 
+-without login home page can not be visited by route or url if tried must redirect to login page first. 
+-mysql as database 
+
+
+
+---------------------
