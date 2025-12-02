@@ -111,7 +111,11 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
 ### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
      Add-Migration InitialCreate  **মাইগ্রেশন তৈরি: এটি ডাটাবেসের স্কিমা পরিবর্তনের জন্য একটি ফাইল তৈরি করবে।
      Update-Database              **ডাটাবেস আপডেট: এটি আপনার MySQL ডাটাবেসে টেবিল তৈরি করবে।
-    **যদি এটি সফলভাবে চলে, তবে আপনার `Item` টেবিলটি MySQL ডাটাবেসে তৈরি হয়ে যাবে।
+
+     Remove-Migration
+    
+
+**যদি এটি সফলভাবে চলে, তবে আপনার `Login` টেবিলটি MySQL ডাটাবেসে তৈরি হয়ে যাবে।
 
 ### ৭. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
        using YourProjectName.Data;  **add line to controller
