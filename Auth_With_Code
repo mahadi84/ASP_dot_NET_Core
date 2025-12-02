@@ -12,7 +12,42 @@ Create:
 
 ---------------------
 
-Route:
+################################ Route: ################################
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+
+// ১. কুকি-ভিত্তিক অথেন্টিকেশন যোগ করুন
+builder.Services.AddAuthentication("CookieAuth")
+    .AddCookie("CookieAuth", options =>
+    {
+        options.LoginPath = "/Account/Login"; // লগইন না থাকলে এই রুটে যাবে
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddControllersWithViews();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+// ... (existing code: if (app.Environment.IsDevelopment()), etc.)
+// ...
+
+app.UseStaticFiles();
+app.UseRouting();
+
+// ২. অথেন্টিকেশন এবং অথরাইজেশন ব্যবহার করুন
+app.UseAuthentication();
+app.UseAuthorization();
+
+// ৩. রুট কনফিগারেশন: ডিফল্ট রুট লগইন পেজে সেট করুন
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}"); // ডিফল্ট কন্ট্রোলার: Account, অ্যাকশন: Login
+
+app.Run();
 
 
 
