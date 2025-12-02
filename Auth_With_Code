@@ -44,7 +44,7 @@ namespace Login.Controllers
             _sqlConn = sqlConn;
         }
 
-        // --- ১. লগইন পেইজ (GET) ---
+        // ################ ১. লগইন পেইজ (GET) ################
 
         // GET: /Login/Login
         public IActionResult Login()
@@ -53,30 +53,26 @@ namespace Login.Controllers
         }
 
 
-
-        // --- ২. লগইন প্রসেস (POST) ---
+    // ################ ২. লগইন প্রসেস (POST) ################
 
         // POST: /Login/Login
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string username, string password)
-        {
-            // ইউজার যাচাই করা হলো
-            var user = await ValidateUser(username, password);
+        {           
+            var user = await ValidateUser(username, password);  // ইউজার যাচাই করা হলো
 
-            if (user != null)
-            {
-                // ইউজার সফল লগইন হলে
-                var claims = new List<Claim>
+            if (user != null)            
+            {                
+                var claims = new List<Claim> // ইউজার সফল লগইন হলে
                 {
                     // ইউজার ID, Username এবং Role Claims হিসেবে যোগ করা হলো (নতুন সংযোজন)
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Name, user.Username),
                     new Claim(ClaimTypes.Role, user.Role) // <--- নতুন: ভূমিকা (Role) Claim যোগ করা হলো
                 };
-
-                // ClaimsIdentity তৈরি করা হলো
-                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme); // ClaimsIdentity তৈরি করা হলো
 
                 // Authentication Properties সেট করা হলো
                 var authProperties = new AuthenticationProperties
@@ -90,59 +86,44 @@ namespace Login.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties);
 
-                // --- ভূমিকার ভিত্তিতে রিডাইরেক্ট লজিক (নতুন সংযোজন) ---
+                // ভূমিকার ভিত্তিতে রিডাইরেক্ট লজিক (নতুন সংযোজন)
                 if (user.Role == "Admin")
-                {
-                    // যদি ভূমিকা "Admin" হয়, তবে Admin কন্ট্রোলারে রিডাইরেক্ট
-                    return RedirectToAction("Index", "Admin");
+                {                   
+                    return RedirectToAction("Index", "Admin");  // যদি ভূমিকা "Admin" হয়, তবে Admin কন্ট্রোলারে রিডাইরেক্ট
                 }
                 else if (user.Role == "User")
-                {
-                    // যদি ভূমিকা "User" হয়, তবে User কন্ট্রোলারে রিডাইরেক্ট
-                    return RedirectToAction("Index", "User");
+                {                    
+                    return RedirectToAction("Index", "User"); // যদি ভূমিকা "User" হয়, তবে User কন্ট্রোলারে রিডাইরেক্ট
                 }
-
-                // কোনো ভূমিকা না থাকলে ডিফল্ট হোম পেইজে রিডাইরেক্ট
-                return RedirectToAction("Index", "Home");
-                // -----------------------------------------------------
+               
+                return RedirectToAction("Index", "Home");  // কোনো ভূমিকা না থাকলে ডিফল্ট হোম পেইজে রিডাইরেক্ট               
             }
 
             // লগইন ব্যর্থ হলে
-            ViewBag.ErrorMessage = "ইউজারনেম অথবা পাসওয়ার্ড সঠিক নয়।";
+            ViewBag.ErrorMessage = "Username or Password is incorrect";
             return View();
         }
 
            
-        
-        
-        
-        // --- ৩. লগআউট ফাংশন (POST) ---
+        // ################ ৩. লগআউট ফাংশন (POST) ################
 
         // POST: /Login/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
-        {
-            // কুকি ডিলিট করে সাইন আউট করা হলো
-            await HttpContext.SignOutAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme);
-
-            // লগইন পেইজে ফেরত পাঠানো
-            return RedirectToAction("Login", "Login");
+        {            
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); // কুকি ডিলিট করে সাইন আউট করা হলো            
+            return RedirectToAction("Login", "Login"); // লগইন পেইজে ফেরত পাঠানো
         }
 
         
-              
-        
-        
-        // --- ৪. ইউজার যাচাই করার Helper ফাংশন ---
+        // ################ ৪. ইউজার যাচাই করার Helper ফাংশন ################
 
         // EF Core ব্যবহার করে ডাটাবেস থেকে ইউজার (Role সহ) খোঁজা এবং পাসওয়ার্ড যাচাই
         private async Task<User> ValidateUser(string username, string password)
         {
             // DbContext ব্যবহার করে ইউজার খুঁজে বের করা হলো
-            var user = await _sqlConn.User
-                // User মডেলের Role প্রপার্টি সহ সমস্ত ডাটা Fetch করা হচ্ছে
+            var user = await _sqlConn.User  // User মডেলের Role প্রপার্টি সহ সমস্ত ডাটা Fetch করা হচ্ছে              
                 .FirstOrDefaultAsync(u => u.Username == username);
 
             // ইউজার পাওয়া গেলে এবং পাসওয়ার্ড যাচাই সফল হলে
@@ -156,18 +137,14 @@ namespace Login.Controllers
 
         
         
-  
-        
-        // --- ৫. পাসওয়ার্ড যাচাই করার Helper ফাংশন ---
+        // ################ ৫. পাসওয়ার্ড যাচাই করার Helper ফাংশন ################
 
         // ASP.NET Identity এর PasswordHasher ব্যবহার করে পাসওয়ার্ড যাচাই করা
         public bool VerifyPassword(string providedPassword, string storedHash)
         {
             var user = new User();
             var hasher = new PasswordHasher<User>();
-
             var result = hasher.VerifyHashedPassword(user, storedHash, providedPassword);
-
             return result == PasswordVerificationResult.Success;
         }
     }
