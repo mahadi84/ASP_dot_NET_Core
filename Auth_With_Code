@@ -76,8 +76,7 @@ namespace Login.Controllers
                 };
 
                 // ClaimsIdentity তৈরি করা হলো
-                var claimsIdentity = new ClaimsIdentity(
-                    claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
                 // Authentication Properties সেট করা হলো
                 var authProperties = new AuthenticationProperties
