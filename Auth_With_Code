@@ -31,15 +31,11 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace Login.Controllers
-{
-    // এই কন্ট্রোলারটি লগইন এবং লগআউট হ্যান্ডেল করবে
-    public class LoginController : Controller
+{    
+    public class LoginController : Controller // এই কন্ট্রোলারটি লগইন এবং লগআউট হ্যান্ডেল করবে
     {
-        // EF Core এর মাধ্যমে ডাটাবেসের সাথে যুক্ত হওয়ার জন্য ApplicationDbContext
-        private readonly ApplicationDbContext _sqlConn;
-
-        // Dependency Injection এর মাধ্যমে DbContext ইনজেক্ট করা হলো
-        public LoginController(ApplicationDbContext sqlConn)
+        private readonly ApplicationDbContext _sqlConn;      // EF Core এর মাধ্যমে ডাটাবেসের সাথে যুক্ত হওয়ার জন্য ApplicationDbContext        
+        public LoginController(ApplicationDbContext sqlConn) // Constructor / Dependency Injection এর মাধ্যমে DbContext ইনজেক্ট করা হলো
         {
             _sqlConn = sqlConn;
         }
@@ -119,8 +115,7 @@ namespace Login.Controllers
         
         // ################ ৪. ইউজার যাচাই করার Helper ফাংশন ################
 
-        // EF Core ব্যবহার করে ডাটাবেস থেকে ইউজার (Role সহ) খোঁজা এবং পাসওয়ার্ড যাচাই
-        private async Task<User> ValidateUser(string username, string password)
+        private async Task<User> ValidateUser(string username, string password) // EF Core ব্যবহার করে ডাটাবেস থেকে ইউজার (Role সহ) খোঁজা এবং পাসওয়ার্ড যাচাই
         {
             // DbContext ব্যবহার করে ইউজার খুঁজে বের করা হলো
             var user = await _sqlConn.User  // User মডেলের Role প্রপার্টি সহ সমস্ত ডাটা Fetch করা হচ্ছে              
