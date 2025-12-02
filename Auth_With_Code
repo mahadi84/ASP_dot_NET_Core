@@ -1,7 +1,7 @@
 
 Create:
 -controller, model and view step by step for asp.net core mvc version 9  
--for login and logout 
+-for login and logout with authentication
 -project name is Login
 -without any ef like identity
 -password with hash 
