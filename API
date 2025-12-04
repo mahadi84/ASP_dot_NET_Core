@@ -1,0 +1,190 @@
+
+##################### Controller: ##################### 
+
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RestAPI.Data;
+using RestAPI.Models;
+
+namespace RestAPI.Controllers
+{
+
+    [Route("api/[controller]")] // API রুট: /api/Emps
+    [ApiController] // নির্দেশ করে যে এটি একটি API কন্ট্রোলার
+    public class EmployeeController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context; // ডেটাবেস কনটেক্সট ইনজেকশন
+
+        // কনস্ট্রাক্টর: ডিপেন্ডেন্সি ইনজেকশনের মাধ্যমে ডেটাবেস কনটেক্সট গ্রহণ করা হয়
+        public EmployeeController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        // 1. GET: /api/Emps (সমস্ত ডেটা পুনরুদ্ধার)
+        // সমস্ত কর্মচারীর তালিকা পুনরুদ্ধার করে
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Emp>>> GetEmps()
+        {
+            // ডেটাবেস থেকে সমস্ত ডেটা অ্যাসিঙ্ক্রোনাসলি পুনরুদ্ধার
+            return await _context.Emp.ToListAsync();
+        }
+
+        // 2. GET: /api/Emps/{id} (একটি নির্দিষ্ট ডেটা পুনরুদ্ধার)
+        // নির্দিষ্ট ID-এর কর্মচারী পুনরুদ্ধার করে
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Emp>> GetEmp(int id)
+        {
+            // ID দিয়ে কর্মচারী খুঁজে বের করা
+            var emp = await _context.Emp.FindAsync(id);
+
+            if (emp == null)
+            {
+                // কর্মচারী না পাওয়া গেলে 404 Not Found রিটার্ন
+                return NotFound("এই ID-এর কোনো কর্মচারী খুঁজে পাওয়া যায়নি।");
+            }
+
+            // 200 OK সহ ডেটা রিটার্ন
+            return emp;
+        }
+
+        // 3. POST: /api/Emps (নতুন ডেটা তৈরি)
+        // নতুন কর্মচারী ডেটাবেসে যোগ করে
+        [HttpPost]
+        public async Task<ActionResult<Emp>> PostEmp(Emp emp)
+        {
+            // নতুন কর্মচারী যোগ
+            _context.Emp.Add(emp);
+            await _context.SaveChangesAsync(); // পরিবর্তন সংরক্ষণ
+
+            // 201 Created স্ট্যাটাস সহ নতুন তৈরি হওয়া রিসোর্স রিটার্ন
+            return CreatedAtAction(nameof(GetEmp), new { id = emp.Id }, emp);
+        }
+
+        // 4. PUT: /api/Emps/{id} (বিদ্যমান ডেটা আপডেট)
+        // নির্দিষ্ট ID-এর কর্মচারীর ডেটা আপডেট করে
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutEmp(int id, Emp emp)
+        {
+            if (id != emp.Id)
+            {
+                return BadRequest("URL এবং ডেটার ID মেলে না।");
+            }
+
+            // Entity State কে Modified হিসেবে চিহ্নিত করা
+            _context.Entry(emp).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync(); // পরিবর্তন সংরক্ষণ
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Emp.Any(e => e.Id == id))
+                {
+                    return NotFound("আপডেট করার জন্য কর্মচারী খুঁজে পাওয়া যায়নি।");
+                }
+                else
+                {
+                    throw; // ডেটাবেস সংক্রান্ত ত্রুটি
+                }
+            }
+
+            // সফলভাবে আপডেট হলে 204 No Content রিটার্ন
+            return NoContent();
+        }
+
+        // 5. DELETE: /api/Emps/{id} (নির্দিষ্ট ডেটা মুছে ফেলা)
+        // নির্দিষ্ট ID-এর কর্মচারী মুছে ফেলে
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteEmp(int id)
+        {
+            var emp = await _context.Emp.FindAsync(id);
+            if (emp == null)
+            {
+                return NotFound("মুছে ফেলার জন্য কর্মচারী খুঁজে পাওয়া যায়নি।");
+            }
+
+            _context.Emp.Remove(emp);
+            await _context.SaveChangesAsync(); // পরিবর্তন সংরক্ষণ
+
+            // সফলভাবে মুছে ফেলা হলে 204 No Content রিটার্ন
+            return NoContent();
+        }
+    }
+
+
+}
+
+
+
+
+#####################  .http: ##################### 
+
+# @RestAPI_HostAddress = http://localhost:5102
+
+# GET {{RestAPI_HostAddress}}/weatherforecast/
+# Accept: application/json
+
+###
+
+
+# ভেরিয়েবল সেটআপ: আপনার অ্যাপ্লিকেশনের URL এখানে সেট করুন
+@host = http://localhost:5102
+@empsRoute = {{host}}/api/Employee
+@id = 5
+@contentType = application/json
+
+### ১. সকল কর্মচারী পুনরুদ্ধার করুন (GET ALL)
+GET {{empsRoute}} 
+Accept: {{contentType}}
+
+###
+### ২. নতুন কর্মচারী তৈরি করুন (POST)
+# Id এখানে দেওয়া হয়নি, কারণ এটি ডেটাবেস দ্বারা স্বয়ংক্রিয়ভাবে তৈরি হবে।
+POST {{empsRoute}}
+Content-Type: {{contentType}}
+
+{
+    "name": "আব্দুল করিম",
+    "designation": "সিনিয়র ডেভেলপার",
+    "email": "abdul.karim@example.com",
+    "userId": 101
+}
+
+###
+### ৩. নির্দিষ্ট কর্মচারী পুনরুদ্ধার করুন (GET BY ID)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা ID-এর কর্মচারীকে খুঁজে দেখা।
+GET {{empsRoute}}/{{id}}
+Accept: {{contentType}}
+
+###
+### ৪. কর্মচারী ডেটা আপডেট করুন (PUT)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা কর্মচারীর ডেটা পরিবর্তন করা।
+# PUT অনুরোধে Id অবশ্যই JSON বডিতেও অন্তর্ভুক্ত করতে হবে।
+PUT {{empsRoute}}/{{id}}
+Content-Type: {{contentType}}
+
+{
+    "id": {{id}},
+    "name": "আব্দুল করিম আহমেদ",
+    "designation": "টেকনিক্যাল লিড", 
+    "email": "abdul.ahmed@example.com", 
+    "userId": 101 
+}
+
+###
+### ৫. কর্মচারী মুছে ফেলুন (DELETE)
+# উদ্দেশ্য: @id ভেরিয়েবলে সেট করা কর্মচারীর ডেটা ডেটাবেস থেকে মুছে ফেলা।
+DELETE {{empsRoute}}/{{id}}
+Accept: */*
+
+
+
+
+
+
+
+
+
+.
