@@ -1,6 +1,9 @@
 
 Weblink: https://github.com/teddysmithdev/
 
+DTO = Data Transfer Object,
+MAPPER= a Tools
+
 API UI/টুল like POSTMAN:
 01.Scalar(Latest)
 dotnet add package Scalar.AspNetCore
