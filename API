@@ -1,5 +1,14 @@
 
-Weblink: https://github.com/teddysmithdev/FinShark
+Weblink: https://github.com/teddysmithdev/
+
+API UI like POSTMAN:
+01.Scalar(Latest)
+dotnet add package Scalar.AspNetCore
+
+02. Swagger UI(Old way)
+dotnet add package Swashbuckle.AspNetCore
+
+*** and configure Program.cs for both Scalar and Swagger
 
 
 ##################### Controller: ##################### 
