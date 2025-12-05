@@ -1,7 +1,7 @@
 
 Weblink: https://github.com/teddysmithdev/
 
-API UI like POSTMAN:
+API UI/টুল like POSTMAN:
 01.Scalar(Latest)
 dotnet add package Scalar.AspNetCore
 
