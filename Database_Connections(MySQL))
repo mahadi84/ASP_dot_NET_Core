@@ -1,4 +1,71 @@
 
+ASP.NET Core-এ ডাটাবেজ কানেকশন করার মোটামুটি ৪টি প্রচলিত পথ আছে। 
+তবে “সেরা পথ” সবসময় একই থাকে না; প্রকল্পের ধরণ, টিমের স্কিল, এবং ভবিষ্যতের স্কেলিং—সবকিছু মিলিয়েই ঠিক করতে হয়।
+
+🌱 একটি ছোট গল্প:
+ভাবো তোমার অ্যাপ একটা রেস্টুরেন্ট। ডাটাবেজ হলো কিচেন।
+
+🎯 তাহলে “সেরা উপায়” কোনটা?
+👉 Normal CRUD, REST API, Subscription-based SaaS, শিক্ষামূলক প্রজেক্ট → EF Core (Best) 
+          ✔ একজন professional ওয়েটার। তুমি শুধু order দাও, সে নিজেই কিচেন থেকে food নিয়ে আসে।
+          ✔ Migration দিয়ে DB auto-create/update
+          ✔ Code clean
+          ✔ Database migration easy
+          ✔ Dependency Injection সহজ
+          ✔ Model-based architecture
+          ✔ Repository pattern follow করা সহজ
+
+👉 High performance analytics, enterprise apps → Dapper (Best choice) |  
+          ✔ EF Core এর চেয়ে দ্রুত | সে কম কথায় কাজ শেষ করে।
+          ✔ Lightweight 
+          ✔ Control বেশি (SQL তুমি লিখবে)
+Example:
+          using var connection = new SqlConnection(connectionString);
+          var employees = await connection.QueryAsync<Employee>("SELECT * FROM Employees");
+
+           
+👉 খুব Low-level control / Legacy system → ADO.NET |  
+          ✔ Speed ভালো
+          ✔ পূর্ণ নিয়ন্ত্রণ
+          ✔ কিন্তু লম্বা কোড লিখতে হয়। Maintain করা কষ্টকর।
+          ** তুমি নিজেই কিচেনে ঢুকে রান্না করে আনো! 
+Example:
+          using (SqlConnection con = new SqlConnection(connectionString)) {
+              con.Open();
+              SqlCommand cmd = new SqlCommand("SELECT * FROM Employees", con);
+              SqlDataReader reader = cmd.ExecuteReader();
+          }
+
+👉 Heavy stored-procedure-based system → Dapper/ADO.NET + Stored Procedure 
+          ✔ Security ভালো
+          ✔ ব্যবসায়িক লজিক DB-র ভেতরে রাখা যায়
+          ✔ API ছোট থাকে
+          ✔ কিচেনে আগে থেকে প্রস্তুত কাস্টম রান্না, তুমি শুধু নাম বললেই হয়ে যায়।
+Example(Dapper):
+          var employees = connection.Query<Employee>( "GetEmployees",  commandType: CommandType.StoredProcedure);
+
+          
+
+
+
+৯০% ক্ষেত্রে EF Core ব্যবহার করাই সবচেয়ে ভালো, কারণ:
+Code clean
+Database migration easy
+Dependency Injection সহজ
+Model-based architecture
+Repository pattern follow করা সহজ
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ##################################
