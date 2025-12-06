@@ -2,12 +2,8 @@
 
 
 
-✔ API কী, কেন, কীভাবে?
-✔ API এর ভেতরের জীবনচক্র (Request → Response)
-✔ Controller বনাম Endpoint
-✔ API security (JWT, API Key, Role-based)
-✔ API versioning
-✔ API Hosting
+✔ API কী, কেন?
+
 
 
 
