@@ -1,5 +1,6 @@
 Date: 17 Nov 2025
 
+
 💻 Prerequisites and Installation
 
 
@@ -11,6 +12,17 @@ Download the latest Long Term Support (LTS) or Standard Term Support (STS) versi
 Installing the SDK automatically installs the necessary runtimes and the ASP.NET Core components.
 
 ## Choose and Install an IDE(Visual Studio 2022 Community edition):
+IDE stands for Integrated Development Environment 💻.
 Visual Studio (Recommended for Windows): 
 Download and install the latest version of Visual Studio (e.g., Visual Studio 2022 Community edition is free for individuals). 
 During installation, ensure you select the "ASP.NET and web development" workload to get all the templates and tools for MVC development.
+
+
+
+
+
+
+
+
+
+.
