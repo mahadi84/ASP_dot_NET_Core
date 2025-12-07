@@ -12,7 +12,7 @@ What steps must I follow? Don't miss steps that make my API insecure in Bangla
 What are the main security measures to create robust CRUD API with .net using mysql? point wise with solution. in Bangla 
 #################################################################################################################################################### 
 
-AA, CORs, DTO, DoS, EH, P, SI, SDTx
+AA, CORs, DTO, DoS, EH, SP, SDTx, SI, 
 
 
 আপনার .NET CRUD API কে MySQL ডাটাবেস ব্যবহার করে শক্তিশালী (robust) এবং নিরাপদ (secure) করার জন্য প্রধান নিরাপত্তা ব্যবস্থাগুলি নিম্নলিখিত পয়েন্টগুলিতে সমাধান সহ দেওয়া হলো:
@@ -25,7 +25,7 @@ AA, CORs, DTO, DoS, EH, P, SI, SDTx
      JWT (JSON Web Token) ব্যবহার: প্রমাণীকরণের জন্য JWT Bearer স্কিম ব্যবহার করুন। সফল লগইনের পর একটি স্বাক্ষরিত (Signed) টোকেন ইস্যু করুন।
      Role-Based Authorization: প্রতিটি এন্ডপয়েন্টে `[Authorize]` অ্যাট্রিবিউট ব্যবহার করুন এবং ব্যবহারকারীর ভূমিকার (Role) ভিত্তিতে অ্যাক্সেস নিয়ন্ত্রণ করুন, যেমন: `[Authorize(Roles = "Admin")]`।
 
-### ২. পাসওয়ার্ড ব্যবস্থাপনা (Password Management)
+### ২. পাসওয়ার্ড ব্যবস্থাপনা (Secure Password Management)
  সমস্যা: ডাটাবেসে সাধারণ টেক্সটে (Plain Text) পাসওয়ার্ড সংরক্ষণ করা।
  সমাধান:
      হ্যাশিং (Hashing): পাসওয়ার্ড সংরক্ষণের আগে সর্বদা BCrypt.Net-Next বা Argon2 এর মতো শক্তিশালী হ্যাশিং অ্যালগরিদম ব্যবহার করে হ্যাশ করুন।
