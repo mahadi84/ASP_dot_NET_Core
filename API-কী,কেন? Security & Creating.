@@ -8,6 +8,7 @@ JWT, TOKEN, Scalar এবং Swagger
 
 
 01. What are the main security measures to create robust CRUD API with .net using mysql? point wise with solution. in Bangla 
+
 02. Create a secure(DTO, Mapper, Token, Validation, Authentication, Authorization, Version control ane more) and robust API for CRUD with .NET using MySQL Database. 
 What steps must I follow? Don't miss steps that make my API insecure in Bangla
 
