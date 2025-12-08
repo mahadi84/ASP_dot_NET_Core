@@ -7,6 +7,9 @@ JSON vs XML, VERSION Control, DTO,Mapper,
 Repository Pattern + Data Injection(DI)
 JWT, TOKEN, Scalar এবং Swagger 
 
+Sorting(Ascending/Decending), 
+Filtering(With condition)
+Pagination(Load data in a page)
 
 01. What are the main security measures to create robust CRUD API with .net using mysql? point wise with solution. in Bangla 
 
