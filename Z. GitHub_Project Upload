@@ -5,8 +5,10 @@
 
 git init
 git add .
+git config --global user.email "mahadi.engr@gmail.com"
+git config --global user.name "mahadi**"
 git commit -m "Initial commit of .NET project"
-git remote add origin https://github.com/mahadi84/MyDotNetWebApp.git
+git remote add origin https://github.com/mahadi84/MyDotNetWebAppName
 git branch -M main
 git push -u origin main
 
