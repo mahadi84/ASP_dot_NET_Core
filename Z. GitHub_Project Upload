@@ -8,7 +8,15 @@ git add .
 git config --global user.email "mahadi.engr@gmail.com"
 git config --global user.name "mahadi**"
 git commit -m "Initial commit of .NET project"
-git remote add origin https://github.com/mahadi84/MyDotNetWebAppName
+git remote add origin https://github.com/mahadi84/MyDotNetWebAppName     
+
+*** if shows "error: remote origin already exists." 
+      **check the set url: git remote -v
+      **set url: git remote set-url origin https://github.com/yourusername/new-repo.git
+
+OR if show this "! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'https://github.com/mahadi84/Login_and_CRUD'"
+
 git branch -M main
 git push -u origin main
 
