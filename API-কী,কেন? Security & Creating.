@@ -3,9 +3,11 @@ Weblink: https://github.com/teddysmithdev/
 
 API কী?   কেন?  API কীভাবে কাজ করে?
 
-JSON vs XML, VERSION Control, DTO,Mapper, 
-Repository Pattern + Data Injection(DI)
-JWT, JWT-Vs-Cookie, Sessoin-Vs-JWT-Vs-Cookie:
+JSON vs XML, VERSION Control, 
+DTO Vs Mapper, 
+Repository Pattern(Interface,Class) + Data Injection(DI)
+JWT, 
+JWT-Vs-Cookie, Sessoin-Vs-JWT-Vs-Cookie:
 TOKEN, 
 Scalar এবং Swagger 
 
