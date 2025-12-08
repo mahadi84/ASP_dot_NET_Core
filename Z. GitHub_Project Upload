@@ -13,7 +13,7 @@ git push -u origin main
 যেকোনো পরিবর্তন করে সহজেই:
 git add . 
 git commit -m "Message"
-git push`
+git push
 কমান্ডের মাধ্যমে আপডেট করতে পারবেন।
 
 
