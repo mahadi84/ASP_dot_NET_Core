@@ -112,6 +112,28 @@ namespace test.Models
 }
 
 ############ Controller ##############
+
+[Authorize]
+[Route("api/stock")]
+[Route("{id:int}")]
+
+[ApiController]
+
+[HttpGet("{id:int}")]
+[HttpGet]
+[HttpPost]
+[HttpPut]
+[HttpDelete]
+
+public async Task<IActionResult> GetAll([FromQuery] QueryObject query){}
+public async Task<IActionResult> GetById([FromRoute] int id){}
+public async Task<IActionResult> Create([FromBody] CreateStockRequestDto stockDto){}
+public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto updateDto){}
+public async Task<IActionResult> Delete([FromRoute] int id){}
+
+
+----------
+
 using CRUD.Data;
 using CRUD.Models;
 using Microsoft.AspNetCore.Mvc;
