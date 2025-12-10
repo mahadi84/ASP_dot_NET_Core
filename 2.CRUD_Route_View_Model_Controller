@@ -10,6 +10,32 @@ asp-controller="Product1"    //Directs the request to the Product1Controller.
 asp-action="ShowAll"         //Directs the request to the ShowAll() method within the ProductController.
 >Home</a>
 
+###################### CRUD ###################
+CREAT:
+context.Students.Add(newStudent);
+await context.SaveChangesAsync(); // ডেটাবেসে সংরক্ষণ
+
+READ:
+var allStudents = await context.Students.ToListAsync(); 
+var student = await context.Students.FirstOrDefaultAsync(s => s.Id == 1);
+
+UPDATE:
+var studentToUpdate = await context.Students.FindAsync(1);
+if (studentToUpdate != null)
+{
+    studentToUpdate.Name = "New Name";
+    await context.SaveChangesAsync(); // ডেটাবেসে আপডেট
+}
+
+DELETE:
+var studentToDelete = await context.Students.FindAsync(1);
+if (studentToDelete != null)
+{
+    context.Students.Remove(studentToDelete);
+    await context.SaveChangesAsync(); // ডেটাবেস থেকে মুছে ফেলা
+}
+
+
 
 ############## Route(Program.cs) ##############
 app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll}" );
