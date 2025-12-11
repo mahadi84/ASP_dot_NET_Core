@@ -71,7 +71,6 @@ public async Task<IActionResult> GetAll([FromQuery] QueryObject query){}   //অ
 public async Task<IActionResult> Create([FromBody] CreateStockRequestDto stockDto){} //অ্যাট্রিবিউট ([FromBody]):  অর্থ: "HTTP রিকোয়েস্টের বডি (Body) থেকে নাও।" উদাহরণ: JSON/XML বডিতে ডেটা পাঠানো হয়, যা ফর্মেট করা হয় C# ক্লাসে। 
 public async Task<IActionResult> GetById([FromRoute] int id){}            //অ্যাট্রিবিউট ([FromRoute]):   অর্থ: "রুট প্যারামিটার (Route Parameter) থেকে নাও।" উদাহরণ URL: /api/stock/5
 public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateStockRequestDto updateDto){}
-public async Task<IActionResult> Delete([FromRoute] int id){}
 
 
 ----------
