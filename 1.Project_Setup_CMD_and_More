@@ -49,15 +49,15 @@ How to uninstall an package:
 
 ### প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) **Entity Framework Core (EF Core)
 
-** .NET CLI:(
-View>Terminal  
+** .NET CLI:(View>Terminal>Select:Developer Command Prompt)
 Select:Developer Command Prompt)
 dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 
+dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
 
-For: authentication and Authorization
-dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** For Identity UI  to hash password
+
+dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
 
 OR
