@@ -21,11 +21,11 @@ Migration:
 
 Hide table Row to other dev: 
 ----------------------------
-Model → ModelDTO → mapper → Controller
+ Model → ModelDTO → mapper → Controller
 
 Repository Pattern:
 -------------------
-Interface → Class → Controller
+ Interface → Class → Controller
 
 Relationship(Need a package name: nuwton ):
 -------------------------------------------
@@ -35,14 +35,14 @@ Relationship(Need a package name: nuwton ):
 
 Check installed packages version CMD:
 ------------------------------------
-dotnet list package 
-dotnet list package --include-transitive
+ dotnet list package 
+ dotnet list package --include-transitive
 
 
 How to uninstall an package:
 ----------------------------
-dotnet remove package Microsoft.EntityFrameworkCore.Tools  // .NET CLI
-Uninstall-Package Pomelo.EntityFrameworkCore.MySql  //NetGut Package Manager
+ dotnet remove package Microsoft.EntityFrameworkCore.Tools  // .NET CLI
+ Uninstall-Package Pomelo.EntityFrameworkCore.MySql  //NetGut Package Manager
 
 
 
