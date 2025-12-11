@@ -1,6 +1,6 @@
 
-### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
-          CMD in project folder:
+
+### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup):           CMD in project folder:
             dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
             cd MyMvcApp
                 dotnet run      **(প্রয়োজনে restore+build) + অবশেষে প্রোগ্রাম চালানো
@@ -32,12 +32,10 @@ Relationship(Need a package name: nuwton ):
  Model Stock: List<Comment> C { get; set; }  //One to many
  Model Comment: int? StockId;    //Many to one
 
-
 Check installed packages version CMD:
 ------------------------------------
  dotnet list package 
  dotnet list package --include-transitive
-
 
 How to uninstall an package:
 ----------------------------
