@@ -5,7 +5,7 @@ How to: (SoftwareDevelopmentManager-H(3)R-Pack)
 3. Create Migration
 4. Hide table Row to other dev
 5. Use Repository Pattern
-6. Create Relationship(Need a package name: nuwton )
+6. Create Relationship-ONE TO MANY:(Need a package name: nuwton )
 7. Install/uninstall an package
 8. Check installed packages version CMD
 and  
@@ -43,10 +43,27 @@ Repository Pattern:
 -------------------
  Interface → Class → Controller
 
-Relationship(Need a package name: nuwton ):
+Relationship-ONE TO MANY:(Need a package name: nuwton ):
 -------------------------------------------
- Model Stock: List<Comment> C { get; set; }  //One to many
- Model Comment: int? StockId;    //Many to one
+ONE TO MANY:
+
+Model Post:
+// নেভিগেশন প্রপার্টি (Navigation Property)
+// এটি One-to-Many রিলেশনশিপের 'One' দিক।
+ // এই পোস্টে যতগুলো কমেন্ট আছে, তার একটি তালিকা (List) এটি।
+ public List<Comment> Comments { get; set; } = new List<Comment>();
+
+Model Comments:
+// ফরেন কী (Foreign Key)
+// এটি এই কমেন্টটি কোন পোস্টের সাথে যুক্ত, সেই পোস্টের Id ধরে রাখে।
+// এটি One-to-Many রিলেশনশিপের 'Many' দিক।
+public int PostId { get; set; } 
+
+// নেভিগেশন প্রপার্টি (Navigation Property)
+// এই কমেন্টটি যে পোস্টে করা হয়েছে, সেই পোস্ট অবজেক্টটি।
+public Post Post { get; set; }
+
+
 
 
 Install/uninstall an package:
@@ -82,6 +99,8 @@ OR
 **Tools>NetGut Package Manager> Package Manager Console
    Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
    Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।      
+
+
 
 
 
