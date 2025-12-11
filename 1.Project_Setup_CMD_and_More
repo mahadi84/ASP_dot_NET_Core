@@ -1,4 +1,17 @@
 
+How to:
+1. Initial Project Setup
+2. DB connection
+3. Migration
+4. Hide table Row to other dev
+5. Repository Pattern
+6. Relationship(Need a package name: nuwton )
+7. Install/uninstall an package
+8. Check installed packages version CMD
+9. Required Packages' Name
+
+
+
 
 ### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup):           CMD in project folder:
             dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
@@ -33,15 +46,17 @@ Relationship(Need a package name: nuwton ):
  Model Stock: List<Comment> C { get; set; }  //One to many
  Model Comment: int? StockId;    //Many to one
 
+
+Install/uninstall an package:
+------------------------------------
+dotnet add package pack_name --version 9.0.0.
+ dotnet remove package Microsoft.EntityFrameworkCore.Tools  // .NET CLI
+ Uninstall-Package Pomelo.EntityFrameworkCore.MySql  //NetGut Package Manager
+
 Check installed packages version CMD:
 ------------------------------------
  dotnet list package 
  dotnet list package --include-transitive
-
-How to uninstall an package:
-----------------------------
- dotnet remove package Microsoft.EntityFrameworkCore.Tools  // .NET CLI
- Uninstall-Package Pomelo.EntityFrameworkCore.MySql  //NetGut Package Manager
 
 
 
