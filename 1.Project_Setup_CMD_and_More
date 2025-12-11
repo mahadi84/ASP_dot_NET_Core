@@ -73,7 +73,7 @@ dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Cor
 dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
 
 
-dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
+dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** Help to create view for Login,Register and many more.
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
 
 OR
