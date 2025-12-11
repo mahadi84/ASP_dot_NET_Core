@@ -11,7 +11,8 @@
 
 DB connection:
 --------------
- Install EF(Core + MySQL) → Data Folder (AppDbContext.cs) → Route(add service) → Dependancy Injectoin(to use connection)
+ Install EF(Core + MySQL)/Dapper/ADO.NET → Data Folder (AppDbContext.cs) → Route(add service) → Dependancy Injectoin(to use connection)
+
 
 Migration:
 ----------
