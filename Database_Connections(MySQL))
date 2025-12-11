@@ -60,27 +60,8 @@ Example(Dapper):
 
 **Entity Framework Core (EF Core)
 
-### ১. প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup)
-          CMD in project folder:
-            dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
-            cd MyMvcApp
-                dotnet run      **(প্রয়োজনে restore+build) + অবশেষে প্রোগ্রাম চালানো
-                dotnet restore  ** নতুন প্যাকেজ অ্যাড করলে বা পুরনোটা আপডেট করলে dotnet restore দিলে সব ঠিকমতো আপডেট হয়। ** বাজার করে আনা,
-                dotnet build    ** তারপর সেই প্যাকেজগুলো নিয়ে প্রজেক্টটা সফলভাবে কম্পাইল হয় কিনা দেখে নাও (build) **রান্না করে খাবার বানানো।
-
-
-### ২. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) **Entity Framework Core (EF Core)
-
-** .NET CLI:(
-View>Terminal  
-Select:Developer Command Prompt)
-dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-
-dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
-
-
-### ৩. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
+### 1. প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) **Entity Framework Core (EF Core)
+### 2. কানেকশন স্ট্রিং সেটআপ (Setup Connection String)
          -appsettings.json` ফাইলটি খুলুন এবং `ConnectionStrings` সেকশন যোগ করুন:
             {
               "ConnectionStrings": {
@@ -89,7 +70,7 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
               // অন্যান্য সেটিংস...
             }
 
-### ৪. মডেল এবং DbContext তৈরি করা (Create Model and DbContext Cass)
+### 3. মডেল এবং DbContext তৈরি করা (Create Model and DbContext Cass)
 
 `Models` ফোল্ডারে `User.cs` তৈরি করুন:
             public class User
@@ -152,7 +133,7 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
                     }
 
 
-### ৫. পরিষেবা কনফিগারেশন (Service Configuration) at Route(Program.cs)
+### 4. পরিষেবা কনফিগারেশন (Service Configuration) at Route(Program.cs)
           using YourProjectName.Data; // আপনার DbContext namespace
           using Microsoft.EntityFrameworkCore;
         --
@@ -161,7 +142,7 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
           // MySQL প্রোভাইডার কনফিগার করুন
           builder.Services.AddDbContext<ApplicationDbContext>( options => options.UseMySql( connectionString, ServerVersion.AutoDetect(connectionString)));
 
-### ৬. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
+### 5. মাইগ্রেশন তৈরি ও প্রয়োগ করা (Create and Apply Migrations)
      Add-Migration InitialCreate  **মাইগ্রেশন তৈরি: এটি ডাটাবেসের স্কিমা পরিবর্তনের জন্য একটি ফাইল তৈরি করবে।
      Update-Database              **ডাটাবেস আপডেট: এটি আপনার MySQL ডাটাবেসে টেবিল তৈরি করবে।
 
@@ -170,7 +151,7 @@ dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদ
 
 **যদি এটি সফলভাবে চলে, তবে আপনার `Login` টেবিলটি MySQL ডাটাবেসে তৈরি হয়ে যাবে।
 
-### ৭. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
+### 6. MVC কন্ট্রোলারে ব্যবহার (Use in MVC Controller)
        using YourProjectName.Data;  **add line to controller
 
 
