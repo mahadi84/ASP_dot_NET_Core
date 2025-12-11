@@ -63,6 +63,20 @@ public int PostId { get; set; }
 // এই কমেন্টটি যে পোস্টে করা হয়েছে, সেই পোস্ট অবজেক্টটি।
 public Post Post { get; set; }
 
+ApplicationDdContext:
+// DbContext এ মডেলগুলো নিবন্ধন করা
+        public DbSet<Post> Posts { get; set; }
+        public DbSet<Comment> Comments { get; set; }
+
+        // রিলেশনশিপ কনফিগার করা (অপশনাল, কিন্তু নিরাপদ)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {          
+            // Post এবং Comment-এর মধ্যে সম্পর্ক
+            modelBuilder.Entity<Comment>()
+                .HasOne(c => c.Post)             // প্রতিটি কমেন্টের একটি পোস্ট থাকবে (The 'One' side)
+                .WithMany(p => p.Comments)       // সেই পোস্টে অনেক কমেন্ট থাকতে পারে (The 'Many' side)
+                .HasForeignKey(c => c.PostId);   // PostId কলামটি ফরেন কী হিসাবে ব্যবহার করা হবে
+        }
 
 
 
