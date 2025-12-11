@@ -11,7 +11,7 @@
 
 DB connection:
 --------------
- EF(Core + MySQL) → Data (AppDbContext) → Route → Dependancy Injectoin
+ Install EF(Core + MySQL) → Data Folder (AppDbContext.cs) → Route(add service) → Dependancy Injectoin(to use connection)
 
 Migration:
 ----------
