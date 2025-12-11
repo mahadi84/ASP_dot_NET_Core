@@ -13,6 +13,7 @@ Required Packages' Name
 
 
 
+------------------------------
 
 ### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup):           CMD in project folder:
             dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
@@ -21,7 +22,7 @@ Required Packages' Name
                 dotnet restore  ** নতুন প্যাকেজ অ্যাড করলে বা পুরনোটা আপডেট করলে dotnet restore দিলে সব ঠিকমতো আপডেট হয়। ** বাজার করে আনা,
                 dotnet build    ** তারপর সেই প্যাকেজগুলো নিয়ে প্রজেক্টটা সফলভাবে কম্পাইল হয় কিনা দেখে নাও (build) **রান্না করে খাবার বানানো।
 
-----------
+-----------------------------
 
 DB connection:
 --------------
