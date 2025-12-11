@@ -1,14 +1,15 @@
 
 How to:
 1. Initial Project Setup
-2. DB connection
-3. Migration
+2. Connection DB 
+3. Create Migration
 4. Hide table Row to other dev
-5. Repository Pattern
-6. Relationship(Need a package name: nuwton )
+5. Use Repository Pattern
+6. Create Relationship(Need a package name: nuwton )
 7. Install/uninstall an package
 8. Check installed packages version CMD
-9. Required Packages' Name
+and  
+Required Packages' Name
 
 
 
