@@ -113,14 +113,15 @@ namespace test.Models
 
 ############ Controller ##############
 
-[Authorize]
+[Authorize]            //অ্যাট্রিবিউট (সিকিউরিটি অ্যাট্রিবিউট)
+[Route]                //শুধু URL প্যাটার্ন। (মেথড নিরপেক্ষ)
 [Route("api/stock")]
 [Route("{id:int}")]
 
 [ApiController]
 
 [HttpGet("{id:int}")]
-[HttpGet]
+[HttpGet]             //URL প্যাটার্ন + HTTP GET মেথড। (মেথড নির্দিষ্ট)
 [HttpPost]
 [HttpPut]
 [HttpDelete]
