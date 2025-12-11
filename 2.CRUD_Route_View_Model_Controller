@@ -1,14 +1,5 @@
 
-## Menu:   
 
-01. <a asp-route="Product1">Home</a> 
-Note: Using asp-route="AllProducts" is the best practice.
-
-02.<a
-asp-area=""
-asp-controller="Product1"    //Directs the request to the Product1Controller.
-asp-action="ShowAll"         //Directs the request to the ShowAll() method within the ProductController.
->Home</a>
 
 ###################### CRUD ###################
 
@@ -64,6 +55,19 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
 
 
 ############ View ##############
+
+## Menu:   
+
+01. <a asp-route="Product1">Home</a> 
+Note: Using asp-route="AllProducts" is the best practice.
+
+02.<a
+asp-area=""
+asp-controller="Product1"    //Directs the request to the Product1Controller.
+asp-action="ShowAll"         //Directs the request to the ShowAll() method within the ProductController.
+>Home</a>
+
+-----------------
 @{
     ViewData["Title"] = "Home Page";
 }
@@ -114,6 +118,8 @@ namespace test.Models
 ############ Controller ##############
 
 [Authorize]            //অ্যাট্রিবিউট (সিকিউরিটি অ্যাট্রিবিউট)
+[ValidateAntiForgeryToken]
+
 [Route]                //শুধু URL প্যাটার্ন। (মেথড নিরপেক্ষ)
 [Route("api/stock")]
 [Route("{id:int}")]
@@ -351,10 +357,6 @@ public IActionResult Index(){
             return StatusCode(500, "Error deleting the user: " + ex.Message);
         }
     }
-
-
-
-
 
 
 
