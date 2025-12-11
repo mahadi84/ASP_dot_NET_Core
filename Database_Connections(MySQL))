@@ -6,7 +6,7 @@ ASP.NET Core-এ ডাটাবেজ কানেকশন করার মো
 ভাবো তোমার অ্যাপ একটা রেস্টুরেন্ট। ডাটাবেজ হলো কিচেন।
 
 🎯 তাহলে “সেরা উপায়” কোনটা?
-👉 Normal CRUD, REST API, Subscription-based SaaS, শিক্ষামূলক প্রজেক্ট → EF Core (Best) 
+1. 👉 Normal CRUD, REST API, Subscription-based SaaS, শিক্ষামূলক প্রজেক্ট → EF Core (Best) 
           ✔ একজন professional ওয়েটার। তুমি শুধু order দাও, সে নিজেই কিচেন থেকে food নিয়ে আসে।
           ✔ Migration দিয়ে DB auto-create/update
           ✔ Code clean
@@ -15,7 +15,7 @@ ASP.NET Core-এ ডাটাবেজ কানেকশন করার মো
           ✔ Model-based architecture
           ✔ Repository pattern follow করা সহজ
 
-👉 High performance analytics, enterprise apps → Dapper (Best choice) |  
+2. 👉 High performance analytics, enterprise apps → Dapper (Best choice) |  
           ✔ EF Core এর চেয়ে দ্রুত | সে কম কথায় কাজ শেষ করে।
           ✔ Lightweight 
           ✔ Control বেশি (SQL তুমি লিখবে)
@@ -24,7 +24,7 @@ Example:
           var employees = await connection.QueryAsync<Employee>("SELECT * FROM Employees");
 
            
-👉 খুব Low-level control / Legacy system → ADO.NET | 
+3. 👉 খুব Low-level control / Legacy system → ADO.NET | 
           ✔ এটা একদম “লো-লেভেল” পদ্ধতি।
           ✔ তুমি নিজেই SQL query লিখবে, command execute করবে, reader দিয়ে ডাটা পড়বে।
           ✔ সবকিছু ম্যানুয়ালি লম্বা কোড করতে হয়—ফ্রি-স্টাইলে কাজ করার freedom বেশি, কিন্তু পরিশ্রমও বেশি। Maintain করা কষ্টকর।
@@ -38,7 +38,7 @@ Example:
               SqlDataReader reader = cmd.ExecuteReader();
           }
 
-👉 Heavy stored-procedure-based system → Dapper/ADO.NET + Stored Procedure 
+4. 👉 Heavy stored-procedure-based system → Dapper/ADO.NET + Stored Procedure 
           ✔ Security ভালো
           ✔ ব্যবসায়িক লজিক DB-র ভেতরে রাখা যায়
           ✔ API ছোট থাকে
@@ -47,10 +47,6 @@ Example(Dapper):
           var employees = connection.Query<Employee>( "GetEmployees",  commandType: CommandType.StoredProcedure);
 
           
-
-
-
-
 
 
 
