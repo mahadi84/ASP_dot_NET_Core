@@ -9,58 +9,14 @@
 **Login + Register + Forgot Password + Roles + Role-based Authorization + MySQL Database**
 এবং সবকিছু কাজ করবে ASP.NET Core 8/9 মিনিমাল হোস্টিং মডেলে।
 
----
-
-# 🏗️ ধাপ ১: নতুন MVC প্রজেক্ট তৈরি
-Terminal / CMD / VS Package Manager:
-```
-dotnet new mvc -n MyAuthProject
-cd MyAuthProject
-```
-
-
-# 🧩 ধাপ ২: প্রয়োজনীয় প্যাকেজ ইনস্টল
-### ✔ MySQL EF Core Provider
-
-dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  অফিশিয়ালি Pomelo সবচেয়ে ভালো:
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+# 🚀 ধাপ 1
 
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    **সাধারণত MVC template-এ থাকে, তবু নিশ্চিত করার জন্য
 dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** For Identity UI  
 
 
-# 🧬 ধাপ ৩: ApplicationDbContext তৈরি করা
-**Data/ApplicationDbContext.cs**
 
-```csharp
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
-
-namespace MyAuthProject.Data
-{
-    public class ApplicationDbContext : IdentityDbContext
-    {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options)
-        {
-        }
-    }
-}
-```
-
----
-
-# ⚙️ ধাপ ৪: appsettings.json → MySQL Connection String
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=MyAuthDB;User=root;Password=1234;" // MySQL অনুযায়ী পাসওয়ার্ড/নাম পরিবর্তন করো।
-  }
-}
-```
-
-
-# 🚀 ধাপ ৫: Program.cs কনফিগারেশন (Core 8/9 মডেল)
+# 🚀 ধাপ 2: Program.cs কনফিগারেশন (Core 8/9 মডেল)
 
 ```csharp
 using Microsoft.AspNetCore.Identity;
@@ -94,7 +50,7 @@ app.UseAuthorization(); // অবশ্যই আছে before, app.MapControlle
 
 ---
 
-# 🧱 ধাপ ৬: Identity UI Scaffold করা (UI পাওয়ার জন্য)
+# 🧱 ধাপ 3: Identity UI Scaffold করা (UI পাওয়ার জন্য)
 
 Visual Studio →
 **Right Click Project → Add → New Scaffolded Item → Identity**
@@ -116,7 +72,7 @@ Areas/Identity/Pages/Account/
 
 ---
 
-# 🗄️ ধাপ ৭: ডাটাবেজ তৈরি + Migration
+# 🗄️ ধাপ 4: ডাটাবেজ তৈরি + Migration
 
 ```
 dotnet ef migrations add Initial
@@ -127,7 +83,7 @@ dotnet ef database update
 
 ---
 
-# 👑 ধাপ ৮: Roles তৈরি করা (Admin, User ইত্যাদি)
+# 👑 ধাপ 5: Roles তৈরি করা (Admin, User ইত্যাদি)
 
 একবারের জন্য Program.cs–এ temporary role seeder দিতে পারো:
 
@@ -156,7 +112,7 @@ await CreateRoles(scope.ServiceProvider);
 
 ---
 
-# 🔐 ধাপ ৯: রোল অ্যাসাইন (Controller থেকে)
+# 🔐 ধাপ 6: রোল অ্যাসাইন (Controller থেকে)
 
 ```csharp
 var user = await _userManager.FindByEmailAsync("test@gmail.com");
@@ -165,7 +121,7 @@ await _userManager.AddToRoleAsync(user, "Admin");
 
 ---
 
-# 🚫 ধাপ ১০: Role-based Protect করা
+# 🚫 ধাপ 7: Role-based Protect করা
 
 ### Controller-level:
 
