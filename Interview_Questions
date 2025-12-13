@@ -1,0 +1,172 @@
+
+
+🧠 প্রশ্ন নিজেকে
+
+1. Controller কেন thin রাখা উচিত?
+2. কেন Entity সরাসরি API response হিসেবে দেওয়া উচিত না?
+3. Repository-তে business logic রাখা ভুল কেন?
+4. Async না ব্যবহার করলে high traffic এ কী সমস্যা হয়?
+5. DB-তে image রাখা খারাপ কেন?
+6. Validation Controller না Service-এ কেন রাখা ভালো?
+7. System Design- আমি এই system-টা ২ বছর পর maintain করতে পারবো তো?
+
+
+
+
+সব উদাহরণ ASP.NET Core (.NET 8/9 compatible)।
+
+---
+
+## 1️⃣ Controller কেন thin রাখা উচিত? (উদাহরণসহ)
+
+### ❌ ভুল (Fat Controller)
+public IActionResult Create(EmployeeDto dto)
+{
+    if (dto.Salary < 0)
+        return BadRequest();
+
+    var emp = new Employee { Name = dto.Name };
+    _context.Employees.Add(emp);
+    _context.SaveChanges();
+
+    return Ok();
+}
+```
+
+### ✅ সঠিক (Thin Controller)
+public IActionResult Create(EmployeeDto dto)
+{
+    _employeeService.CreateEmployee(dto);
+    return Ok();
+}
+```
+
+🔹 কেন?
+Controller শুধু request নেয় ও response দেয়; business logic Service-এ থাকলে code clean ও testable হয়।
+
+---
+
+## 2️⃣ কেন Entity সরাসরি API response হিসেবে দেওয়া উচিত না?
+
+### ❌ ভুল
+public Employee GetEmployee(int id)
+{
+    return _context.Employees.Find(id);
+}
+```
+
+(এতে Salary, InternalId, PasswordHash বের হতে পারে)
+
+### ✅ সঠিক (DTO ব্যবহার)
+public EmployeeDto GetEmployee(int id)
+{
+    var emp = _context.Employees.Find(id);
+    return new EmployeeDto { Name = emp.Name };
+}
+```
+
+🔹 কেন?
+Entity দিলে database structure ও sensitive data leak হতে পারে।
+
+---
+
+## 3️⃣ Repository-তে business logic রাখা ভুল কেন?
+
+### ❌ ভুল
+public void AddEmployee(Employee emp)
+{
+    if (emp.Salary < 0)
+        throw new Exception("Invalid salary");
+
+    _context.Employees.Add(emp);
+    _context.SaveChanges();
+}
+```
+
+### ✅ সঠিক
+// Service
+public void CreateEmployee(Employee emp)
+{
+    if (emp.Salary < 0)
+        throw new Exception();
+
+    _repo.Add(emp);
+}
+```
+
+🔹 কেন?
+Repository শুধু DB access-এর জন্য; business rule থাকলে architecture ভেঙে যায়।
+
+---
+
+## 4️⃣ Async না ব্যবহার করলে high traffic এ কী সমস্যা হয়?
+
+### ❌ Sync (Problem)
+public IActionResult GetAll()
+{
+    var data = _context.Employees.ToList(); // thread block
+    return Ok(data);
+}
+```
+
+### ✅ Async (Solution)
+public async Task<IActionResult> GetAll()
+{
+    var data = await _context.Employees.ToListAsync();
+    return Ok(data);
+}
+```
+
+🔹 কেন?
+Async না হলে thread block হয় → high traffic এ server slow/crash করে।
+
+---
+
+## 5️⃣ DB-তে image রাখা খারাপ কেন?
+
+### ❌ ভুল
+public byte[] EmployeeImage { get; set; }
+```
+
+### ✅ সঠিক
+public string ImagePath { get; set; }
+```
+
+🔹 কেন?
+DB-তে image রাখলে performance কমে, storage heavy হয়; file system + path অনেক efficient।
+
+---
+
+## 6️⃣ Validation Controller না Service-এ কেন রাখা ভালো?
+
+### ❌ Controller Validation
+public IActionResult Create(EmployeeDto dto)
+{
+    if (dto.Name == null)
+        return BadRequest();
+}
+```
+
+### ✅ Service Validation
+public void CreateEmployee(EmployeeDto dto)
+{
+    if (string.IsNullOrEmpty(dto.Name))
+        throw new Exception("Name required");
+}
+```
+
+🔹 কেন?
+Service validation reuse করা যায় (API, background job, future feature)—Controller শুধু entry point।
+
+---
+
+# 🧠 ৩০-সেকেন্ডে মনে রাখার শর্ট ফর্ম
+
+ Controller → Request/Response
+ Service → Business rules
+ Repository → Database
+ Async → Scalability
+ Image → File system
+ Validation → Service
+
+
