@@ -1,7 +1,97 @@
 
 
+01. 🎯 Tricky Follow-up Interview Questions (with Smart Answers)
+02. 🚀 Mid → Senior .NET Interview Questions & Answers
+03.  WHY DOT NET? Over Java or PHP.
 
-# 🚀 Mid → Senior .NET Interview Questions & Answers
+
+
+
+
+
+#############################################################################################
+   🎯 Tricky Follow-up Interview Questions (with Smart Answers)
+#############################################################################################
+
+
+চল—এখন আমি তোমাকে interviewer যেসব tricky follow-up প্রশ্ন করে (Mid → Senior level) সেগুলো দিচ্ছি।
+প্রতিটা প্রশ্নের সাথে short but powerful উত্তরও দিলাম, যেন তুমি চাপে পড়েও ঠিকভাবে বলতে পারো।
+
+
+# 🧠 Interview Survival Formula
+
+Before Answering:
+1. Trade-off বলো
+2. Real-world context দাও
+3. Absolute statement এড়িয়ে যাও
+
+## 🎯 Final Killer Closing Line (চাপের সময়)
+> আমি কোনো pattern blindly follow করি না—আমি context, scale এবং future impact বিবেচনা করে সিদ্ধান্ত নেই।
+
+
+# 🎯 Tricky Follow-up Interview Questions (with Smart Answers)
+
+## 1️⃣ “Controller thin বলছ—কিন্তু সব logic Service-এ দিলে কি Service fat হয়ে যাবে না?”
+স্মার্ট উত্তর:Service fat হয় না যদি business logic ছোট ছোট domain-focused method এ ভাগ করা হয় এবং cross-cutting concern আলাদা রাখা হয়।
+
+## 2️⃣ “DTO ব্যবহার করলে তো mapping overhead বাড়ে—তাহলে কেন DTO দরকার?”
+স্মার্ট উত্তর:DTO mapping overhead এর চেয়ে Entity expose করলে security ও maintainability risk অনেক বেশি, তাই DTO safer trade-off।
+
+## 3️⃣ “Repository pattern EF Core-এর উপর বাড়তি abstraction নয় কি?”
+স্মার্ট উত্তর:Simple app-এ abstraction বাড়তি হতে পারে, কিন্তু complex business rule ও testability দরকার হলে Repository উপকারী।
+
+## 4️⃣ “সব জায়গায় async ব্যবহার করলে কি performance সবসময় বাড়ে?”
+স্মার্ট উত্তর:Async CPU-bound কাজের জন্য নয়; I/O-bound কাজের ক্ষেত্রে async scalability বাড়ায়।
+
+## 5️⃣ “AsNoTracking ব্যবহার করলে update কীভাবে হবে?”
+স্মার্ট উত্তর:`AsNoTracking` শুধুমাত্র read-only query-তে ব্যবহার করি; update করতে হলে entity attach বা tracked query ব্যবহার করি।
+
+## 6️⃣ “একটা বড় CSV upload এক request-এ করা কি safe?”
+স্মার্ট উত্তর:না, বড় CSV upload background job বা chunk-based processing ছাড়া করলে timeout ও memory issue হয়।
+
+## 7️⃣ “File system-এ image রাখলে multiple server হলে কী হবে?”
+স্মার্ট উত্তর:Multi-server setup-এ shared storage বা cloud storage (Azure Blob, S3) ব্যবহার করতে হয়।
+
+## 8️⃣ “Singleton service-এ HttpContext ব্যবহার করলে কী সমস্যা?”
+স্মার্ট উত্তর:Singleton shared থাকে, তাই HttpContext leak বা data mismatch হতে পারে—এটি Scoped service হওয়া উচিত।
+
+## 9️⃣ “Client-side validation থাকলে server-side কেন দরকার?”
+স্মার্ট উত্তর:Client-side validation user experience এর জন্য, server-side validation security ও data integrity এর জন্য।
+
+## 🔟 “Transaction slow করে—তাহলে সব জায়গায় কেন ব্যবহার করব?”
+স্মার্ট উত্তর:Transaction critical data consistency নিশ্চিত করে; সব জায়গায় নয়, কিন্তু যেখানে atomicity দরকার সেখানে অবশ্যই ব্যবহার করি।
+
+## 1️⃣1️⃣ “CQRS তো complex—তবুও কেন ব্যবহার করব?”
+স্মার্ট উত্তর:Small system-এ CQRS দরকার নেই; large read-heavy system-এ এটি scalability ও performance বাড়ায়।
+
+## 1️⃣2️⃣ “EF Core ছাড়াই Dapper কেন ব্যবহার করব?”
+স্মার্ট উত্তর:Complex join বা read-heavy scenario-তে Dapper faster ও lightweight হয়, তাই hybrid approach ব্যবহার করি।
+
+## 1️⃣3️⃣ “সব error catch করলে debugging কঠিন হয় না?”
+স্মার্ট উত্তর:Error swallow করি না; meaningful logging করে আবার throw বা proper response দেই।
+
+## 1️⃣4️⃣ “Pagination থাকলেও কেউ page=1, size=100000 দিলে?”
+স্মার্ট উত্তর:Server-side page size limit enforce করি যাতে abuse ও performance issue না হয়।
+
+## 1️⃣5️⃣ “Mid-level আর Senior পার্থক্য আবার বলো?” (Trap Question)
+স্মার্ট উত্তর:Mid-level feature deliver করে, Senior risk anticipate করে এবং long-term impact বিবেচনা করে সিদ্ধান্ত নেয়।
+
+
+
+## 🔜 Next Level Option
+আমি চাইলে এখন:
+
+ 🔥 Mock interview simulation (I ask → you answer → feedback)
+ 🧩 System design follow-up questions
+ 📝 Whiteboard explanation practice
+
+বললেই শুরু করব।
+
+
+#############################################################################################
+                       🚀 Mid → Senior .NET Interview Questions & Answers
+#############################################################################################
+
 
 
 Mid → Senior .NET interview questions + concise but strong answers ।
