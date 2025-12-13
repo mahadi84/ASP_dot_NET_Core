@@ -1,0 +1,285 @@
+
+
+
+আমি এটাকে Phase + tiny details আকারে সাজিয়েছি, ঠিক যেমন senior engineer চিন্তা করে। 
+তুমি healthcare-grade system design শেখে ফেলবে।
+
+# 💊 Pharmacy Inventory Management System – Full Roadmap (.NET Core)
+
+## 🎯 লক্ষ্য (Goal)
+একটি secure, accurate, audit-ready, online pharmacy inventory system যেখানে:
+
+* ভুল ওষুধ দেয়া যাবে না
+* Expired medicine detect হবে
+* Stock mismatch হবে না
+* Data legally & securely handled হবে
+
+# 🧱 Phase-0: Requirement & Compliance Understanding (সবচেয়ে গুরুত্বপূর্ণ)
+
+### Pharmacy-specific বাস্তব চাহিদা
+
+* Batch number tracking
+* Expiry date mandatory
+* Controlled drugs (restricted access)
+* Stock accuracy (no negative stock)
+* Audit trail (কে কখন কী করলো)
+
+👉 এখানে ভুল করলে পুরো system fail
+
+# 🟢 Phase-1: Core Foundation (Week 1)
+
+## Tech Stack (Recommended)
+
+* ASP.NET Core Web API (.NET 8/9)
+* EF Core + MySQL
+* JWT Authentication
+* Role-based Authorization
+
+## User Roles (Very Important)
+
+| Role          | Access                 |
+| | |
+| Admin         | Full access            |
+| Pharmacist    | Sell, view stock       |
+| Store Manager | Purchase, stock update |
+| Auditor       | Read-only              |
+
+👉 Role ভুল হলে legal problem হতে পারে
+
+# 🟢 Phase-2: Database Design (Healthcare-grade)
+
+## Medicine Table
+
+```
+MedicineId
+Name
+GenericName
+Manufacturer
+Category
+IsControlled (bool)
+```
+
+## Stock Table (Batch-based)
+
+```
+MedicineStock-
+Id
+MedicineId (FK)
+BatchNumber
+ExpiryDate
+PurchasePrice
+SellingPrice
+Quantity
+```
+
+👉 Batch + Expiry ছাড়া pharmacy system INVALID
+
+## Supplier Table
+
+```
+SupplierId
+Name
+LicenseNumber
+Contact
+```
+
+## Audit Log Table (Mandatory)
+
+```
+AuditLogId
+UserId
+Action
+EntityName
+OldValue
+NewValue
+Timestamp
+```
+
+# 🟢 Phase-3: Authentication & Security (Week 2)
+
+## Security Rules
+
+* JWT + Refresh Token
+* Password hashing
+* HTTPS only
+* Role-based API access
+
+### Example
+
+* Pharmacist ❌ cannot edit purchase price
+* Auditor ❌ cannot update stock
+
+👉 Security = core feature, not add-on
+
+# 🟢 Phase-4: Inventory Operations (Week 3)
+
+## Add Medicine Stock
+
+* Mandatory batch number
+* Mandatory expiry date
+* Quantity validation
+* Supplier validation
+
+## Stock Update Rules
+
+* Quantity never negative
+* Expired stock cannot be sold
+* Controlled medicine needs permission
+
+## Real-World Rule
+
+> Same medicine, different batch = different stock
+
+# 🟢 Phase-5: Sales & Dispensing Logic (Week 4)
+
+## Sell Medicine Flow
+
+1. Search medicine
+2. System auto-selects earliest expiry batch
+3. Check stock & expiry
+4. Deduct quantity
+5. Log transaction
+
+### Critical Validation
+
+* Expired medicine ❌
+* Insufficient stock ❌
+* Unauthorized user ❌
+
+👉 This logic saves lives
+
+# 🟢 Phase-6: Expiry & Alert System (Week 5)
+
+## Expiry Monitoring
+
+* 30 days before expiry → warning
+* Expired → auto block sale
+
+## Alerts
+
+* Low stock alert
+* Expiry alert
+* Controlled drug alert
+
+👉 Background job (async)
+
+# 🟢 Phase-7: Purchase & Supplier Management (Week 6)
+
+## Purchase Flow
+
+* Create purchase order
+* Receive stock
+* Validate invoice
+* Update stock batch-wise
+
+## CSV Bulk Import
+
+* 10k+ medicine import
+* Chunk processing
+* Transaction safety
+
+# 🟢 Phase-8: Reporting & Audit (Week 7)
+
+## Mandatory Reports
+
+* Daily sales
+* Expired medicine
+* Low stock
+* Purchase vs sales
+* Controlled drug report
+
+👉 Auditor role = read-only
+
+# 🟢 Phase-9: Performance & Reliability (Week 8)
+
+## Performance
+
+* Pagination everywhere
+* `AsNoTracking()` for reports
+* Caching read-only data
+
+## Reliability
+
+* Transaction usage
+* Retry policy
+* Global exception handling
+
+# 🟢 Phase-10: Online & Production Ready (Week 9)
+
+## Deployment
+
+* Docker container
+* Cloud hosting (Azure / AWS)
+* Secure file storage
+* Backup strategy
+
+## Monitoring
+
+* Logging (Serilog)
+* Health checks
+* Error alert
+
+
+
+
+
+
+
+
+
+
+# 🧠 Final Architecture (Interview-grade)
+
+```
+Client
+ ↓
+API (ASP.NET Core)
+ ↓
+Service Layer (Rules, Validation)
+ ↓
+Repository (DB)
+ ↓
+MySQL
+
+Background Jobs → Expiry, Alerts
+Audit Log → Every change
+```
+
+# 🔐 Pharmacy-Specific Security Checklist
+
+✔ Batch-based stock
+✔ Expiry enforcement
+✔ Role isolation
+✔ Audit trail
+✔ No direct DB manipulation
+✔ Controlled drug restriction
+
+# 🎯 30-Second Interview Killer Line
+
+> আমি ASP.NET Core ব্যবহার করে একটি pharmacy inventory system ডিজাইন করেছি যেখানে batch-wise stock, expiry enforcement, role-based security এবং audit logging রয়েছে, যা online ও compliance-ready।
+
+# 🧠 Mentor Truth
+
+এই project শেষ করলে তুমি:
+
+* শুধু developer না
+* তুমি healthcare system engineer
+
+এটা eCommerce থেকেও কঠিন—
+👉 তাই এর value অনেক বেশি।
+
+## 🔜 পরের ধাপে কী চাই?
+
+আমি এখন চাইলে:
+
+* 📌 Full API endpoint list
+* 📌 Exact database schema SQL
+* 📌 Security threat model
+* 📌 Mock system design interview (pharmacy)
+
+বললেই next level শুরু করি 💪
+
+
+
+
+.
