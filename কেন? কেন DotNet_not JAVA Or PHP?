@@ -1,85 +1,97 @@
 
 
 
+# 🚀 Mid → Senior .NET Interview Questions & Answers
+
+
+Mid → Senior .NET interview questions + concise but strong answers ।
+ ২–৩ লাইনে confidence সহ, আবার চাইলে ডিপে ঢুকেও ব্যাখ্যা করতে ।
+
+## 🎯 কীভাবে এগুলো practice করবে?
+- প্রতিদিন ৩–৪টা প্রশ্ন মুখে বলার চেষ্টা করো
+- নিজের project-এর সাথে মিলিয়ে explain করো
+- GitHub README-তে এই concepts লিখে ফেল
+
 ## 🧠 মনে রাখার শর্ট ফর্ম (Exam Trick)
 - Controller → Request / Response
 - Service → Business logic + Validation
 - Repository → Database
 - DTO → Data transfer
 - Async → Scalability
-- File/Image → File system, DB নয়
+- File/Image → File system, DB নয়ো
 
 
 
-## 1️⃣ Controller কেন thin রাখা উচিত?
-Controller শুধু request গ্রহণ ও response দেয়। Business logic Service layer-এ রাখলে code clean, testable ও maintainable হয়।
+## 1️⃣ Controller কেন সবসময় thin রাখা উচিত?
+Controller শুধু request–response handle করে। Business logic Service-এ রাখলে code testable, maintainable এবং scalable হয়।
 
+## 2️⃣ DTO ব্যবহার না করে Entity সরাসরি expose করলে কী সমস্যা হয়?
+Entity expose করলে database structure ও sensitive data leak হতে পারে এবং future DB change API ভেঙে ফেলতে পারে।
 
-## 2️⃣ কেন Entity সরাসরি API response হিসেবে দেওয়া উচিত না?
-Entity দিলে database structure ও sensitive তথ্য expose হওয়ার ঝুঁকি থাকে। তাই DTO ব্যবহার করা হয়।
+## 3️⃣ Repository pattern ব্যবহার করার মূল উদ্দেশ্য কী?
+Database access logic আলাদা রাখা, যাতে business logic database থেকে loosely coupled থাকে।
 
+## 4️⃣ Repository-তে business logic রাখা কেন ভুল?
+Repository শুধু data access-এর জন্য। Business logic রাখলে separation of concerns ভেঙে যায় এবং code reuse কঠিন হয়।
 
-## 3️⃣ DTO এবং ViewModel আলাদা রাখার প্রয়োজন কেন?
-DTO data transfer এর জন্য, ViewModel UI-এর জন্য। আলাদা রাখলে loose coupling ও clarity বজায় থাকে।
+## 5️⃣ `async/await` high-traffic system-এ কীভাবে সাহায্য করে?
+Async thread block না করে I/O wait handle করে, ফলে একই server বেশি concurrent request serve করতে পারে।
 
+## 6️⃣ `SaveChangesAsync()` কেন production-এ বেশি ব্যবহার করা হয়?
+এটি non-blocking হওয়ায় scalability বাড়ায় এবং high-load environment-এ server responsive রাখে।
 
-## 4️⃣ Repository-তে business logic রাখা ভুল কেন?
-Repository-র কাজ শুধু database access। Business logic রাখলে separation of concerns ভেঙে যায়।
+## 7️⃣ `AsNoTracking()` কখন ব্যবহার করা উচিত?
+Read-only query-তে, কারণ tracking বন্ধ থাকলে memory কম লাগে এবং query faster হয়।
 
+## 8️⃣ Repository থেকে `IQueryable` return করা কেন risky?
+এতে query control caller-এর হাতে চলে যায়, ফলে unexpected query execution ও performance issue হতে পারে।
 
-## 5️⃣ `async/await` কেন গুরুত্বপূর্ণ?
-Async ব্যবহার না করলে thread block হয়, ফলে high traffic-এ application slow বা crash করতে পারে।
+## 9️⃣ Large data API-তে pagination বাধ্যতামূলক কেন?
+একবারে বেশি data আনলে memory ও response time বেড়ে যায়; pagination system scalable রাখে।
 
+## 🔟 DB-তে image/file রাখা কেন খারাপ practice?
+Binary data DB-তে রাখলে performance ও backup cost বেড়ে যায়; file system বা cloud storage বেশি efficient।
 
-## 6️⃣ `SaveChangesAsync()` কেন `SaveChanges()` এর চেয়ে ভালো?
-এটি non-blocking হওয়ায় concurrent request ভালোভাবে handle করা যায়।
+## 1️⃣1️⃣ File upload secure করার জন্য কী কী করতে হবে?
+File type, size validation, random filename, restricted folder এবং old file cleanup বাধ্যতামূলক।
 
+## 1️⃣2️⃣ শুধু client-side validation কেন যথেষ্ট নয়?
+Client-side validation bypass করা যায়, তাই server-side validation অবশ্যই দরকার।
 
-## 7️⃣ `IFormFile` কেন Entity Model-এ রাখা উচিত না?
-Entity শুধুমাত্র database structure বোঝায়। `IFormFile` web-specific হওয়ায় এটি DTO/ViewModel-এ রাখা উচিত।
+## 1️⃣3️⃣ Service layer-এ validation রাখা কেন ভালো practice?
+Service-এ রাখলে API, background job ও future features-এ একই rule reuse করা যায়।
 
+## 1️⃣4️⃣ Background job কেন দরকার হয়?
+Heavy কাজ (CSV import, image processing) request thread থেকে আলাদা রাখলে UI responsive থাকে।
 
-## 8️⃣ Database-এ image রাখা খারাপ কেন?
-Image DB-তে রাখলে performance কমে, storage heavy হয়। File system-এ রেখে শুধু path DB-তে রাখা best practice।
+## 1️⃣5️⃣ Logging কেন production-এ বাধ্যতামূলক?
+Issue না থাকলেও future debugging, monitoring ও audit-এর জন্য logging প্রয়োজন।
 
+## 1️⃣6️⃣ Dependency Injection না ব্যবহার করলে কী সমস্যা হয়?
+Code tightly coupled হয়, testing কঠিন হয় এবং future change costly হয়ে যায়।
 
-## 9️⃣ Controller-এ file upload logic রাখা কেন খারাপ?
-Controller fat হয়ে যায় এবং code reuse কঠিন হয়। File logic Service-এ রাখা উচিত।
+## 1️⃣7️⃣ Scoped vs Singleton ভুলভাবে ব্যবহার করলে কী হতে পারে?
+Singleton-এ state রাখলে data leak হতে পারে, Scoped ভুল হলে request isolation ভেঙে যায়।
 
+## 1️⃣8️⃣ Transaction কেন গুরুত্বপূর্ণ?
+একাধিক DB operation একসাথে সফল বা ব্যর্থ করার জন্য transaction data consistency নিশ্চিত করে।
 
-## 🔟 শুধু client-side validation যথেষ্ট নয় কেন?
-Client-side validation bypass করা যায়। তাই server-side validation বাধ্যতামূলক।
+## 1️⃣9️⃣ CQRS concept কেন বড় system-এ কাজে আসে?
+Read ও Write আলাদা করলে performance, scalability এবং complexity manage করা সহজ হয়।
 
+## 2️⃣0️⃣ Mid-level আর Senior developer-এর মূল পার্থক্য কী?
+Mid-level feature বানায়, Senior system impact, scalability ও future risk আগে চিন্তা করে।
 
-## 1️⃣1️⃣ Service-এ validation রাখা কেন ভালো?
-Service-এ validation রাখলে API, background job ও future feature-এ একই নিয়ম reuse করা যায়।
-
-
-## 1️⃣2️⃣ Pagination কেন প্রয়োজন?
-একবারে বেশি data আনলে performance ও memory সমস্যা হয়। Pagination scalable solution।
-
-
-## 1️⃣3️⃣ `AsNoTracking()` কেন গুরুত্বপূর্ণ?
-Read-only query-তে tracking বন্ধ করলে performance বাড়ে ও memory কম ব্যবহার হয়।
-
-
-## 1️⃣4️⃣ Repository থেকে `IQueryable` return করা কেন উচিত না?
-এতে query control বাইরে চলে যায় এবং unexpected performance issue হতে পারে।
-
-
-## 1️⃣5️⃣ Logging কেন জরুরি?
-Application ঠিকমতো কাজ করলেও future debugging, monitoring ও audit-এর জন্য logging প্রয়োজন।
-
-
-
-
-
-
-
+# 🧠 Senior-Level Closing Statement (Interview Killer Line)
+> আমি কোড লেখার সময় শুধু কাজ করছে কিনা দেখি না—আমি দেখি এই code ২ বছর পরেও maintainable, secure ও scalable থাকবে কিনা।
 
 
 
 
+
+#############################################################################################
+                            WHY DOT NET?
+#############################################################################################
 
 
 
