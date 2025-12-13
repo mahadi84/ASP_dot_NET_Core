@@ -1,0 +1,214 @@
+এটা খুব production-critical প্রশ্ন—CSV upload ভুলভাবে করলে
+👉 server crash, memory overflow, slow MySQL, partial data insert—সবই হতে পারে।
+
+আমি নিচে বাস্তব production best practice দিচ্ছি, সাথে “একবারে কত row safe?”
+—এই প্রশ্নটার বাস্তব উত্তরও।
+
+###################################################################
+                  STUDY
+###################################################################
+
+
+# 🎯 প্রশ্নের সংক্ষিপ্ত উত্তর (আগে বলে দেই)
+
+> একবারে কত row CSV upload করা যাবে—এর কোনো fixed সংখ্যা নেই।
+> এটা নির্ভর করে কীভাবে upload + insert করা হচ্ছে তার ওপর।
+
+কিন্তু safe guideline নিচে দিলাম 👇
+
+# 📊 Safe Row Count Guideline (Production Reality)
+
+| Upload Strategy               | Safe Rows (একবারে) |
+|-------------------------------|------------------------|
+| ❌ Naive loop + SaveChanges  | 1k – 5k            |
+| ⚠️ EF Core batch insert      | 10k – 30k          |
+| ✅ Chunk + Bulk Insert       | 50k – 200k         |
+| 🚀 MySQL `LOAD DATA INFILE`  | 1M+                |
+
+👉 Best practice = Chunk + Bulk Insert
+
+# 🧠 CSV Upload Best Practice (High-Level Flow)
+
+```
+CSV Upload
+   ↓
+Validate file (type, size)
+   ↓
+Stream read (NOT load full file)
+   ↓
+Parse row by row
+   ↓
+Chunk (e.g. 1000 rows)
+   ↓
+Bulk insert to MySQL
+```
+
+# 1️⃣ CSV Upload – What NOT to do ❌
+
+❌ পুরো CSV file memory তে load করা
+❌ `ReadAllLines()` ব্যবহার
+❌ প্রতি row এ `SaveChanges()`
+❌ Transaction ছাড়া insert
+❌ Validation ছাড়া data ঢোকানো
+
+এইগুলো করলে 5–10 হাজার row এই app মারা যাবে।
+
+
+###################################################################
+                      CODE START
+###################################################################
+
+# 2️⃣ Production-Ready CSV Upload Best Practice (.NET)
+
+## ✅ Step-1: File Validation
+if (file == null || file.Length == 0)
+    throw new Exception("File required");
+
+if (!file.FileName.EndsWith(".csv"))
+    throw new Exception("Invalid file type");
+
+if (file.Length > 10  1024  1024) // 10 MB
+    throw new Exception("File too large");
+```
+
+📌 CSV upload এর জন্য সাধারণত:
+
+ 5–20 MB safe
+
+## ✅ Step-2: Stream CSV (Memory Safe)
+using var reader = new StreamReader(file.OpenReadStream());
+```
+
+👉 StreamReader মানে:
+
+ লাইন ধরে পড়ে
+ RAM explode করে না
+
+## 3️⃣ CSV Parsing (Recommended Library)
+
+### 📦 NuGet
+
+```bash
+dotnet add package CsvHelper
+```
+using CsvHelper;
+using System.Globalization;
+
+using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+var records = csv.GetRecords<MyCsvDto>();
+```
+
+# 4️⃣ Chunking (সবচেয়ে গুরুত্বপূর্ণ)
+const int batchSize = 1000;
+var batch = new List<Employee>();
+
+foreach (var record in records)
+{
+    batch.Add(new Employee
+    {
+        Name = record.Name,
+        Email = record.Email
+    });
+
+    if (batch.Count == batchSize)
+    {
+        await BulkInsertAsync(batch);
+        batch.Clear();
+    }
+}
+
+if (batch.Any())
+{
+    await BulkInsertAsync(batch);
+}
+```
+
+👉 1000 rows = sweet spot
+👉 500–2000 range safe
+
+# 5️⃣ Bulk Insert into MySQL (Best Option)
+
+### Option-A: `MySqlBulkCopy` (Fast)
+using MySqlConnector;
+```
+using var bulk = new MySqlBulkCopy(connection)
+{
+    DestinationTableName = "employees",
+    BulkCopyTimeout = 600
+};
+
+await bulk.WriteToServerAsync(dataTable);
+```
+
+🚀 50k–200k rows easy
+
+### Option-B: MySQL Native (Fastest)
+
+```sql
+LOAD DATA INFILE 'employees.csv'
+INTO TABLE employees
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+IGNORE 1 ROWS;
+```
+
+👉 1 million+ rows
+👉 Requires server permission
+
+# 6️⃣ Transaction + Error Handling (Mandatory)
+using var transaction = await connection.BeginTransactionAsync();
+
+try
+{
+    await BulkInsertAsync(batch);
+    await transaction.CommitAsync();
+}
+catch
+{
+    await transaction.RollbackAsync();
+    throw;
+}
+```
+
+# 🔐 Security Best Practices
+
+### ✅ DO
+
+✔ CSV size limit
+✔ Column mapping validation
+✔ Chunk insert
+✔ Transaction
+✔ Background processing (large files)
+
+### ❌ NEVER
+
+❌ Blind insert
+❌ Full file in memory
+❌ Row-by-row DB hit
+❌ UI thread block
+
+# 🧪 Real-World Recommendation (Answer to your core question)
+
+> Production-grade ASP.NET application এ একবারে 50,000 row CSV upload করা safe,
+> যদি chunk + bulk insert ব্যবহার করা হয়।
+>
+> আর LOAD DATA INFILE ব্যবহার করলে 1 million+ row সম্ভব।
+
+# 🎓 Interview / Viva One-Liner
+
+> CSV upload করার ক্ষেত্রে .NET web application-এ stream-based reading, chunk processing এবং bulk insert ব্যবহার করা হয়, যার মাধ্যমে হাজার থেকে লক্ষ row নিরাপদে MySQL database-এ insert করা যায়।
+
+# 🧠 Mental Model (মনে রাখার মতো)
+
+> Small bites, not big swallow
+> (Chunk করো, DB-কে শ্বাস নিতে দাও)
+
+তুমি চাইলে আমি পরের ধাপে:
+
+ Repository + Service based CSV upload
+ Background job (Hangfire)
+ CSV validation rules
+ Progress bar (UI)
+ Partial failure recovery
+
+সব production-ready করে দিতে পারি।
