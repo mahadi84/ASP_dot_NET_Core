@@ -6,18 +6,27 @@
 
 # 💊 Pharmacy Inventory Management System – Full Roadmap (.NET Core)
 
+
+
+
 ## 🎯 লক্ষ্য (Goal)
 একটি secure, accurate, audit-ready, online pharmacy inventory system যেখানে:
 
 * ভুল ওষুধ দেয়া যাবে না
 * Expired medicine detect হবে
 * Stock mismatch হবে না
-* Data legally & securely handled হবে
+* Data legally & securely handled হবে 
+
+
+
+
+
+
+
 
 # 🧱 Phase-0: Requirement & Compliance Understanding (সবচেয়ে গুরুত্বপূর্ণ)
 
 ### Pharmacy-specific বাস্তব চাহিদা
-
 * Batch number tracking
 * Expiry date mandatory
 * Controlled drugs (restricted access)
@@ -29,7 +38,6 @@
 # 🟢 Phase-1: Core Foundation (Week 1)
 
 ## Tech Stack (Recommended)
-
 * ASP.NET Core Web API (.NET 8/9)
 * EF Core + MySQL
 * JWT Authentication
@@ -49,7 +57,6 @@
 # 🟢 Phase-2: Database Design (Healthcare-grade)
 
 ## Medicine Table
-
 ```
 MedicineId
 Name
@@ -60,7 +67,6 @@ IsControlled (bool)
 ```
 
 ## Stock Table (Batch-based)
-
 ```
 MedicineStock-
 Id
@@ -75,7 +81,6 @@ Quantity
 👉 Batch + Expiry ছাড়া pharmacy system INVALID
 
 ## Supplier Table
-
 ```
 SupplierId
 Name
@@ -84,7 +89,6 @@ Contact
 ```
 
 ## Audit Log Table (Mandatory)
-
 ```
 AuditLogId
 UserId
@@ -98,7 +102,6 @@ Timestamp
 # 🟢 Phase-3: Authentication & Security (Week 2)
 
 ## Security Rules
-
 * JWT + Refresh Token
 * Password hashing
 * HTTPS only
@@ -114,26 +117,22 @@ Timestamp
 # 🟢 Phase-4: Inventory Operations (Week 3)
 
 ## Add Medicine Stock
-
 * Mandatory batch number
 * Mandatory expiry date
 * Quantity validation
 * Supplier validation
 
 ## Stock Update Rules
-
 * Quantity never negative
 * Expired stock cannot be sold
 * Controlled medicine needs permission
 
 ## Real-World Rule
-
 > Same medicine, different batch = different stock
 
 # 🟢 Phase-5: Sales & Dispensing Logic (Week 4)
 
 ## Sell Medicine Flow
-
 1. Search medicine
 2. System auto-selects earliest expiry batch
 3. Check stock & expiry
@@ -151,12 +150,10 @@ Timestamp
 # 🟢 Phase-6: Expiry & Alert System (Week 5)
 
 ## Expiry Monitoring
-
 * 30 days before expiry → warning
 * Expired → auto block sale
 
 ## Alerts
-
 * Low stock alert
 * Expiry alert
 * Controlled drug alert
@@ -166,14 +163,12 @@ Timestamp
 # 🟢 Phase-7: Purchase & Supplier Management (Week 6)
 
 ## Purchase Flow
-
 * Create purchase order
 * Receive stock
 * Validate invoice
 * Update stock batch-wise
 
 ## CSV Bulk Import
-
 * 10k+ medicine import
 * Chunk processing
 * Transaction safety
@@ -181,7 +176,6 @@ Timestamp
 # 🟢 Phase-8: Reporting & Audit (Week 7)
 
 ## Mandatory Reports
-
 * Daily sales
 * Expired medicine
 * Low stock
@@ -193,13 +187,11 @@ Timestamp
 # 🟢 Phase-9: Performance & Reliability (Week 8)
 
 ## Performance
-
 * Pagination everywhere
 * `AsNoTracking()` for reports
 * Caching read-only data
 
 ## Reliability
-
 * Transaction usage
 * Retry policy
 * Global exception handling
@@ -207,14 +199,12 @@ Timestamp
 # 🟢 Phase-10: Online & Production Ready (Week 9)
 
 ## Deployment
-
 * Docker container
 * Cloud hosting (Azure / AWS)
 * Secure file storage
 * Backup strategy
 
 ## Monitoring
-
 * Logging (Serilog)
 * Health checks
 * Error alert
