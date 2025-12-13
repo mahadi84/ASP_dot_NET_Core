@@ -1,0 +1,124 @@
+
+
+
+## 🧠 মনে রাখার শর্ট ফর্ম (Exam Trick)
+- Controller → Request / Response
+- Service → Business logic + Validation
+- Repository → Database
+- DTO → Data transfer
+- Async → Scalability
+- File/Image → File system, DB নয়
+
+
+
+## 1️⃣ Controller কেন thin রাখা উচিত?
+Controller শুধু request গ্রহণ ও response দেয়। Business logic Service layer-এ রাখলে code clean, testable ও maintainable হয়।
+
+
+## 2️⃣ কেন Entity সরাসরি API response হিসেবে দেওয়া উচিত না?
+Entity দিলে database structure ও sensitive তথ্য expose হওয়ার ঝুঁকি থাকে। তাই DTO ব্যবহার করা হয়।
+
+
+## 3️⃣ DTO এবং ViewModel আলাদা রাখার প্রয়োজন কেন?
+DTO data transfer এর জন্য, ViewModel UI-এর জন্য। আলাদা রাখলে loose coupling ও clarity বজায় থাকে।
+
+
+## 4️⃣ Repository-তে business logic রাখা ভুল কেন?
+Repository-র কাজ শুধু database access। Business logic রাখলে separation of concerns ভেঙে যায়।
+
+
+## 5️⃣ `async/await` কেন গুরুত্বপূর্ণ?
+Async ব্যবহার না করলে thread block হয়, ফলে high traffic-এ application slow বা crash করতে পারে।
+
+
+## 6️⃣ `SaveChangesAsync()` কেন `SaveChanges()` এর চেয়ে ভালো?
+এটি non-blocking হওয়ায় concurrent request ভালোভাবে handle করা যায়।
+
+
+## 7️⃣ `IFormFile` কেন Entity Model-এ রাখা উচিত না?
+Entity শুধুমাত্র database structure বোঝায়। `IFormFile` web-specific হওয়ায় এটি DTO/ViewModel-এ রাখা উচিত।
+
+
+## 8️⃣ Database-এ image রাখা খারাপ কেন?
+Image DB-তে রাখলে performance কমে, storage heavy হয়। File system-এ রেখে শুধু path DB-তে রাখা best practice।
+
+
+## 9️⃣ Controller-এ file upload logic রাখা কেন খারাপ?
+Controller fat হয়ে যায় এবং code reuse কঠিন হয়। File logic Service-এ রাখা উচিত।
+
+
+## 🔟 শুধু client-side validation যথেষ্ট নয় কেন?
+Client-side validation bypass করা যায়। তাই server-side validation বাধ্যতামূলক।
+
+
+## 1️⃣1️⃣ Service-এ validation রাখা কেন ভালো?
+Service-এ validation রাখলে API, background job ও future feature-এ একই নিয়ম reuse করা যায়।
+
+
+## 1️⃣2️⃣ Pagination কেন প্রয়োজন?
+একবারে বেশি data আনলে performance ও memory সমস্যা হয়। Pagination scalable solution।
+
+
+## 1️⃣3️⃣ `AsNoTracking()` কেন গুরুত্বপূর্ণ?
+Read-only query-তে tracking বন্ধ করলে performance বাড়ে ও memory কম ব্যবহার হয়।
+
+
+## 1️⃣4️⃣ Repository থেকে `IQueryable` return করা কেন উচিত না?
+এতে query control বাইরে চলে যায় এবং unexpected performance issue হতে পারে।
+
+
+## 1️⃣5️⃣ Logging কেন জরুরি?
+Application ঠিকমতো কাজ করলেও future debugging, monitoring ও audit-এর জন্য logging প্রয়োজন।
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## কেন .NET Core ব্যবহার করব (Java / PHP এর তুলনায়) — টেবিল আকারে
+
+| বিষয়                       | .NET Core                       | Java                       | PHP                         | বাস্তব উদাহরণ                             |
+| -------------------------- | ------------------------------- | -------------------------- | --------------------------- | ----------------------------------------- |
+|     Performance            | খুব দ্রুত (Kestrel + async)       | দ্রুত কিন্তু heavy              | তুলনামূলক ধীর               | E-commerce site এ একসাথে 10k user request |
+|     Scalability            | সহজে scale করা যায়             | scale করা যায়, config জটিল | বড় scale কঠিন               | Bank loan system, HR system               |
+|     Architecture           | Clean, layered built-in         | শক্তিশালী কিন্তু verbose        | বেশিরভাগ সময় messy          | ERP বা Payroll software                   |
+|     Async Support          | Built-in async/await everywhere | সম্ভব কিন্তু complex           | সীমিত                       | CSV upload, image processing              |
+|     Security               | Built-in security pipeline      | secure কিন্তু heavy config    | অনেকটাই developer-dependent | Healthcare / financial app                |
+|     Developer Productivity | Fast development + strong tools | Development slow           | Fast but risky              | Large team project                        |
+|     Maintainability        | Long-term maintain সহজ         | maintainable               | long-term কঠিন              | 3–5 বছর চলা software                      |
+|     Cloud Ready            | Cloud-first (Azure/AWS)         | Cloud-ready                | Limited                     | Microservices / SaaS                      |
+|     Error Detection        | Compile-time error বেশি         | Compile-time               | Runtime error বেশি          | Production bug কমানো                      |
+|     Career Growth          | High demand + high pay          | Stable demand              | Lower ceiling               | Enterprise / remote job                   |
+
+---
+
+## এক লাইনের বাস্তব উদাহরণ (মুখে বলার মতো)
+
+*     PHP → ছোট website, CMS, blog
+*     Java → বড় corporate system, banking
+*     .NET Core → modern, high-performance, secure enterprise & cloud apps
+
+---
+
+## ৩০-সেকেন্ডের Interview Answer (মুখস্থযোগ্য)
+
+> .NET Core ব্যবহার করা হয় কারণ এটি high-performance, scalable এবং secure web application development সাপোর্ট করে, যেখানে clean architecture, async processing এবং cloud-readiness একসাথে পাওয়া যায়—যা enterprise-level এবং long-term systems এর জন্য বেশি উপযোগী।
+
+---
+
+## মনে রাখার শর্ট ট্রিক 🧠
+
+PHP = Simple & Fast start
+Java = Powerful but Heavy
+. NET Core = Power + Speed + Clean Design
+
+
