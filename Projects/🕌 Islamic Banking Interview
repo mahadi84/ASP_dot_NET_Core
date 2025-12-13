@@ -12,11 +12,8 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 # 🕌 Islamic Banking Interview-এর জন্য Best Sample Project (Secure & Practical)
 
 ## 🥇 Project Recommendation (সবচেয়ে শক্তিশালী)
-
 ### ✅ Islamic Banking Deposit & Investment Management System
-
 (Shariah-compliant Savings + Investment Platform)
-
 👉 এটা Bangladesh Islamic banks (IBBL, Al-Arafah, SIBL)–এর সাথে সবচেয়ে বেশি মিল।
 
 ---
@@ -24,7 +21,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ## 🔹 Project-1: Islamic Deposit & Investment Management System (BEST)
 
 ### 🎯 কী সমস্যা Solve করে?
-
 * সুদ (Interest) নিষিদ্ধ
 * Profit–Loss Sharing ভিত্তিক হিসাব
 * Transparency + Audit
@@ -34,7 +30,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ### 🧩 Core Modules
 
 #### 1️⃣ Customer Account Management
-
 * Mudaraba Savings Account
 * Mudaraba Term Deposit
 * Wakala Account
@@ -44,7 +39,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ---
 
 #### 2️⃣ Profit Distribution Engine (VERY IMPORTANT)
-
 * Monthly / Quarterly profit calculation
 * Bank : Customer ratio (e.g. 60:40)
 * Loss হলে profit = 0 (No guaranteed return)
@@ -54,7 +48,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ---
 
 #### 3️⃣ Investment Module (Shariah-compliant)
-
 * Murabaha (Cost + Profit)
 * Musharaka (Joint investment)
 * Ijara (Lease-based)
@@ -67,7 +60,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ---
 
 #### 4️⃣ Transaction & Ledger System
-
 * Debit / Credit (Interest-free)
 * Immutable transaction record
 * Daily balance snapshot
@@ -75,7 +67,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ---
 
 #### 5️⃣ Audit & Shariah Compliance Log
-
 * কে profit approve করলো
 * কে ratio change করলো
 * Shariah board approval log
@@ -83,10 +74,8 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ---
 
 ### 🔐 Security (Interview Gold)
-
 * JWT Authentication
 * Role-based access
-
   * Admin
   * Banker
   * Shariah Auditor
@@ -109,32 +98,36 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 
 
 
-
-
-
-
-## 🥈 Project-2: Islamic Zakat & Charity Management Platform
+##################################################################
+ 🥈 Project-2: Islamic Zakat & Charity Management Platform
+##################################################################
 
 ### কী করে?
-
 * Zakat calculation
 * Eligible beneficiary verification
 * Transparent distribution
 
 ### Features
-
 * Asset-based Zakat calculation
 * Nisab threshold
 * Distribution report
 
 👉 ভালো, কিন্তু banking role-এর জন্য ২য় পছন্দ
 
----
 
-## 🥉 Project-3: Halal Financing Approval System
+
+
+
+
+
+
+
+
+##################################################
+ 🥉 Project-3: Halal Financing Approval System
+##################################################
 
 ### কী করে?
-
 * Loan না, Halal Financing
 * Asset-backed financing only
 * Interest-free repayment schedule
@@ -168,26 +161,27 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 
 ---
 
+
+
+
+
 # 🧠 60-Second Interview Explanation (মুখস্থযোগ্য)
 
-> আমি একটি Shariah-compliant Islamic banking system ডিজাইন করেছি যেখানে Mudaraba ভিত্তিক deposit ও investment পরিচালনা করা হয়। এখানে interest ব্যবহার করা হয়নি; বরং profit-loss sharing model প্রয়োগ করা হয়েছে। System-টি secure, auditable এবং Bangladesh Islamic banking regulation অনুযায়ী ডিজাইন করা।
+> আমি একটি Shariah-compliant Islamic banking system ডিজাইন করেছি যেখানে Mudaraba ভিত্তিক deposit ও investment পরিচালনা করা হয়।
+এখানে interest ব্যবহার করা হয়নি; বরং profit-loss sharing model প্রয়োগ করা হয়েছে। System-টি secure, auditable এবং Bangladesh Islamic banking regulation অনুযায়ী ডিজাইন করা।
 
 ---
 
 # 🔍 Interviewer যদি Follow-up করে…
-
 ### ❓ “Interest ছাড়া profit কিভাবে calculate করো?”
 
 উত্তর:
-
 > Profit actual investment return থেকে আসে এবং predefined ratio অনুযায়ী distribute হয়। Loss হলে profit distribute হয় না।
 
 ---
 
 ### ❓ “Security কেন এত গুরুত্বপূর্ণ?”
-
 উত্তর:
-
 > Banking data sensitive এবং Shariah compliance violation legal ও trust issue তৈরি করে, তাই audit trail ও role isolation জরুরি।
 
 ---
@@ -205,7 +199,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 ## 🎯 Mentor Advice (খুব গুরুত্বপূর্ণ)
 
 এই interview-এ তারা খুঁজবে:
-
 > “এই engineer কি আমাদের domain বোঝে?”
 
 👉 তুমি যদি শুধু এই একটা project ভালোভাবে বোঝাতে পারো,
