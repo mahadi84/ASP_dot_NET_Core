@@ -1,0 +1,297 @@
+
+
+
+Target stack:
+ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resize & Compression
+
+#################################################################### 
+               Logic, Description and Best Practice
+################################################################## 
+
+# 🔐 Production Best Practices (Very Important)
+
+🧠 Golden Rules (আগে মাথায় বসাও)
+
+1️⃣ Image database এ না, file system এ রাখো
+2️⃣ DB তে রাখবে শুধু image path / filename
+3️⃣ File নাম নিজে generate করবে, user-এর নাম ব্যবহার করবে না
+4️⃣ Size, type, extension সব validate করবে
+5️⃣ পুরোনো image delete না করলে → server ভরে যাবে
+
+### ✅ DO
+✔ Resize before save
+✔ Compress image
+✔ GUID filename
+✔ Async IO
+✔ Delete unused files
+✔ Separate layers
+
+### ❌ NEVER
+❌ Raw user filename
+❌ DB-তে image
+❌ Controller-এ business logic
+❌ Sync file IO
+❌ Unlimited file size
+
+---
+
+# 🧠 Architecture Wisdom (Interview Gold)
+
+👉 Controller “চুপচাপ” থাকবে
+👉 সব বুদ্ধি থাকবে Service-এ
+👉 Repository শুধু DB touch করব
+
+```
+Controller
+   ↓
+Service Layer  (Business + Image logic)
+   ↓
+Repository Layer (Database only)
+   ↓
+Database
+
+Image Processing → Async → Resize → Compress → Save to File System
+```
+---
+
+# 🎯 One-Line Production Summary
+
+> ASP.NET Core MVC-তে production-ready image upload বাস্তবায়নের জন্য layered architecture, asynchronous image processing, resize ও compression ব্যবহার করা হয় যাতে performance, security ও scalability নিশ্চিত হয়।
+
+---
+
+তুমি এখন junior-level নয়,
+এই design mid–senior .NET developer standard।ে
+
+
+
+#################################################################### 
+               CODE START 
+################################################################## 
+
+# 1️⃣ Entity (Database Model)
+
+public class Employee
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public string? ImagePath { get; set; }
+}
+```
+
+🔹 কেন শুধু ImagePath?
+কারণ DB-তে binary image রাখা:
+
+- slow
+- memory heavy
+- backup painful
+
+---
+
+# 2️⃣ ViewModel / DTO (Upload এর জন্য)
+
+public class EmployeeImageVm
+{
+    public int EmployeeId { get; set; }
+    public IFormFile Image { get; set; }
+}
+```
+
+⚠️ Rule:
+`IFormFile` কখনো Entity Model-এ যাবে না
+
+---
+
+# 3️⃣ Repository Layer (DB only)
+
+### Interface
+
+public interface IEmployeeRepository
+{
+    Task<Employee?> GetByIdAsync(int id);
+    Task UpdateAsync(Employee employee);
+}
+```
+
+### Implementation
+
+public class EmployeeRepository : IEmployeeRepository
+{
+    private readonly AppDbContext _context;
+
+    public EmployeeRepository(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<Employee?> GetByIdAsync(int id)
+    {
+        return await _context.Employees.FindAsync(id);
+    }
+
+    public async Task UpdateAsync(Employee employee)
+    {
+        _context.Employees.Update(employee);
+        await _context.SaveChangesAsync();
+    }
+}
+```
+
+🔹 Repository এর কাজ শুধু DB
+🔹 File system, resize, validation—সব নিষিদ্ধ
+
+---
+
+# 4️⃣ Image Service Interface (Business Logic)
+
+public interface IEmployeeImageService
+{
+    Task UpdateEmployeeImageAsync(EmployeeImageVm model);
+    Task DeleteEmployeeImageAsync(int employeeId);
+}
+```
+
+---
+
+# 5️⃣ Async Image Processing + Resize + Compression (Service)
+
+👉 এখানে আমরা ব্যবহার করবো ImageSharp (production-safe)
+
+### 📦 NuGet Package
+
+```bash
+dotnet add package SixLabors.ImageSharp
+```
+
+---
+
+### Service Implementation
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
+
+public class EmployeeImageService : IEmployeeImageService
+{
+    private readonly IEmployeeRepository _repository;
+    private readonly IWebHostEnvironment _env;
+
+    private const int MaxWidth = 300;
+    private const int MaxHeight = 300;
+    private const int MaxFileSize = 2 * 1024 * 1024;
+
+    public EmployeeImageService(
+        IEmployeeRepository repository,
+        IWebHostEnvironment env)
+    {
+        _repository = repository;
+        _env = env;
+    }
+
+    public async Task UpdateEmployeeImageAsync(EmployeeImageVm model)    //👉 UpdateEmployeeImageAsync-ই আসলে Add + Update দুইটাই handle করছে
+    {
+        if (model.Image == null || model.Image.Length == 0)
+            throw new Exception("Image required");
+
+        if (model.Image.Length > MaxFileSize)
+            throw new Exception("Image too large");
+
+        var allowed = new[] { ".jpg", ".jpeg", ".png" };
+        var ext = Path.GetExtension(model.Image.FileName).ToLower();
+
+        if (!allowed.Contains(ext))
+            throw new Exception("Invalid image type");
+
+        var employee = await _repository.GetByIdAsync(model.EmployeeId)
+                        ?? throw new Exception("Employee not found");
+
+        var folder = Path.Combine(_env.WebRootPath, "uploads/employees");
+        Directory.CreateDirectory(folder);
+
+        var newFileName = $"{Guid.NewGuid()}.jpg";
+        var fullPath = Path.Combine(folder, newFileName);
+
+        // ❌ Old image delete
+        if (!string.IsNullOrEmpty(employee.ImagePath))
+        {
+            var old = Path.Combine(_env.WebRootPath, employee.ImagePath);
+            if (File.Exists(old)) File.Delete(old);
+        }
+
+        // ✅ Async resize + compress
+        using var image = await Image.LoadAsync(model.Image.OpenReadStream());
+        image.Mutate(x => x.Resize(new ResizeOptions
+        {
+            Size = new Size(MaxWidth, MaxHeight),
+            Mode = ResizeMode.Max
+        }));
+
+        await image.SaveAsync(fullPath, new JpegEncoder
+        {
+            Quality = 75 // compression
+        });
+
+        employee.ImagePath = $"uploads/employees/{newFileName}";
+        await _repository.UpdateAsync(employee);
+    }
+
+    public async Task DeleteEmployeeImageAsync(int employeeId)
+    {
+        var employee = await _repository.GetByIdAsync(employeeId)
+                        ?? throw new Exception("Employee not found");
+
+        if (!string.IsNullOrEmpty(employee.ImagePath))
+        {
+            var path = Path.Combine(_env.WebRootPath, employee.ImagePath);
+            if (File.Exists(path)) File.Delete(path);
+
+            employee.ImagePath = null;
+            await _repository.UpdateAsync(employee);
+        }
+    }
+}
+```
+
+---
+
+# 6️⃣ Controller (Thin & Clean)
+
+public class EmployeeController : Controller
+{
+    private readonly IEmployeeImageService _imageService;
+
+    public EmployeeController(IEmployeeImageService imageService)
+    {
+        _imageService = imageService;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateImage(EmployeeImageVm model)
+    {
+        await _imageService.UpdateEmployeeImageAsync(model);
+        return RedirectToAction("Details", new { id = model.EmployeeId });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteImage(int id)
+    {
+        await _imageService.DeleteEmployeeImageAsync(id);
+        return RedirectToAction("Edit", new { id });
+    }
+}
+```
+
+🔹 Controller-এ কোনো file logic নাই
+🔹 Testable + Maintainable
+
+---
+
+# 7️⃣ Dependency Injection (Program.cs)
+
+builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IEmployeeImageService, EmployeeImageService>();
+```
+
+---
+
