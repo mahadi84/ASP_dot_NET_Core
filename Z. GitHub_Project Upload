@@ -1,4 +1,14 @@
 
+
+01. How to upload .NET porject into github.com
+02. How to update .NET porject into github.com
+03. How to upload many project in one link
+04. How to add another new porject into many project in one link.
+
+
+
+
+
 Git কোনো শাস্তির যন্ত্র না—এটা সময়কে শৃঙ্খলায় রাখার যন্ত্র।
 একবার ছন্দটা ধরতে পারলে, এগুলো আর error মনে হবে না—warning হয়ে যাবে।
 
@@ -16,11 +26,16 @@ git init
     appsettings.Development.json
 git add .
 git config --global user.email "mahadi.engr@gmail.com"
-git config --global user.name "mahadi**"
+git config --global user.name "mahadi"
 git commit -m "Initial commit of .NET project"
 git remote add origin https://github.com/mahadi84/MyDotNetWebAppName     
 git branch -M main
 git push -u origin main
+
+
+
+
+
 
 
 
@@ -109,4 +124,213 @@ git push -f ❌
 > Empty GitHub repo + local project → git init → commit → push
 
 এই workflow-টা একবার মাথায় বসে গেলে, Git error আর error মনে হবে না—just guidance মনে হবে।
+
+
+
+##################################################################
+একাধিক .NET project একটি GitHub repository-তে রাখতে p
+arent folder-এ Git initialize করে প্রতিটি project আলাদা subfolder হিসেবে রাখা হয়, 
+যাকে monorepo approach বলা হয়।
+##################################################################
+
+
+
+## 🎯 তুমি যা চাও (ঠিকভাবে লেখা)
+
+তুমি চাও:
+
+https://github.com/mahadi84/Dotnet
+ ├── Project1
+ ├── Project2
+ ├── Project3
+
+👉 একটাই GitHub link, কিন্তু ভেতরে একাধিক project।
+
+এটাই Monorepo approach।
+
+## ✅ সঠিক ও Recommended সমাধান: Monorepo
+
+### 🔹 Step-1: GitHub এ একটি repo তৈরি করো
+
+ Repo name: `Dotnet`
+ ❌ README auto-create বন্ধ রাখো (local project থাকলে)
+ Create repository
+
+### 🔹 Step-2: লোকালে main parent folder তৈরি করো
+D:/Dotnet
+
+এর ভেতরে structure এমন হবে:
+
+Dotnet/
+ ├── Project1/
+ ├── Project2/
+ ├── Project3/
+
+প্রতিটা `Project` আলাদা আলাদা .NET project
+(নিজস্ব `.csproj`, `Program.cs`, etc.)
+
+### 🔹 Step-3: Parent folder এ Git initialize করো
+cd D:/Dotnet
+git init
+
+⚠️ গুরুত্বপূর্ণ:
+Git init শুধু parent folder (`Dotnet`) এ হবে, project folder গুলোতে নয়।
+
+### 🔹 Step-4: `.gitignore` যোগ করো (একটাই, parent এ)
+
+bin/
+obj/
+.vs/
+.user
+.suo
+
+এটা সব project এর জন্য কাজ করবে।
+
+### 🔹 Step-5: সব project একসাথে add করো
+git add .
+
+### 🔹 Step-6: Commit করো
+git commit -m "Add multiple .NET projects under Dotnet repository"
+
+### 🔹 Step-7: GitHub repo connect করো
+git remote add origin https://github.com/mahadi84/Dotnet.git
+
+### 🔹 Step-8: main branch সেট করে push করো
+git branch -M main
+git push -u origin main
+
+🎉 Done!
+এখন এক লিংকে সব project থাকবে।
+
+## 🔍 GitHub এ কেমন দেখাবে?
+
+Dotnet
+ ├── Project1
+ │   └── Project1.csproj
+ ├── Project2
+ │   └── Project2.csproj
+ ├── Project3
+ │   └── Project3.csproj
+
+## ❌ যেটা করা উচিত না (Common mistake)
+
+ প্রতিটা project এ আলাদা `git init`
+ এক repo এর ভিতরে আরেক repo (nested git)
+ Force push দিয়ে history নষ্ট করা
+
+## 🧠 Alternative (কখন লাগতে পারে)
+
+### Submodule ❌ (Beginner দের জন্য নয়)
+
+Git submodule ব্যবহার করা যায়, কিন্তু:
+
+ জটিল
+ Error-prone
+ সাধারণ .NET learning/project এর জন্য দরকার নেই
+
+👉 Monorepo-ই best choice।
+
+## 🧪 Viva / Interview one-liner
+
+> একাধিক .NET project একটি GitHub repository-তে রাখতে parent folder-এ Git initialize করে প্রতিটি project আলাদা subfolder হিসেবে রাখা হয়, যাকে monorepo approach বলা হয়।
+
+## 🔑 মনে রাখার সূত্র
+
+> One repo → Many projects → One git init (parent)
+
+এই structure professional .NET teams, Microsoft docs, এবং real-world production–এও ব্যবহার হয়।
+
+
+
+##################################################################
+বিদ্যমান .NET monorepo-তে নতুন project যোগ করতে 
+##################################################################
+ঠিক আছে—ধরি তোমার কাছে ইতিমধ্যেই এই repo আছে:
+
+https://github.com/mahadi84/Dotnet
+
+এটার ভেতরে আগে থেকেই কিছু project আছে।
+এখন তুমি আরেকটা নতুন .NET project যোগ করতে চাও, কিন্তু নতুন repo না খুলে, একই লিংকের ভেতরেই।
+
+এটাই সঠিক workflow নিচে দিলাম—step by step।
+
+## 🎯 লক্ষ্যমাত্রা (Final Structure)
+
+Dotnet
+ ├── Project1
+ ├── Project2
+ ├── NewProject   ← এটাকে যোগ করবে
+
+## ✅ Step–1: Repo টি লোকালে clone করো (যদি আগে না করা থাকে)
+git clone https://github.com/mahadi84/Dotnet.git
+cd Dotnet
+
+⚠️ যদি আগেই clone করা থাকে, এই ধাপ বাদ দাও।
+
+## ✅ Step–2: Repo folder এর ভেতরে নতুন project তৈরি করো
+
+### Option–A: .NET CLI দিয়ে (Recommended)
+dotnet new webapi -n NewProject
+
+অথবা
+dotnet new mvc -n NewProject
+
+এতে তৈরি হবে:
+
+Dotnet/NewProject/
+
+### Option–B: Visual Studio দিয়ে
+
+1. Open Folder → Dotnet
+2. Add → New Project
+3. Location হিসেবে দাও:
+
+
+   Dotnet/
+
+4. Project name দাও: `NewProject`
+
+⚠️ আলাদা git init করবে না।
+
+## ✅ Step–3: Git status চেক করো
+git status
+
+তুমি দেখবে:
+
+Untracked files:
+  NewProject/
+
+## ✅ Step–4: নতুন project add করো
+git add NewProject
+
+(বা চাইলে `git add .`)
+
+## ✅ Step–5: Commit করো
+git commit -m "Add NewProject to Dotnet repository"
+
+## ✅ Step–6: GitHub এ push করো
+git push
+
+🎉 Done!
+একই link-এ নতুন project যোগ হয়ে গেছে।
+
+## ❌ যেটা কখনো করবে না
+
+ `NewProject` folder এর ভেতরে `git init`
+ আলাদা repo বানানো
+ Force push (`git push -f`)
+
+## 🧠 মনে রাখার Golden Rule
+
+> একটা Git repo → যত খুশি project → কিন্তু git init একবারই (root এ)
+
+## 🎓 Viva / Interview one-liner
+
+> বিদ্যমান .NET monorepo-তে নতুন project যোগ করতে parent repository folder-এর ভেতরে project তৈরি করে সেটি commit ও push করলেই হয়।
+
+এভাবে কাজ করলে:
+✔ Repo clean থাকবে
+✔ History ঠিক থাকবে
+✔ Future এ কোনো Git error আসবে না
+
 
