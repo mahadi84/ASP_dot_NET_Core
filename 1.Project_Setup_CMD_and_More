@@ -5,7 +5,7 @@ How to: (SoftwareDevelopmentManager-H(3)R-Pack)
 3. Create Migration
 4. Hide table Row to other dev
 5. Use Repository Pattern
-6. Create Relationship-ONE TO MANY:(Need a package name: nuwton )
+6. Create Relationship, ONE-TO-MANY, মানে: একটা Parent entity → অনেক Child entity যেমন: Department → অনেক Employee.
 7. Install/uninstall an package
 8. Check installed packages version CMD
 and  
