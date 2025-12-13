@@ -12,6 +12,11 @@ ASP.NET, CSHTML, NAMESAPCE, USING, Return type
 
 
 ### ১. Async ও Await
+
+ডাটাবেস কল মানেই:
+⏳ সময় লাগে
+⛔ Thread ব্লক করা উচিত না
+
    Async (অ্যাসিঙ্ক):
        বাংলা অর্থ: এটি একটি কি-ওয়ার্ড (Keyword) যা কোনো Asynchoronus Method আগে ব্যবহার করা হয়।
        ব্যাখ্যা: 
