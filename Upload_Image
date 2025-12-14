@@ -5,7 +5,7 @@ Target stack:
 ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resize & Compression
 
 #################################################################### 
-               What to learn First?
+               What is medatory to know First!
 ################################################################## 
 
 # 🔐 Production Best Practices (Very Important)
@@ -18,14 +18,6 @@ ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resi
 4️⃣ Size, type, extension সব validate করবে
 5️⃣ পুরোনো image delete না করলে → server ভরে যাবে
 
-### ✅ DO
-✔ Resize before save
-✔ Compress image
-✔ GUID filename
-✔ Async IO
-✔ Delete unused files
-✔ Separate layers
-
 ### ❌ NEVER
 ❌ Raw user filename
 ❌ DB-তে image
@@ -33,7 +25,6 @@ ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resi
 ❌ Sync file IO
 ❌ Unlimited file size
 
----
 
 # 🧠 Architecture Wisdom (Interview Gold)
 
@@ -52,7 +43,18 @@ Database
 
 Image Processing → Async → Resize → Compress → Save to File System
 ```
+
+### ✅ DO
+✔ Resize before save
+✔ Compress image
+✔ GUID filename
+✔ Async IO
+✔ Delete unused files
+✔ Separate layers
 ---
+
+
+
 
 # 🎯 One-Line Production Summary
 
