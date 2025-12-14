@@ -7,28 +7,23 @@
 ###################################################################
 
 
-# 🎯 প্রশ্নের সংক্ষিপ্ত উত্তর:
+🎯 প্রশ্নের সংক্ষিপ্ত উত্তর:
 > একবারে কত row CSV upload করা যাবে—এর কোনো fixed সংখ্যা নেই।
 > এটা নির্ভর করে কীভাবে upload + insert করা হচ্ছে তার ওপর।
 
 CSV upload ভুলভাবে করলে-
 👉 server crash, memory overflow, slow MySQL, partial data insert—সবই হতে পারে।
 
-কিন্তু safe guideline নিচে দিলাম 👇
-# 📊 Safe Row Count Guideline (Production Reality):
------------------------------------------------------
-| Upload Strategy               | Safe Rows (একবারে)|
-|-------------------------------|--------------------|
-| ❌ Naive loop + SaveChanges  | 1k – 5k            |
-| ⚠️ EF Core batch insert      | 10k – 30k          |
-| ✅ Chunk + Bulk Insert       | 50k – 200k         |
-| 🚀 MySQL `LOAD DATA INFILE`  | 1M+                |
------------------------------------------------------
+1️⃣ CSV Upload – What NOT to do ❌
+❌ পুরো CSV file memory তে load করা
+❌ `ReadAllLines()` ব্যবহার
+❌ প্রতি row এ `SaveChanges()`
+❌ Transaction ছাড়া insert
+❌ Validation ছাড়া data ঢোকানো
 
-👉 Best practice = Chunk + Bulk Insert
+এইগুলো করলে 5–10 হাজার row এই app মারা যাবে।
 
-# 🧠 CSV Upload Best Practice (High-Level Flow)
-
+🧠 CSV Upload Best Practice (High-Level Flow):
 ```
 CSV Upload
    ↓
@@ -43,15 +38,21 @@ Chunk (e.g. 1000 rows)
 Bulk insert to MySQL
 ```
 
-# 1️⃣ CSV Upload – What NOT to do ❌
 
-❌ পুরো CSV file memory তে load করা
-❌ `ReadAllLines()` ব্যবহার
-❌ প্রতি row এ `SaveChanges()`
-❌ Transaction ছাড়া insert
-❌ Validation ছাড়া data ঢোকানো
+কিন্তু safe guideline নিচে দিলাম 👇
+# 📊 Safe Row Count Guideline (Production Reality):
+-----------------------------------------------------
+| Upload Strategy               | Safe Rows (একবারে)|
+|-------------------------------|--------------------|
+| ❌ Naive loop + SaveChanges  | 1k – 5k            |
+| ⚠️ EF Core batch insert      | 10k – 30k          |
+| ✅ Chunk + Bulk Insert       | 50k – 200k         |
+| 🚀 MySQL `LOAD DATA INFILE`  | 1M+                |
+-----------------------------------------------------
+👉 Best practice = Chunk + Bulk Insert
 
-এইগুলো করলে 5–10 হাজার row এই app মারা যাবে।
+
+
 
 
 ###################################################################
