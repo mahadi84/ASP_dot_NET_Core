@@ -1,0 +1,10 @@
+
+
+
+"একটি .NET Core MVC অ্যাপ্লিকেশন ডিজাইন করুন যা ৬০,০০০ রো-এর একটি CSV ফাইল আপলোড করবে। রো-গুলিতে একটি ব্যাংকের ৬০০-এরও বেশি ব্রাঞ্চের জন্য `ABD` দিয়ে শুরু হওয়া ইউনিক কোডসহ একাধিক ডেটা থাকবে। 
+প্রতিটি `ABD` কোডের জন্য মোট টাকার পরিমাণ আলাদাভাবে যোগ করুন, ফলাফল প্রদর্শন করুন এবং মাইক্রোসফট এক্সেল ফরম্যাটে ডাউনলোড করার সুবিধা দিন।"
+
+"Design .net core mvc app which will upload csv file of 60k row. row contain multiple data with unique code start with ABD for more than 600 banchase of a Bank.
+Add total  amount of each ABD code differently, show and download in microsoft excel formate. give explanation" convert the sentence in Bangla
+
+
