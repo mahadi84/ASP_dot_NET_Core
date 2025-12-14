@@ -1,4 +1,4 @@
-
+DATE: 15 Dec 2025
 
 
 "একটি .NET Core MVC অ্যাপ্লিকেশন ডিজাইন করুন যা 1M রো-এর একটি CSV ফাইল আপলোড করবে। রো-গুলিতে একটি ব্যাংকের ৬০০-এরও বেশি ব্রাঞ্চের জন্য `ABD` দিয়ে শুরু হওয়া ইউনিক কোডসহ একাধিক ডেটা থাকবে। 
@@ -8,78 +8,245 @@
 Add total  amount of each ABD code differently, show and download in microsoft excel formate. give explanation" convert the sentence in Bangla
 
 
-💡 মূল শিক্ষণীয় বিষয় (Key Learnings):
-
-১. স্ট্রিমরিডার ব্যবহার (StreamReader for large files): 
-৬০,০০০ রো বা তার বেশি ডেটার জন্য পুরো ফাইলটিকে একবারে মেমরিতে লোড করা বিপজ্জনক। 
-StreamReader ব্যবহার করে আমরা রো বাই রো ফাইল পড়তে পারি, যা মেমরি ব্যবহার কমিয়ে দেয়।
-
-২. Grouping for Aggregation: 
-প্রতিটি ইউনিক ABDCode-এর মোট অ্যামাউন্ট বের করার জন্য LINQ-এর .GroupBy() এবং .Sum() মেথড ব্যবহার করা সবচেয়ে কার্যকর উপায়।
-
-৩. TempData/Cache ব্যবহার: 
-ফাইল প্রসেসিং সম্পন্ন হওয়ার পর ফলাফলটিকে সেশন (Session) বা TempData-তে সংরক্ষণ করা হয়েছে, যাতে ব্যবহারকারী Summary পেজ দেখতে পারে 
-এবং সেখান থেকে DownloadExcel অ্যাকশন কল করতে পারে, সার্ভারকে বারবার একই গণনা করতে না হয়।
 
 
+##################################################################################################
+                           WHAT I'V LEARNED SO FAR
+##################################################################################################
 
 
-======================== CODE =========================================
+### 🔹 1. Project Overview (Opening – ৩০ সেকেন্ড)
 
-
-
-ঠিক আছে। নিচে আমি **পুরো WesterUnionPD (.NET 9 MVC + MySQL)** প্রজেক্টের **সম্পূর্ণ, একদম শেষ, copy-paste ready কোড** দিচ্ছি।
-আপনি **একটা নতুন MVC প্রজেক্ট খুলে ফাইলগুলোর নাম/path ঠিক রেখে paste করলেই রান করবে**—কোনো modification লাগবে না (শুধু MySQL password বদলাবেন)।
-
-আমি প্রতিটি গুরুত্বপূর্ণ জায়গায় **comment** দিয়েছি, যাতে বুঝতে পারেন কোন অংশ কী কাজ করছে।
+> “আমি সম্প্রতি WesterUnionPD নামে একটি financial data processing system নিয়ে কাজ করেছি।
+> এই সিস্টেমটির মূল উদ্দেশ্য ছিল খুব বড় আকারের CSV ফাইল (১ মিলিয়ন+ row) নিরাপদভাবে প্রসেস করা, যেখানে একটিও ভুল হিসাব গ্রহণযোগ্য নয়।”
 
 ---
 
-# ✅ PROJECT SUMMARY (আপনি কী পাচ্ছেন)
+### 🔹 2. Problem Statement (Why this system – ৪৫ সেকেন্ড)
 
-✔ Project name: **WesterUnionPD**
-✔ .NET **9** MVC
-✔ MySQL (Pomelo)
-✔ CSV ≤ **1GB**
-✔ 1M+ row safe (streaming)
-✔ ABD + 6 digit strict validation
-✔ No data loss (fail-fast + transaction)
-✔ IP allow only: `172.25.5.60`, `172.25.5.59`
-✔ Progress tracking
-✔ Audit log
-✔ Password-protected **Delete All Data** button
-✔ Excel download
+> “Financial বা banking data–তে সবচেয়ে বড় ঝুঁকি হচ্ছে silent error।
+> একটা ছোট ভুল row থাকলেও যদি সিস্টেম সেটাকে ignore করে, তাহলে ভুল total তৈরি হতে পারে, যা production-এ মারাত্মক সমস্যা তৈরি করে।”
+
+> “এছাড়া বড় CSV ফাইল হলে:
+
+* memory overflow,
+* request timeout,
+* partial data save
+  এই সমস্যাগুলো খুব সাধারণ।”
 
 ---
 
-# 1️⃣ Create Project
+### 🔹 3. Architecture Approach (High-level design – ১ মিনিট)
+
+> “এই সমস্যাগুলো সমাধান করতে আমি job-based architecture ব্যবহার করেছি।”
+
+> “User যখন CSV upload করে, তখন:
+
+* upload এবং processing আলাদা করা হয়,
+* একটি JobId তৈরি হয়,
+* এবং background worker সেই job প্রসেস করে।”
+
+> “এতে করে HTTP request block হয় না এবং বড় ফাইল হলেও সিস্টেম stable থাকে।”
+
+---
+
+### 🔹 4. Large File Handling (Scalability – ১ মিনিট)
+
+> “আমি CSV ফাইলগুলো streaming mode-এ পড়েছি, মানে পুরো ফাইল কখনোই memory-তে লোড করা হয় না।”
+
+> “এতে করে:
+
+* ১ মিলিয়ন+ row হলেও RAM safe থাকে,
+* এবং system predictably scale করে।”
+
+---
+
+### 🔹 5. Data Integrity & No-Data-Loss (Most important – ১.৫ মিনিট)
+
+> “এই প্রজেক্টে আমার সবচেয়ে বড় ফোকাস ছিল data integrity।”
+
+> “আমি fail-fast validation ব্যবহার করেছি:
+
+* Account অবশ্যই `ABD + 6 digit` হতে হবে,
+* amount field অবশ্যই valid numeric হতে হবে।”
+
+> “যদি একটাও row invalid হয়, পুরো job fail করে—
+> কারণ financial system-এ ভুল output, no output থেকেও খারাপ।”
+
+> “Database-এ আমি transaction ব্যবহার করে atomic save নিশ্চিত করেছি,
+> যাতে partial data কখনো persist না হয়।”
+
+---
+
+### 🔹 6. User Experience (Progress & Auto Update – ১ মিনিট)
+
+> “User experience উন্নত করার জন্য আমি দুই ধরনের progress যুক্ত করেছি।”
+
+> “একটা হচ্ছে:
+
+* upload progress bar, যেখানে user দেখতে পায় file কতটুকু upload হয়েছে।”
+
+> “আরেকটা হচ্ছে:
+
+* processing progress, যেখানে কত row প্রসেস হয়েছে তা দেখা যায়।”
+
+> “Processing শেষ হলে user-কে refresh করতে হয় না—
+> page নিজেই polling এর মাধ্যমে auto-update হয় এবং result দেখায়।”
+
+---
+
+### 🔹 7. Security Measures (Enterprise mindset – ১ মিনিট)
+
+> “কারণ এটা sensitive data, তাই security নিয়ে আমি খুব strict ছিলাম।”
+
+> “পুরো application-টা IP-whitelisted:
+
+* শুধু নির্দিষ্ট internal IP থেকেই access করা যায়।”
+
+> “Raw CSV কখনো database-এ রাখা হয় না—
+> শুধু aggregated summary সংরক্ষণ করা হয়।”
+
+> “Delete operation:
+
+* POST-only,
+* CSRF protected,
+* এবং password-protected করা হয়েছে।”
+
+---
+
+### 🔹 8. Result Management (Real-world usability – ৪৫ সেকেন্ড)
+
+> “User যেন আগের processed file হারিয়ে না ফেলে, সেজন্য আমি:
+
+* recent job history দেখিয়েছি,
+* প্রতিটি completed job-এর জন্য আলাদা download ও delete button দিয়েছি।”
+
+> “এতে করে systemটা বাস্তব production usage-এর জন্য উপযোগী হয়েছে।”
+
+---
+
+### 🔹 9. Closing (Strong finish – ২০ সেকেন্ড)
+
+> “এই প্রজেক্ট থেকে আমি শিখেছি কীভাবে performance, security, data integrity এবং user experience একসাথে balance করে একটি production-grade financial system ডিজাইন করতে হয়।”
+
+> “আমি এটাকে শুধু একটি কাজ করা application হিসেবে নয়,
+> বরং একটি reliable system হিসেবে চিন্তা করে তৈরি করেছি।”
+
+---
+
+## 🔥 Short Version (২ মিনিটে বলার জন্য)
+
+> “আমি একটি .NET-based financial CSV processing system তৈরি করেছি যেখানে বড় ফাইল streaming-এ প্রসেস হয়, strict validation দিয়ে ভুল হিসাব প্রতিরোধ করা হয়, background worker ব্যবহার করে timeout এড়ানো হয়, এবং IP-restricted secure environment-এ Excel report generate করা হয়। পুরো সিস্টেমটাই production-grade mindset দিয়ে ডিজাইন করা।”
+
+---
+
+## 🎯 Interviewer যদি follow-up প্রশ্ন করে
+
+Q: *সব row valid না হলে কেন পুরো job fail করলেন?*
+A:
+
+> “Financial data-তে silent error সবচেয়ে বিপজ্জনক। ভুল output না দেওয়াই safer choice।”
+
+Q: *WebSocket ব্যবহার করেননি কেন?*
+A:
+
+> “Polling এখানে simpler, auditable এবং enterprise-friendly—কম moving parts।”
+
+Q: *এই system scale করবে তো?*
+A:
+
+> “Streaming + background processing থাকার কারণে file size এবং row count অনুযায়ী linear scale করবে।”
+
+---
+
+############################################################################################
+                                      CODE with EXPLANATION
+############################################################################################
+
+নিচে আমি আপনার **WesternUnionPD** প্রজেক্টটা **শিক্ষানোর মতো করে Step-by-step** সাজিয়ে দিলাম—প্রতিটা Step এ থাকবে:
+
+✅ **Step # (Title)**
+✅ **কী করা হয়েছে**
+✅ **কেন দরকার**
+✅ **না থাকলে সমস্যা**
+✅ **একই সাথে সেই Step-এর code (file path সহ)**
+
+> লক্ষ্য: আপনি যেন কাউকে শেখাতে পারেন এবং একই সাথে code দেখাতে পারেন।
+
+---
+
+# ✅ Step 1 — Project তৈরি (Project Skeleton)
+
+### কী করা হয়েছে
+
+.NET 9 MVC প্রজেক্ট তৈরি করেছি।
+
+### কেন দরকার
+
+MVC structure থাকলে UI/Logic/Data আলাদা থাকে, maintain করা সহজ হয়।
+
+### না থাকলে সমস্যা
+
+একটা বড় system এ code জটলা হয়ে যায়।
+
+### Code
 
 ```bash
-dotnet new mvc -n WesterUnionPD
-cd WesterUnionPD
+dotnet new mvc -n WesternUnionPD
+cd WesternUnionPD
 ```
 
 ---
 
-# 2️⃣ NuGet Packages
+# ✅ Step 2 — Packages ইনস্টল (CSV, Excel, MySQL, EF Core)
+
+### কী করা হয়েছে
+
+CSV read, Excel export, MySQL + EF Core support যোগ করেছি।
+
+### কেন দরকার
+
+* 1M row CSV: efficient parser দরকার
+* Excel report: business output
+* MySQL: persistent storage
+* EF Core: safe DB access
+
+### না থাকলে সমস্যা
+
+CSV/Excel/MySQL কাজই করবে না বা custom code বাড়বে।
+
+### Code
 
 ```bash
 dotnet add package CsvHelper
 dotnet add package ClosedXML
 dotnet add package Pomelo.EntityFrameworkCore.MySql
 dotnet add package Microsoft.EntityFrameworkCore.Design
+dotnet add package Microsoft.EntityFrameworkCore.Tools
 ```
 
 ---
 
-# 3️⃣ appsettings.json
+# ✅ Step 3 — Configuration (appsettings.json)
 
-📄 **WesterUnionPD/appsettings.json**
+### কী করা হয়েছে
+
+DB connection, 1GB limit, IP whitelist, admin delete password config করেছি।
+
+### কেন দরকার
+
+Hardcode না করে config রাখলে security + environment change সহজ।
+
+### না থাকলে সমস্যা
+
+Password/IP কোডে leak হতে পারে, production-এ change করা কঠিন।
+
+### Code (📄 `appsettings.json`)
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=wester_union_pd;User=root;Password=YOUR_PASSWORD;TreatTinyAsBoolean=false;"
+    "DefaultConnection": "Server=localhost;Port=3306;Database=western_union_pd;User=root;Password=YOUR_PASSWORD;TreatTinyAsBoolean=false;"
   },
   "Upload": {
     "MaxUploadBytes": 1073741824,
@@ -96,35 +263,100 @@ dotnet add package Microsoft.EntityFrameworkCore.Design
 
 ---
 
-# 4️⃣ Program.cs (.NET 9)
+# ✅ Step 4 — IP Whitelist Middleware (Global Security Gate)
 
-📄 **Program.cs**
+### কী করা হয়েছে
+
+Allowed IP ছাড়া সব request ব্লক করে দিয়েছি।
+
+### কেন দরকার
+
+Bank data public access থেকে রক্ষা করে—upload/download/delete সবই locked।
+
+### না থাকলে সমস্যা
+
+URL জানলেই যে কেউ access করতে পারবে—high risk।
+
+### Code (📄 `Middleware/IpWhitelistMiddleware.cs`)
+
+```csharp
+namespace WesternUnionPD.Middleware;
+
+/// <summary>
+/// Blocks all requests except allowed IPs (upload/download/delete all protected).
+/// </summary>
+public sealed class IpWhitelistMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly HashSet<string> _allowedIps;
+
+    public IpWhitelistMiddleware(RequestDelegate next, IConfiguration cfg)
+    {
+        _next = next;
+        _allowedIps = cfg.GetSection("Upload:AllowedIPs")
+                         .Get<string[]>()!
+                         .ToHashSet();
+    }
+
+    public async Task InvokeAsync(HttpContext ctx)
+    {
+        var ip = ctx.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+
+        if (ip == null || !_allowedIps.Contains(ip))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await ctx.Response.WriteAsync("Access denied: IP not allowed.");
+            return;
+        }
+
+        await _next(ctx);
+    }
+}
+```
+
+---
+
+# ✅ Step 5 — Program.cs (Pipeline + DI + 1GB limit)
+
+### কী করা হয়েছে
+
+* EF Core + MySQL register
+* 1GB upload limit enforce
+* Services (CSV/Excel/Queue/Worker) register
+* Middleware pipeline set
+
+### কেন দরকার
+
+ASP.NET Core এ order & DI ঠিক না হলে security/feature কাজ করবে না।
+
+### না থাকলে সমস্যা
+
+Upload limit fail, background processing fail, middleware skip হতে পারে।
+
+### Code (📄 `Program.cs`)
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
-using WesterUnionPD.Data;
-using WesterUnionPD.Services;
-using WesterUnionPD.Middleware;
+using WesternUnionPD.Data;
+using WesternUnionPD.Services;
+using WesternUnionPD.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
-// MySQL connection
 var conn = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
     opt.UseMySql(conn, ServerVersion.AutoDetect(conn));
 });
 
-// 1GB upload limit
+// 1GB hard limit
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit =
-        builder.Configuration.GetValue<long>("Upload:MaxUploadBytes");
+    o.MultipartBodyLengthLimit = builder.Configuration.GetValue<long>("Upload:MaxUploadBytes");
 });
 
-// Dependency injection
 builder.Services.AddScoped<ICsvAggregationService, CsvAggregationService>();
 builder.Services.AddSingleton<IUploadJobQueue, UploadJobQueue>();
 builder.Services.AddHostedService<UploadJobWorker>();
@@ -136,7 +368,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// 🔐 IP restriction middleware (GLOBAL)
+// 🔐 Global IP whitelist
 app.UseMiddleware<IpWhitelistMiddleware>();
 
 app.MapControllerRoute(
@@ -148,109 +380,89 @@ app.Run();
 
 ---
 
-# 5️⃣ Middleware – IP Whitelist
+# ✅ Step 6 — Database Context (EF Core)
 
-📄 **Middleware/IpWhitelistMiddleware.cs**
+### কী করা হয়েছে
 
-```csharp
-namespace WesterUnionPD.Middleware;
+MySQL DB-তে দুইটা table রাখবো: Job + Aggregated Summary
 
-/// <summary>
-/// Blocks all requests except from allowed IPs.
-/// </summary>
-public sealed class IpWhitelistMiddleware
-{
-    private readonly RequestDelegate _next;
-    private readonly HashSet<string> _allowedIps;
+### কেন দরকার
 
-    public IpWhitelistMiddleware(RequestDelegate next, IConfiguration config)
-    {
-        _next = next;
-        _allowedIps = config
-            .GetSection("Upload:AllowedIPs")
-            .Get<string[]>()!
-            .ToHashSet();
-    }
+Raw CSV রাখা risky; আমরা শুধু aggregated totals রাখছি।
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        var ip = context.Connection.RemoteIpAddress?.MapToIPv4().ToString();
+### না থাকলে সমস্যা
 
-        if (ip == null || !_allowedIps.Contains(ip))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("Access denied: IP not allowed.");
-            return;
-        }
+DB bloated + sensitive leak risk।
 
-        await _next(context);
-    }
-}
-```
-
----
-
-# 6️⃣ Data Layer
-
-📄 **Data/AppDbContext.cs**
+### Code (📄 `Data/AppDbContext.cs`)
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
-using WesterUnionPD.Models;
+using WesternUnionPD.Models;
 
-namespace WesterUnionPD.Data;
+namespace WesternUnionPD.Data;
 
 /// <summary>
-/// Database context – stores ONLY aggregated data.
+/// Stores only job & aggregated summaries (NO raw CSV stored).
 /// </summary>
 public sealed class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> opt) : base(opt) { }
 
     public DbSet<UploadJob> UploadJobs => Set<UploadJob>();
     public DbSet<BranchSummary> BranchSummaries => Set<BranchSummary>();
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 }
 ```
 
 ---
 
-# 7️⃣ Models
+# ✅ Step 7 — Models (Job + Summary)
 
-📄 **Models/UploadJob.cs**
+### কী করা হয়েছে
+
+* UploadJob: status + processed row count
+* BranchSummary: ABD code wise totals
+
+### কেন দরকার
+
+Job ধারণা থাকলে download/history/delete reliable হয়।
+
+### না থাকলে সমস্যা
+
+Go Back করলে job link হারিয়ে যেত।
+
+### Code (📄 `Models/UploadJob.cs`)
 
 ```csharp
-namespace WesterUnionPD.Models;
+namespace WesternUnionPD.Models;
 
 /// <summary>
-/// One CSV upload job.
+/// One upload+process job (tracked by JobId).
 /// </summary>
 public sealed class UploadJob
 {
     public Guid Id { get; set; }
-    public string Status { get; set; } = "Queued";
+    public string Status { get; set; } = "Queued"; // Queued|Processing|Completed|Failed
     public string? Error { get; set; }
-
     public long ProcessedRows { get; set; }
-
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
 }
 ```
 
-📄 **Models/BranchSummary.cs**
+### Code (📄 `Models/BranchSummary.cs`)
 
 ```csharp
-namespace WesterUnionPD.Models;
+namespace WesternUnionPD.Models;
 
 /// <summary>
-/// Aggregated result per ABD branch.
+/// Aggregated totals per ABDxxxxxx.
 /// </summary>
 public sealed class BranchSummary
 {
     public int Id { get; set; }
     public Guid UploadJobId { get; set; }
 
-    public string AbdCode { get; set; } = "";
+    public string AbdCode { get; set; } = ""; // ABD + 6 digits
     public decimal ChargesLOC { get; set; }
     public decimal FxLOC { get; set; }
 
@@ -258,105 +470,95 @@ public sealed class BranchSummary
 }
 ```
 
-📄 **Models/AuditLog.cs**
-
-```csharp
-namespace WesterUnionPD.Models;
-
-/// <summary>
-/// Security audit log (no sensitive data).
-/// </summary>
-public sealed class AuditLog
-{
-    public int Id { get; set; }
-    public string Action { get; set; } = "";
-    public string IpAddress { get; set; } = "";
-    public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
-}
-```
-
 ---
 
-# 8️⃣ Services
+# ✅ Step 8 — CSV Aggregation (Streaming + Fail-Fast Validation)
 
-## 8.1 CSV Aggregation (FAIL-FAST)
+### কী করা হয়েছে
 
-📄 **Services/ICsvAggregationService.cs**
+* CSV row-by-row read (streaming)
+* Account must be `ABD + 6 digit` strict
+* numeric parse strict
+* progress update (ProcessedRows)
+
+### কেন দরকার
+
+Financial data-তে silent error ভয়ংকর। Fail-fast = wrong output প্রতিরোধ।
+
+### না থাকলে সমস্যা
+
+Wrong totals তৈরি হতে পারে, audit fail হবে।
+
+### Code (📄 `Services/ICsvAggregationService.cs`)
 
 ```csharp
-using WesterUnionPD.Models;
-using WesterUnionPD.Data;
+using WesternUnionPD.Data;
+using WesternUnionPD.Models;
 
-namespace WesterUnionPD.Services;
+namespace WesternUnionPD.Services;
 
 public interface ICsvAggregationService
 {
-    Task<List<BranchSummary>> AggregateAsync(
-        Stream csvStream,
-        UploadJob job,
-        AppDbContext db,
-        CancellationToken ct);
+    Task<List<BranchSummary>> AggregateAsync(Stream csvStream, UploadJob job, AppDbContext db, CancellationToken ct);
 }
 ```
 
-📄 **Services/CsvAggregationService.cs**
+### Code (📄 `Services/CsvAggregationService.cs`)
 
 ```csharp
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
 using System.Text.RegularExpressions;
-using WesterUnionPD.Models;
-using WesterUnionPD.Data;
+using WesternUnionPD.Data;
+using WesternUnionPD.Models;
 
-namespace WesterUnionPD.Services;
+namespace WesternUnionPD.Services;
 
 /// <summary>
-/// Streaming CSV aggregation (1M+ rows safe).
-/// Any invalid row FAILS the job.
+/// Streaming CSV aggregation with strict ABD validation (fail-fast).
 /// </summary>
 public sealed class CsvAggregationService : ICsvAggregationService
 {
     private static readonly Regex AbdRegex = new(@"^ABD\d{6}$");
 
-    public async Task<List<BranchSummary>> AggregateAsync(
-        Stream csvStream,
-        UploadJob job,
-        AppDbContext db,
-        CancellationToken ct)
+    public async Task<List<BranchSummary>> AggregateAsync(Stream csvStream, UploadJob job, AppDbContext db, CancellationToken ct)
     {
-        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+        var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
-            IgnoreBlankLines = true
+            IgnoreBlankLines = true,
+            TrimOptions = TrimOptions.Trim
         };
 
         using var reader = new StreamReader(csvStream);
-        using var csv = new CsvReader(reader, config);
+        using var csv = new CsvReader(reader, cfg);
 
-        var dict = new Dictionary<string, (decimal c, decimal f)>();
-        long processed = 0;
-
-        await csv.ReadAsync();
+        // Require headers strictly
+        if (!await csv.ReadAsync()) throw new InvalidDataException("CSV empty.");
         csv.ReadHeader();
+
+        var dict = new Dictionary<string, (decimal c, decimal f)>(StringComparer.Ordinal);
+        long processed = 0;
 
         while (await csv.ReadAsync())
         {
             ct.ThrowIfCancellationRequested();
             processed++;
 
-            var account = csv.GetField("Account")?.Trim();
-            if (account == null || !AbdRegex.IsMatch(account))
-                throw new InvalidDataException("Invalid ABD code.");
+            var account = (csv.GetField("Account") ?? "").Trim();
+            if (!AbdRegex.IsMatch(account))
+                throw new InvalidDataException("Invalid Account: must be ABD + 6 digits.");
 
-            decimal charges = Parse(csv.GetField("ShareOfChargesLOC"));
-            decimal fx = Parse(csv.GetField("ShareOfFXLOC"));
+            var charges = ParseMoney(csv.GetField("ShareOfChargesLOC"));
+            var fx = ParseMoney(csv.GetField("ShareOfFXLOC"));
 
             if (dict.TryGetValue(account, out var agg))
                 dict[account] = (agg.c + charges, agg.f + fx);
             else
                 dict[account] = (charges, fx);
 
+            // Update DB progress every 5000 rows
             if (processed % 5000 == 0)
             {
                 job.ProcessedRows = processed;
@@ -376,27 +578,159 @@ public sealed class CsvAggregationService : ICsvAggregationService
         }).ToList();
     }
 
-    private static decimal Parse(string? v)
+    private static decimal ParseMoney(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(v)) return 0;
-        v = v.Replace(",", "");
+        raw = (raw ?? "").Trim();
+        if (raw.Length == 0) return 0m;
 
-        if (!decimal.TryParse(v, out var d))
-            throw new InvalidDataException("Invalid numeric value.");
+        raw = raw.Replace(",", ""); // allow 1,234.50
+        if (!decimal.TryParse(raw, out var v))
+            throw new InvalidDataException("Invalid numeric amount in CSV.");
 
-        return d;
+        return v;
     }
 }
 ```
 
-## 8.2 Excel Export
+---
 
-📄 **Services/IExcelExportService.cs**
+# ✅ Step 9 — Queue + Background Worker (No Timeout + Reliability)
+
+### কী করা হয়েছে
+
+Upload request শেষ হলেও processing background এ চলবে।
+
+### কেন দরকার
+
+1M rows processing HTTP request এ করলে timeout হয়।
+
+### না থাকলে সমস্যা
+
+User “request timeout” পাবে, data inconsistent হতে পারে।
+
+### Code (📄 `Services/IUploadJobQueue.cs`)
 
 ```csharp
-using WesterUnionPD.Models;
+namespace WesternUnionPD.Services;
 
-namespace WesterUnionPD.Services;
+public interface IUploadJobQueue
+{
+    ValueTask EnqueueAsync(Guid jobId, string tempPath, CancellationToken ct);
+    ValueTask<(Guid jobId, string tempPath)> DequeueAsync(CancellationToken ct);
+}
+```
+
+### Code (📄 `Services/UploadJobQueue.cs`)
+
+```csharp
+using System.Threading.Channels;
+
+namespace WesternUnionPD.Services;
+
+public sealed class UploadJobQueue : IUploadJobQueue
+{
+    private readonly Channel<(Guid, string)> _ch = Channel.CreateUnbounded<(Guid, string)>();
+
+    public ValueTask EnqueueAsync(Guid jobId, string tempPath, CancellationToken ct)
+        => _ch.Writer.WriteAsync((jobId, tempPath), ct);
+
+    public ValueTask<(Guid jobId, string tempPath)> DequeueAsync(CancellationToken ct)
+        => _ch.Reader.ReadAsync(ct);
+}
+```
+
+### Code (📄 `Services/UploadJobWorker.cs`)
+
+```csharp
+using WesternUnionPD.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace WesternUnionPD.Services;
+
+/// <summary>
+/// Background worker: reads temp CSV, aggregates, saves atomically with transaction.
+/// </summary>
+public sealed class UploadJobWorker : BackgroundService
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IUploadJobQueue _queue;
+
+    public UploadJobWorker(IServiceScopeFactory scopeFactory, IUploadJobQueue queue)
+    {
+        _scopeFactory = scopeFactory;
+        _queue = queue;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            var (jobId, tempPath) = await _queue.DequeueAsync(stoppingToken);
+
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var agg = scope.ServiceProvider.GetRequiredService<ICsvAggregationService>();
+
+            var job = await db.UploadJobs.FirstAsync(x => x.Id == jobId, stoppingToken);
+
+            try
+            {
+                job.Status = "Processing";
+                job.Error = null;
+                await db.SaveChangesAsync(stoppingToken);
+
+                await using var fs = File.OpenRead(tempPath);
+                var summaries = await agg.AggregateAsync(fs, job, db, stoppingToken);
+
+                // Atomic write (all-or-nothing)
+                using var tx = await db.Database.BeginTransactionAsync(stoppingToken);
+
+                db.BranchSummaries.RemoveRange(db.BranchSummaries.Where(x => x.UploadJobId == jobId));
+                await db.SaveChangesAsync(stoppingToken);
+
+                db.BranchSummaries.AddRange(summaries);
+                job.Status = "Completed";
+
+                await db.SaveChangesAsync(stoppingToken);
+                await tx.CommitAsync(stoppingToken);
+            }
+            catch (Exception)
+            {
+                job.Status = "Failed";
+                job.Error = "CSV processing failed (format/value invalid).";
+                await db.SaveChangesAsync(stoppingToken);
+            }
+            finally
+            {
+                try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { /* ignore */ }
+            }
+        }
+    }
+}
+```
+
+---
+
+# ✅ Step 10 — Excel Export (Business Output)
+
+### কী করা হয়েছে
+
+Aggregated result Excel (.xlsx) বানানো।
+
+### কেন দরকার
+
+Finance team Excel format ব্যবহার করে।
+
+### না থাকলে সমস্যা
+
+Manual copy/paste → error prone।
+
+### Code (📄 `Services/IExcelExportService.cs`)
+
+```csharp
+using WesternUnionPD.Models;
+
+namespace WesternUnionPD.Services;
 
 public interface IExcelExportService
 {
@@ -404,17 +738,14 @@ public interface IExcelExportService
 }
 ```
 
-📄 **Services/ExcelExportService.cs**
+### Code (📄 `Services/ExcelExportService.cs`)
 
 ```csharp
 using ClosedXML.Excel;
-using WesterUnionPD.Models;
+using WesternUnionPD.Models;
 
-namespace WesterUnionPD.Services;
+namespace WesternUnionPD.Services;
 
-/// <summary>
-/// Creates Excel (.xlsx) from aggregated data.
-/// </summary>
 public sealed class ExcelExportService : IExcelExportService
 {
     public byte[] CreateExcel(List<BranchSummary> summaries)
@@ -426,11 +757,10 @@ public sealed class ExcelExportService : IExcelExportService
         ws.Cell(1, 2).Value = "Charges LOC";
         ws.Cell(1, 3).Value = "FX LOC";
         ws.Cell(1, 4).Value = "Grand Total";
-
         ws.Range(1, 1, 1, 4).Style.Font.Bold = true;
 
         int r = 2;
-        foreach (var s in summaries)
+        foreach (var s in summaries.OrderBy(x => x.AbdCode))
         {
             ws.Cell(r, 1).Value = s.AbdCode;
             ws.Cell(r, 2).Value = s.ChargesLOC;
@@ -450,124 +780,33 @@ public sealed class ExcelExportService : IExcelExportService
 
 ---
 
-# 9️⃣ Background Queue & Worker
+# ✅ Step 11 — Controller (Upload Ajax + Result + Download + History)
 
-📄 **Services/IUploadJobQueue.cs**
+### কী করা হয়েছে
 
-```csharp
-namespace WesterUnionPD.Services;
+* Upload page: recent jobs দেখায়
+* UploadAjax: progress bar support
+* Result: polling দিয়ে auto-update
+* Download: completed হলে excel
 
-public interface IUploadJobQueue
-{
-    ValueTask EnqueueAsync(Guid jobId, string path, CancellationToken ct);
-    ValueTask<(Guid jobId, string path)> DequeueAsync(CancellationToken ct);
-}
-```
+### কেন দরকার
 
-📄 **Services/UploadJobQueue.cs**
+Professional UX: refresh ছাড়া result show, job history থেকে re-download।
 
-```csharp
-using System.Threading.Channels;
+### না থাকলে সমস্যা
 
-namespace WesterUnionPD.Services;
+User confuse হবে, back গেলে job হারাবে।
 
-public sealed class UploadJobQueue : IUploadJobQueue
-{
-    private readonly Channel<(Guid, string)> _ch =
-        Channel.CreateUnbounded<(Guid, string)>();
-
-    public ValueTask EnqueueAsync(Guid jobId, string path, CancellationToken ct)
-        => _ch.Writer.WriteAsync((jobId, path), ct);
-
-    public ValueTask<(Guid jobId, string path)> DequeueAsync(CancellationToken ct)
-        => _ch.Reader.ReadAsync(ct);
-}
-```
-
-📄 **Services/UploadJobWorker.cs**
-
-```csharp
-using WesterUnionPD.Data;
-
-namespace WesterUnionPD.Services;
-
-/// <summary>
-/// Background worker to process CSV without timeout.
-/// </summary>
-public sealed class UploadJobWorker : BackgroundService
-{
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IUploadJobQueue _queue;
-
-    public UploadJobWorker(IServiceScopeFactory scopeFactory, IUploadJobQueue queue)
-    {
-        _scopeFactory = scopeFactory;
-        _queue = queue;
-    }
-
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            var (jobId, path) = await _queue.DequeueAsync(stoppingToken);
-
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var csv = scope.ServiceProvider.GetRequiredService<ICsvAggregationService>();
-
-            var job = await db.UploadJobs.FindAsync(jobId);
-
-            try
-            {
-                job!.Status = "Processing";
-                await db.SaveChangesAsync(stoppingToken);
-
-                await using var fs = File.OpenRead(path);
-                var summaries = await csv.AggregateAsync(fs, job, db, stoppingToken);
-
-                using var tx = await db.Database.BeginTransactionAsync(stoppingToken);
-
-                db.BranchSummaries.RemoveRange(
-                    db.BranchSummaries.Where(x => x.UploadJobId == jobId));
-
-                await db.SaveChangesAsync(stoppingToken);
-
-                db.BranchSummaries.AddRange(summaries);
-
-                job.Status = "Completed";
-                await db.SaveChangesAsync(stoppingToken);
-
-                await tx.CommitAsync(stoppingToken);
-            }
-            catch
-            {
-                job!.Status = "Failed";
-                job.Error = "CSV processing failed.";
-                await db.SaveChangesAsync(stoppingToken);
-            }
-            finally
-            {
-                if (File.Exists(path)) File.Delete(path);
-            }
-        }
-    }
-}
-```
-
----
-
-# 🔟 Controllers
-
-📄 **Controllers/BranchChargeController.cs**
+### Code (📄 `Controllers/BranchChargeController.cs`) — **Complete**
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using WesterUnionPD.Data;
-using WesterUnionPD.Models;
-using WesterUnionPD.Services;
+using WesternUnionPD.Data;
+using WesternUnionPD.Models;
+using WesternUnionPD.Services;
 
-namespace WesterUnionPD.Controllers;
+namespace WesternUnionPD.Controllers;
 
 public sealed class BranchChargeController : Controller
 {
@@ -576,11 +815,7 @@ public sealed class BranchChargeController : Controller
     private readonly IExcelExportService _excel;
     private readonly long _maxBytes;
 
-    public BranchChargeController(
-        AppDbContext db,
-        IUploadJobQueue queue,
-        IExcelExportService excel,
-        IConfiguration cfg)
+    public BranchChargeController(AppDbContext db, IUploadJobQueue queue, IExcelExportService excel, IConfiguration cfg)
     {
         _db = db;
         _queue = queue;
@@ -588,71 +823,125 @@ public sealed class BranchChargeController : Controller
         _maxBytes = cfg.GetValue<long>("Upload:MaxUploadBytes");
     }
 
-    public IActionResult Upload() => View();
+    // Upload page with recent jobs list
+    [HttpGet]
+    public async Task<IActionResult> Upload()
+    {
+        var recentJobs = await _db.UploadJobs
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedUtc)
+            .Take(10)
+            .ToListAsync();
 
+        return View(recentJobs);
+    }
+
+    // AJAX upload endpoint (supports client-side upload progress bar)
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Upload(IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> UploadAjax(IFormFile file, CancellationToken ct)
     {
-        if (file == null || file.Length == 0) return BadRequest();
-        if (file.Length > _maxBytes) return BadRequest("File too large.");
+        if (file == null || file.Length == 0) return BadRequest("File missing.");
+        if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Only .csv allowed.");
+        if (file.Length > _maxBytes) return BadRequest("File too large (max 1GB).");
 
-        var tempDir = Path.Combine(Path.GetTempPath(), "wupd");
+        // Save file to temp (NOT wwwroot)
+        var tempDir = Path.Combine(Path.GetTempPath(), "western_union_pd_uploads");
         Directory.CreateDirectory(tempDir);
+        var tempPath = Path.Combine(tempDir, $"{Guid.NewGuid():N}.csv");
 
-        var path = Path.Combine(tempDir, $"{Guid.NewGuid()}.csv");
-
-        await using (var fs = System.IO.File.Create(path))
+        await using (var fs = System.IO.File.Create(tempPath))
         {
             await file.CopyToAsync(fs, ct);
         }
 
-        var job = new UploadJob { Id = Guid.NewGuid() };
+        // Create job
+        var job = new UploadJob
+        {
+            Id = Guid.NewGuid(),
+            Status = "Queued",
+            CreatedUtc = DateTime.UtcNow,
+            ProcessedRows = 0
+        };
+
         _db.UploadJobs.Add(job);
         await _db.SaveChangesAsync(ct);
 
-        await _queue.EnqueueAsync(job.Id, path, ct);
+        // Background processing
+        await _queue.EnqueueAsync(job.Id, tempPath, ct);
 
-        return RedirectToAction(nameof(Result), new { id = job.Id });
+        return Json(new
+        {
+            jobId = job.Id,
+            redirectUrl = Url.Action(nameof(Result), new { id = job.Id })
+        });
     }
 
+    // Result view (UI polls this page to auto-update status without manual refresh)
+    [HttpGet]
     public async Task<IActionResult> Result(Guid id)
     {
-        var job = await _db.UploadJobs.FindAsync(id);
-        var data = await _db.BranchSummaries
+        var job = await _db.UploadJobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (job == null) return NotFound();
+
+        var summaries = await _db.BranchSummaries
+            .AsNoTracking()
             .Where(x => x.UploadJobId == id)
+            .OrderBy(x => x.AbdCode)
             .ToListAsync();
 
         ViewBag.Job = job;
-        return View(data);
+        return View(summaries);
     }
 
+    // Download Excel only when completed
+    [HttpGet]
     public async Task<IActionResult> Download(Guid id)
     {
-        var data = await _db.BranchSummaries
+        var job = await _db.UploadJobs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+        if (job == null) return NotFound();
+        if (!string.Equals(job.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Job not completed.");
+
+        var summaries = await _db.BranchSummaries
+            .AsNoTracking()
             .Where(x => x.UploadJobId == id)
+            .OrderBy(x => x.AbdCode)
             .ToListAsync();
 
-        var bytes = _excel.CreateExcel(data);
-        return File(bytes,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "BranchTotals.xlsx");
+        var bytes = _excel.CreateExcel(summaries);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"BranchTotals_{id:N}.xlsx");
     }
 }
 ```
 
-📄 **Controllers/AdminController.cs**
+---
+
+# ✅ Step 12 — Admin Controller (Delete All + Delete Job)
+
+### কী করা হয়েছে
+
+* Delete All: password protected
+* Delete Job: per-job delete (safe cleanup)
+
+### কেন দরকার
+
+Selective delete + emergency cleanup।
+
+### না থাকলে সমস্যা
+
+DB bloated হবে, accidental wipe risk।
+
+### Code (📄 `Controllers/AdminController.cs`)
 
 ```csharp
 using Microsoft.AspNetCore.Mvc;
-using WesterUnionPD.Data;
-using WesterUnionPD.Services;
+using Microsoft.EntityFrameworkCore;
+using WesternUnionPD.Data;
 
-namespace WesterUnionPD.Controllers;
+namespace WesternUnionPD.Controllers;
 
-/// <summary>
-/// Dangerous admin operations.
-/// </summary>
 public sealed class AdminController : Controller
 {
     private readonly AppDbContext _db;
@@ -664,19 +953,33 @@ public sealed class AdminController : Controller
         _cfg = cfg;
     }
 
+    // Delete single job + its summaries
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteJob(Guid jobId)
+    {
+        var job = await _db.UploadJobs.FirstOrDefaultAsync(x => x.Id == jobId);
+        if (job == null) return NotFound();
+
+        _db.BranchSummaries.RemoveRange(_db.BranchSummaries.Where(x => x.UploadJobId == jobId));
+        _db.UploadJobs.Remove(job);
+
+        await _db.SaveChangesAsync();
+        return RedirectToAction("Upload", "BranchCharge");
+    }
+
+    // Delete ALL data (Danger Zone) + password protected
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteAll(string password)
     {
         if (password != _cfg["Admin:DeletePassword"])
-            return BadRequest("Invalid password.");
+            return BadRequest("Invalid delete password.");
 
         _db.BranchSummaries.RemoveRange(_db.BranchSummaries);
         _db.UploadJobs.RemoveRange(_db.UploadJobs);
-        _db.AuditLogs.RemoveRange(_db.AuditLogs);
 
         await _db.SaveChangesAsync();
-
         return RedirectToAction("Upload", "BranchCharge");
     }
 }
@@ -684,56 +987,207 @@ public sealed class AdminController : Controller
 
 ---
 
-# 1️⃣1️⃣ Views
+# ✅ Step 13 — Upload View (Upload Progress + Recent Jobs + Delete per job)
 
-📄 **Views/BranchCharge/Upload.cshtml**
+### কী করা হয়েছে
+
+* Upload progress bar (XHR)
+* Recent job history
+* Download + Delete button per completed job
+* Danger zone (delete all)
+
+### কেন দরকার
+
+User back গেলেও download করতে পারবে; clean UX।
+
+### না থাকলে সমস্যা
+
+Job link হারিয়ে যেত; refresh confusion।
+
+### Code (📄 `Views/BranchCharge/Upload.cshtml`)
 
 ```html
+@model List<WesternUnionPD.Models.UploadJob>
+
 <h2>Upload CSV</h2>
 
-<form asp-action="Upload" method="post" enctype="multipart/form-data">
+<form id="uploadForm" method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
-    <input type="file" name="file" accept=".csv" required />
-    <button type="submit">Upload</button>
+    <input id="fileInput" type="file" name="file" accept=".csv" required />
+    <button id="btnUpload" type="button">Upload & Process</button>
 </form>
+
+<div id="status" style="margin-top:10px;"></div>
+
+<!-- Upload progress bar -->
+<div id="progressWrap" style="margin-top:10px; width:420px; display:none;">
+    <div style="border:1px solid #999;height:22px;border-radius:4px;overflow:hidden;">
+        <div id="progressBar" style="height:22px;width:0%;background:#2e7d32;"></div>
+    </div>
+    <div id="progressText" style="margin-top:6px;font-family:monospace;">0%</div>
+</div>
+
+<hr />
+
+<h3>Recent Jobs</h3>
+
+@if (!Model.Any())
+{
+    <p>No previous jobs.</p>
+}
+else
+{
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+        <tr>
+            <th>JobId</th>
+            <th>Status</th>
+            <th>Rows</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var job in Model)
+        {
+            <tr>
+                <td>@job.Id</td>
+                <td>@job.Status</td>
+                <td>@job.ProcessedRows</td>
+                <td style="white-space:nowrap;">
+                    <a asp-action="Result" asp-route-id="@job.Id" style="margin-right:10px;">View</a>
+
+                    @if (job.Status == "Completed")
+                    {
+                        <a asp-action="Download" asp-route-id="@job.Id" style="margin-right:10px;">📥 Download</a>
+
+                        <!-- Delete one job -->
+                        <form asp-controller="Admin" asp-action="DeleteJob" method="post"
+                              style="display:inline;"
+                              onsubmit="return confirm('Delete this job data?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="jobId" value="@job.Id" />
+                            <button type="submit" style="background:#c62828;color:white;border:none;padding:4px 8px;">
+                                ❌ Delete
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span>Processing…</span>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
 
 <hr />
 
 <h3 style="color:red;">Danger Zone</h3>
-
-<form asp-controller="Admin"
-      asp-action="DeleteAll"
-      method="post"
-      onsubmit="return confirm('DELETE ALL DATA?');">
+<form asp-controller="Admin" asp-action="DeleteAll" method="post"
+      onsubmit="return confirm('FINAL WARNING: Delete ALL data?');">
     @Html.AntiForgeryToken()
     <input type="password" name="password" placeholder="Delete password" required />
-    <button type="submit" style="background:red;color:white;">
+    <button type="submit" style="background:red;color:white;border:none;padding:6px 10px;">
         DELETE ALL DATA
     </button>
 </form>
+
+<script>
+(() => {
+    const btn = document.getElementById("btnUpload");
+    const fileInput = document.getElementById("fileInput");
+    const status = document.getElementById("status");
+    const wrap = document.getElementById("progressWrap");
+    const bar = document.getElementById("progressBar");
+    const txt = document.getElementById("progressText");
+    const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+    btn.onclick = () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) { status.innerText = "Please select a file."; return; }
+
+        // client-side size check (1GB)
+        if (file.size > 1073741824) { status.innerText = "File too large (max 1GB)."; return; }
+
+        wrap.style.display = "block";
+        bar.style.width = "0%";
+        txt.innerText = "0%";
+        status.innerText = "Uploading...";
+
+        btn.disabled = true;
+
+        const fd = new FormData();
+        fd.append("file", file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "@Url.Action("UploadAjax","BranchCharge")", true);
+        xhr.setRequestHeader("RequestVerificationToken", token);
+
+        xhr.upload.onprogress = (e) => {
+            if (!e.lengthComputable) return;
+            const pct = (e.loaded / e.total) * 100;
+            bar.style.width = pct + "%";
+            txt.innerText = Math.round(pct) + "%";
+        };
+
+        xhr.onload = () => {
+            btn.disabled = false;
+            if (xhr.status >= 200 && xhr.status < 300) {
+                const res = JSON.parse(xhr.responseText);
+                window.location.href = res.redirectUrl;
+            } else {
+                status.innerText = "Upload failed: " + xhr.responseText;
+            }
+        };
+
+        xhr.onerror = () => {
+            btn.disabled = false;
+            status.innerText = "Network error during upload.";
+        };
+
+        xhr.send(fd);
+    };
+})();
+</script>
 ```
 
-📄 **Views/BranchCharge/Result.cshtml**
+---
+
+# ✅ Step 14 — Result View (Auto-show result without refresh + Go back)
+
+### কী করা হয়েছে
+
+Polling দিয়ে status auto-update; Completed হলে result show; Go back button।
+
+### কেন দরকার
+
+User refresh না করেই result পায়।
+
+### না থাকলে সমস্যা
+
+Manual refresh লাগত, confusion হতো।
+
+### Code (📄 `Views/BranchCharge/Result.cshtml`)
 
 ```html
-@model List<WesterUnionPD.Models.BranchSummary>
+@model List<WesternUnionPD.Models.BranchSummary>
 @{
-    var job = ViewBag.Job as WesterUnionPD.Models.UploadJob;
+    var job = ViewBag.Job as WesternUnionPD.Models.UploadJob;
 }
 
-<h2>Status: @job?.Status</h2>
-<p>Processed Rows: @job?.ProcessedRows</p>
+<h2>Job Result</h2>
 
-@if (job?.Status == "Completed")
-{
-    <a asp-action="Download" asp-route-id="@job!.Id">Download Excel</a>
+<p><b>Status:</b> <span id="jobStatus">@job?.Status</span></p>
+<p><b>Processed Rows:</b> <span id="rowCount">@job?.ProcessedRows</span></p>
 
-    <table border="1">
+<div id="resultSection" style="display:@(job?.Status=="Completed" ? "block":"none"); margin-top:15px;">
+    <a asp-action="Download" asp-route-id="@job!.Id">📥 Download Excel</a>
+
+    <table border="1" cellpadding="6" cellspacing="0" style="margin-top:10px;">
         <tr>
-            <th>ABD</th>
-            <th>Charges</th>
-            <th>FX</th>
-            <th>Total</th>
+            <th>ABD</th><th>Charges</th><th>FX</th><th>Total</th>
         </tr>
         @foreach (var r in Model)
         {
@@ -745,12 +1199,68 @@ public sealed class AdminController : Controller
             </tr>
         }
     </table>
+</div>
+
+@if (job?.Status == "Failed")
+{
+    <p style="color:red;"><b>@(job.Error ?? "Processing failed.")</b></p>
 }
+
+<hr />
+<a asp-action="Upload" style="padding:8px 12px;background:#2e7d32;color:white;text-decoration:none;border-radius:4px;">
+    ⬅ Go Back & Start Fresh
+</a>
+
+<script>
+(() => {
+    const statusEl = document.getElementById("jobStatus");
+    const rowEl = document.getElementById("rowCount");
+    const resultSection = document.getElementById("resultSection");
+
+    if (statusEl.textContent === "Completed" || statusEl.textContent === "Failed") return;
+
+    const timer = setInterval(async () => {
+        try {
+            const res = await fetch(window.location.href, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+            if (!res.ok) return;
+
+            const html = await res.text();
+            const doc = new DOMParser().parseFromString(html, "text/html");
+
+            const newStatus = doc.querySelector("#jobStatus")?.textContent;
+            const newRows = doc.querySelector("#rowCount")?.textContent;
+
+            if (newStatus) statusEl.textContent = newStatus;
+            if (newRows) rowEl.textContent = newRows;
+
+            if (newStatus === "Completed") {
+                clearInterval(timer);
+                resultSection.style.display = "block";
+            }
+            if (newStatus === "Failed") clearInterval(timer);
+        } catch {}
+    }, 3000);
+})();
+</script>
 ```
 
 ---
 
-# 1️⃣2️⃣ Database Init
+# ✅ Step 15 — Migration & Run
+
+### কী করা হয়েছে
+
+Database table create করেছি।
+
+### কেন দরকার
+
+Without migrations DB schema তৈরি হবে না।
+
+### না থাকলে সমস্যা
+
+Run করলে table not found error।
+
+### Code
 
 ```bash
 dotnet ef migrations add Init
@@ -760,26 +1270,21 @@ dotnet run
 
 ---
 
-## 🟢 FINAL NOTE (গুরুত্বপূর্ণ)
+## ✅ আপনি এখন “Teaching Pack” পেলেন
 
-এই কোডটি এখন:
+আপনি এখন কাউকে শেখাতে পারবেন—কারণ প্রতিটি step এ আছে:
 
-* Production-grade logic ✔
-* No-data-loss ✔
-* Bank-style safety ✔
-* Copy–paste ready ✔
+* কী
+* কেন
+* সমস্যা
+* code (file path সহ
 
-আপনি চাইলে পরের ধাপে আমি দিতে পারি:
 
-* Full **ZIP structure**
-* IIS / Nginx deployment guide
-* Automatic cleanup scheduler
-* Digital signature on Excel
-
-বললেই হবে।
 
 
 
 
 
 .
+
+
