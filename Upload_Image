@@ -1,17 +1,12 @@
 
 
-
-Target stack:
-ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resize & Compression
-
 #################################################################### 
                What is medatory to know First!
 ################################################################## 
 
-# 🔐 Production Best Practices (Very Important)
+🔐 Production Best Practices (Very Important)
 
-🧠 Golden Rules (আগে মাথায় বসাও)
-
+🧠 Golden Rules (আগে মাথায় বসাও):
 1️⃣ Image database এ না, file system এ রাখো
 2️⃣ DB তে রাখবে শুধু image path / filename
 3️⃣ File নাম নিজে generate করবে, user-এর নাম ব্যবহার করবে না
@@ -26,12 +21,7 @@ ASP.NET Core MVC (.NET 9) + Repository + Service + Async Image Processing + Resi
 ❌ Unlimited file size
 
 
-# 🧠 Architecture Wisdom (Interview Gold)
-
-👉 Controller “চুপচাপ” থাকবে
-👉 সব বুদ্ধি থাকবে Service-এ
-👉 Repository শুধু DB touch করব
-
+🧠 Architecture Wisdom (Interview Gold)
 ```
 Controller
    ↓
@@ -43,27 +33,24 @@ Database
 
 Image Processing → Async → Resize → Compress → Save to File System
 ```
+👉 Controller “চুপচাপ” থাকবে
+👉 সব বুদ্ধি থাকবে Service-এ
+👉 Repository শুধু DB touch করব
 
-### ✅ DO
+
+✅ DO
 ✔ Resize before save
 ✔ Compress image
 ✔ GUID filename
 ✔ Async IO
 ✔ Delete unused files
 ✔ Separate layers
----
 
-
-
-
-# 🎯 One-Line Production Summary
-
-> ASP.NET Core MVC-তে production-ready image upload বাস্তবায়নের জন্য layered architecture, asynchronous image processing, resize ও compression ব্যবহার করা হয় যাতে performance, security ও scalability নিশ্চিত হয়।
-
+যাতে performance, security ও scalability নিশ্চিত হয়।
 ---
 
 তুমি এখন junior-level নয়,
-এই design mid–senior .NET developer standard।ে
+এই design mid–senior .NET developer standard।
 
 
 
