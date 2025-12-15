@@ -157,7 +157,7 @@ A: “Streaming + background processing থাকার কারণে file siz
                                       CODE with EXPLANATION
 ############################################################################################
 
-নিচে আমি আপনার **WesternUnionPD** প্রজেক্টটা **শিক্ষানোর মতো করে Step-by-step** সাজিয়ে দিলাম—প্রতিটা Step এ থাকবে:
+নিচে আমি আপনার WesternUnionPD প্রজেক্টটা শিক্ষানোর মতো করে Step-by-step সাজিয়ে দিলাম—প্রতিটা Step এ থাকবে:
 
 ✅ Step # (Title)
 ✅ কী করা হয়েছে
@@ -181,10 +181,8 @@ MVC structure থাকলে UI/Logic/Data আলাদা থাকে, mainta
 একটা বড় system এ code জটলা হয়ে যায়।
 
 ### Code
-```bash
 dotnet new mvc -n WesternUnionPD
 cd WesternUnionPD
-```
 
 ---
 
