@@ -9,12 +9,9 @@
 
 
 
-Git কোনো শাস্তির যন্ত্র না—এটা সময়কে শৃঙ্খলায় রাখার যন্ত্র।
-একবার ছন্দটা ধরতে পারলে, এগুলো আর error মনে হবে না—warning হয়ে যাবে।
-
-
-# ✅ CASE–A: লোকাল PC-তে আগে থেকেই .NET প্রজেক্ট আছে (সবচেয়ে common)
-
+##################################################################################################
+          ✅ CASE–A: লোকাল PC-তে আগে থেকেই .NET প্রজেক্ট আছে 
+##################################################################################################
 
 git init
     .gitignore ফাইলে এইগুলো রাখো:
@@ -34,14 +31,7 @@ git push -u origin main
 
 
 
-
-
-
-
-
-
 ### 🔹 Step-1: GitHub এ নতুন repo তৈরি করো
-
 1. GitHub → New Repository
 2. Repo name দাও (যেমন: `Login_and_CRUD`)
 3. ❌ README / .gitignore / License কিছুই auto-create করো না
@@ -49,50 +39,11 @@ git push -u origin main
 
 ⚠️ এটা খুব গুরুত্বপূর্ণ—এতে history conflict হবে না।
 
-### 🔹 Step-2: লোকাল প্রজেক্ট ফোল্ডারে ঢুকো
-cd D:/AsPdOtNeT/Login_latest
-
-### 🔹 Step-3: Git initialize করো
-git init
-
-### 🔹 Step-4: `.gitignore` ফাইল তৈরি করো (অবশ্যই)
-
-`.gitignore` ফাইলে এইগুলো রাখো:
-
-bin/
-obj/
-.vs/
-.user
-.suo
-appsettings.Development.json
-
-👉 এতে build file, secret, cache GitHub এ যাবে না।
-
-### 🔹 Step-5: সব file stage করো
-git add .
-
-### 🔹 Step-6: প্রথম commit করো
-git commit -m "Initial commit of .NET project"
-
-### 🔹 Step-7: GitHub repo-র সাথে connect করো
-git remote add origin https://github.com/USERNAME/REPO_NAME.git
-
-উদাহরণ:
-git remote add origin https://github.com/mahadi84/Login_and_CRUD.git
-
-### 🔹 Step-8: main branch সেট করো
-git branch -M main
-
-### 🔹 Step-9: GitHub এ push করো 🎉
-git push -u origin main
-
-✔ Done. Project upload হয়ে গেছে।
 
 
-
-
-
+##################################################################################################
 # ✅ CASE–B: GitHub এ repo আগে আছে (README সহ)
+##################################################################################################
 
 ### 🔹 Step-1: Repo clone করো
 git clone https://github.com/mahadi84/Login_and_CRUD.git
@@ -214,16 +165,26 @@ Dotnet
 
 
 ##################################################################
-বিদ্যমান .NET monorepo-তে নতুন project ADD/DELETE করতে 
+বিদ্যমান .NET monorepo-তে নতুন project ADD/UPDATE/DELETE করতে 
 ##################################################################
 
 Add(CMD) New Project into the mono-repo:
+------------
 git add New_Project_Folder_Name
 git commit -m "Add New_Project_Folder_Name project files"
 git push
 
+Update Existing Project into mono-repo:
+------------
+git status                  //Git কোন কোন ফাইল বদলেছে দেখো
+git add ProjectFolderName  //পরিবর্তনগুলো stage করো 
+git add .
+git commit -m "Update project logic and fixes"  //কি update করছো লিখে রাখো 
+git push                   //GitHub-এ পাঠাও (push)
+
 
 Delete(CMD) Any Project:
+------------
 git add -u
 git commit -m "Remove New_Project_Folder_Name folder"
 git push
