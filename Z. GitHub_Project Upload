@@ -177,10 +177,10 @@ git push
 Update Existing Project into mono-repo:
 ------------
 git status                  //Git কোন কোন ফাইল বদলেছে দেখো
-git add ProjectFolderName  //পরিবর্তনগুলো stage করো 
-git add .
+git add ProjectFolderName  //পরিবর্তনগুলো add করো 
+git add .                 //সব পরিবর্তন stage করো
 git commit -m "Update project logic and fixes"  //কি update করছো লিখে রাখো 
-git push                   //GitHub-এ পাঠাও (push)
+git push                   //GitHub-এ পাঠাও
 
 
 Delete(CMD) Any Project:
