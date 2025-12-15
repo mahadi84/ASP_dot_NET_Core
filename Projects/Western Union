@@ -206,11 +206,11 @@ CSV/Excel/MySQL কাজই করবে না বা custom code বাড়ব
 ### Code
 
 ```bash
-dotnet add package CsvHelper
-dotnet add package ClosedXML
-dotnet add package Pomelo.EntityFrameworkCore.MySql
-dotnet add package Microsoft.EntityFrameworkCore.Design
-dotnet add package Microsoft.EntityFrameworkCore.Tools
+dotnet add package CsvHelper                             //এটি সরাসরি EF-এর অংশ নয়, তবে CSV ফাইল থেকে ডেটা ইনপুট বা আউটপুট করার জন্য ব্যবহৃত হতে পারে।
+dotnet add package ClosedXML                             //এটিও সরাসরি EF-এর অংশ নয়, তবে EF দ্বারা প্রাপ্ত ডেটাকে Excel (.xlsx) ফাইলে এক্সপোর্ট করার জন্য কাজে লাগে।
+dotnet add package Pomelo.EntityFrameworkCore.MySql      //EF-কে MySQL ডেটাবেসের সাথে সংযোগ ও ইন্টারঅ্যাক্ট করার ক্ষমতা প্রদান করে।
+dotnet add package Microsoft.EntityFrameworkCore.Design  //ডেটাবেস মাইগ্রেশন তৈরি, আপডেট এবং মডেল স্ক্যাফোল্ডিংয়ের মতো EF ডিজাইন-টাইম টাস্ক পরিচালনার জন্য এটি অপরিহার্য।
+dotnet add package Microsoft.EntityFrameworkCore.Tools   //EF মাইগ্রেশন কমান্ড এবং অন্যান্য ডেটাবেস সরঞ্জাম কমান্ড লাইনের মাধ্যমে চালানোর জন্য ব্যবহৃত হয়।
 ```
 
 ---
