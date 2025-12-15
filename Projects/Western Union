@@ -217,16 +217,13 @@ dotnet add package Microsoft.EntityFrameworkCore.Tools   //EF মাইগ্র
 
 # ✅ Step 3 — Configuration (appsettings.json)
 
-### কী করা হয়েছে
-
+### কী করা হয়েছে 
 DB connection, 1GB limit, IP whitelist, admin delete password config করেছি।
 
 ### কেন দরকার
-
 Hardcode না করে config রাখলে security + environment change সহজ।
 
-### না থাকলে সমস্যা
-
+### না থাকলে সমস্যা 
 Password/IP কোডে leak হতে পারে, production-এ change করা কঠিন।
 
 ### Code (📄 `appsettings.json`)
@@ -254,15 +251,12 @@ Password/IP কোডে leak হতে পারে, production-এ change ক�
 # ✅ Step 4 — IP Whitelist Middleware (Global Security Gate)
 
 ### কী করা হয়েছে
-
 Allowed IP ছাড়া সব request ব্লক করে দিয়েছি।
 
 ### কেন দরকার
-
 Bank data public access থেকে রক্ষা করে—upload/download/delete সবই locked।
 
 ### না থাকলে সমস্যা
-
 URL জানলেই যে কেউ access করতে পারবে—high risk।
 
 ### Code (📄 `Middleware/IpWhitelistMiddleware.cs`)
@@ -307,22 +301,18 @@ public sealed class IpWhitelistMiddleware
 # ✅ Step 5 — Program.cs (Pipeline + DI + 1GB limit)
 
 ### কী করা হয়েছে
-
 * EF Core + MySQL register
 * 1GB upload limit enforce
 * Services (CSV/Excel/Queue/Worker) register
 * Middleware pipeline set
 
 ### কেন দরকার
-
 ASP.NET Core এ order & DI ঠিক না হলে security/feature কাজ করবে না।
 
 ### না থাকলে সমস্যা
-
 Upload limit fail, background processing fail, middleware skip হতে পারে।
 
 ### Code (📄 `Program.cs`)
-
 ```csharp
 using Microsoft.EntityFrameworkCore;
 using WesternUnionPD.Data;
@@ -371,15 +361,12 @@ app.Run();
 # ✅ Step 6 — Database Context (EF Core)
 
 ### কী করা হয়েছে
-
 MySQL DB-তে দুইটা table রাখবো: Job + Aggregated Summary
 
 ### কেন দরকার
-
 Raw CSV রাখা risky; আমরা শুধু aggregated totals রাখছি।
 
 ### না থাকলে সমস্যা
-
 DB bloated + sensitive leak risk।
 
 ### Code (📄 `Data/AppDbContext.cs`)
@@ -407,16 +394,13 @@ public sealed class AppDbContext : DbContext
 # ✅ Step 7 — Models (Job + Summary)
 
 ### কী করা হয়েছে
-
-* UploadJob: status + processed row count
-* BranchSummary: ABD code wise totals
+ UploadJob: status + processed row count
+ BranchSummary: ABD code wise totals
 
 ### কেন দরকার
-
 Job ধারণা থাকলে download/history/delete reliable হয়।
 
 ### না থাকলে সমস্যা
-
 Go Back করলে job link হারিয়ে যেত।
 
 ### Code (📄 `Models/UploadJob.cs`)
@@ -463,22 +447,18 @@ public sealed class BranchSummary
 # ✅ Step 8 — CSV Aggregation (Streaming + Fail-Fast Validation)
 
 ### কী করা হয়েছে
-
 * CSV row-by-row read (streaming)
 * Account must be `ABD + 6 digit` strict
 * numeric parse strict
 * progress update (ProcessedRows)
 
 ### কেন দরকার
-
 Financial data-তে silent error ভয়ংকর। Fail-fast = wrong output প্রতিরোধ।
 
 ### না থাকলে সমস্যা
-
 Wrong totals তৈরি হতে পারে, audit fail হবে।
 
 ### Code (📄 `Services/ICsvAggregationService.cs`)
-
 ```csharp
 using WesternUnionPD.Data;
 using WesternUnionPD.Models;
@@ -585,15 +565,12 @@ public sealed class CsvAggregationService : ICsvAggregationService
 # ✅ Step 9 — Queue + Background Worker (No Timeout + Reliability)
 
 ### কী করা হয়েছে
-
 Upload request শেষ হলেও processing background এ চলবে।
 
 ### কেন দরকার
-
 1M rows processing HTTP request এ করলে timeout হয়।
 
 ### না থাকলে সমস্যা
-
 User “request timeout” পাবে, data inconsistent হতে পারে।
 
 ### Code (📄 `Services/IUploadJobQueue.cs`)
@@ -702,15 +679,12 @@ public sealed class UploadJobWorker : BackgroundService
 # ✅ Step 10 — Excel Export (Business Output)
 
 ### কী করা হয়েছে
-
 Aggregated result Excel (.xlsx) বানানো।
 
 ### কেন দরকার
-
 Finance team Excel format ব্যবহার করে।
 
 ### না থাকলে সমস্যা
-
 Manual copy/paste → error prone।
 
 ### Code (📄 `Services/IExcelExportService.cs`)
@@ -771,18 +745,15 @@ public sealed class ExcelExportService : IExcelExportService
 # ✅ Step 11 — Controller (Upload Ajax + Result + Download + History)
 
 ### কী করা হয়েছে
-
 * Upload page: recent jobs দেখায়
 * UploadAjax: progress bar support
 * Result: polling দিয়ে auto-update
 * Download: completed হলে excel
 
 ### কেন দরকার
-
 Professional UX: refresh ছাড়া result show, job history থেকে re-download।
 
 ### না থাকলে সমস্যা
-
 User confuse হবে, back গেলে job হারাবে।
 
 ### Code (📄 `Controllers/BranchChargeController.cs`) — **Complete**
@@ -909,16 +880,13 @@ public sealed class BranchChargeController : Controller
 # ✅ Step 12 — Admin Controller (Delete All + Delete Job)
 
 ### কী করা হয়েছে
-
 * Delete All: password protected
 * Delete Job: per-job delete (safe cleanup)
 
 ### কেন দরকার
-
 Selective delete + emergency cleanup।
 
 ### না থাকলে সমস্যা
-
 DB bloated হবে, accidental wipe risk।
 
 ### Code (📄 `Controllers/AdminController.cs`)
@@ -978,22 +946,18 @@ public sealed class AdminController : Controller
 # ✅ Step 13 — Upload View (Upload Progress + Recent Jobs + Delete per job)
 
 ### কী করা হয়েছে
-
 * Upload progress bar (XHR)
 * Recent job history
 * Download + Delete button per completed job
 * Danger zone (delete all)
 
 ### কেন দরকার
-
 User back গেলেও download করতে পারবে; clean UX।
 
 ### না থাকলে সমস্যা
-
 Job link হারিয়ে যেত; refresh confusion।
 
 ### Code (📄 `Views/BranchCharge/Upload.cshtml`)
-
 ```html
 @model List<WesternUnionPD.Models.UploadJob>
 
@@ -1146,15 +1110,12 @@ else
 # ✅ Step 14 — Result View (Auto-show result without refresh + Go back)
 
 ### কী করা হয়েছে
-
 Polling দিয়ে status auto-update; Completed হলে result show; Go back button।
 
 ### কেন দরকার
-
 User refresh না করেই result পায়।
 
 ### না থাকলে সমস্যা
-
 Manual refresh লাগত, confusion হতো।
 
 ### Code (📄 `Views/BranchCharge/Result.cshtml`)
@@ -1237,15 +1198,12 @@ Manual refresh লাগত, confusion হতো।
 # ✅ Step 15 — Migration & Run
 
 ### কী করা হয়েছে
-
 Database table create করেছি।
 
 ### কেন দরকার
-
 Without migrations DB schema তৈরি হবে না।
 
 ### না থাকলে সমস্যা
-
 Run করলে table not found error।
 
 ### Code
