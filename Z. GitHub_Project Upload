@@ -137,15 +137,12 @@ arent folder-এ Git initialize করে প্রতিটি project আল�
 
 ## 🎯 তুমি যা চাও (ঠিকভাবে লেখা)
 
-তুমি চাও:
-
 https://github.com/mahadi84/Dotnet
  ├── Project1
  ├── Project2
  ├── Project3
 
 👉 একটাই GitHub link, কিন্তু ভেতরে একাধিক project।
-
 এটাই Monorepo approach।
 
 ## ✅ সঠিক ও Recommended সমাধান: Monorepo
@@ -160,7 +157,6 @@ https://github.com/mahadi84/Dotnet
 D:/Dotnet
 
 এর ভেতরে structure এমন হবে:
-
 Dotnet/
  ├── Project1/
  ├── Project2/
