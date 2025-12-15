@@ -174,7 +174,7 @@ A: “Streaming + background processing থাকার কারণে file siz
 ### কী করা হয়েছে
 .NET 9 MVC প্রজেক্ট তৈরি করেছি।
 
-### কেন দরকার
+### কেন MVC দরকার
 MVC structure থাকলে UI/Logic/Data আলাদা থাকে, maintain করা সহজ হয়।
 
 ### না থাকলে সমস্যা
