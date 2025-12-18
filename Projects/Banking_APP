@@ -1,5 +1,18 @@
 
 
+
+Create a banking system that must be
+secure, advance, user-friendly and scalable web application for real-world-use 
+with .NET core mvc version 9.
+
+-What things need to consider before start the project, explain it in details. -in Bangla
+
+Create Models with Relatons, Services, Controller, eye-catchy-bootstrap-5 view 
+with Authentication and Authorization 
+use Reposity pattern
+
+with the following logic:
+
 " create a .NET core mvc web app  for a banking system with the following information:
 Customers can:
 -Register with name, email, password and city, after registration customer will get 5 digit account number by which he/she can login
