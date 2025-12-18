@@ -1,0 +1,26 @@
+
+
+
+Create a doctor's appointment 
+secure, advance,  user-friendly and scalable web application for real-world-use with .NET core mvc version 9.
+
+-What things need to consider before start the roject, explain it in details. -in Bangla
+
+Create Models, Services, Controller, eye-catchy-bootstrap-5 view with Authentication and Authorization use Reposity pattern,
+-with the following logic:
+
+"-Login into the Admin panel, admin will register doctors' info like doctor_id, doctor_name and specialization,
+-A patient will register himself with name, email, password, city than login into the website and make an appointment with a  doctor's name(doctor's ID will be stored in the table), 
+   and  Doctor's visiting date selecting 8-time slots (10am to 6pm) limit one appointment in a day, after a successful appointment patient will see and copy the  Appointment ID with bold text
+
+-Anyone can book an appointment  01. tomorrow or next date, 03. prevent selecting same doctor, same date, with same time slot
+-Appointment table will store doctor_ID, patient_ID and appoinment_date and Time slote and appointment booked date
+-Anyone can search for an appointment with an appointment ID
+-List 10 appointments per page with dynamic PAGINATION with Doctor's Name, Patient name, Appointment Date, and created/Booked Date with search option, the page can be accessed by Admin only 
+"
+
+
+
+
+
+.
