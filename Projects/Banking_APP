@@ -1,13 +1,15 @@
 
 
 
-Create a banking system that must be
-secure, advance, user-friendly and scalable web application for real-world-use 
-with .NET core mvc version 9.
+Create a web application with .NET core mvc version 9
+for banking system 
+that must be
+secure, advance, user-friendly, scalable and Clean Architecture 
+for real-world-use.
 
 -What things need to consider before start the project, explain it in details. -in Bangla
 
-Create Models with Relatons, Services, Controller, eye-catchy-bootstrap-5 view 
+Create Models with Relations, Services, Controllers, eye-catchy-bootstrap-5 Viewes 
 with Authentication and Authorization 
 use Reposity pattern
 
