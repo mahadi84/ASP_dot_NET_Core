@@ -1,13 +1,19 @@
 
 
 
-Create a doctor's appointment 
-secure, advance,  user-friendly and scalable web application for real-world-use with .NET core mvc version 9.
+Create a web application with .NET core mvc version 9
+for doctor's appointment 
+that must be
+secure, advance, user-friendly, scalable and Clean Architecture 
+for real-world-use.
 
--What things need to consider before start the roject, explain it in details. -in Bangla
+-What things need to consider before start the project, explain it in details. -in Bangla
 
-Create Models, Services, Controller, eye-catchy-bootstrap-5 view with Authentication and Authorization use Reposity pattern,
--with the following logic:
+Create Models with Relations, Services, Controllers, eye-catchy-bootstrap-5 Viewes 
+with Authentication and Authorization 
+use Reposity pattern
+
+with the following logic:
 
 "-Login into the Admin panel, admin will register doctors' info like doctor_id, doctor_name and specialization,
 -A patient will register himself with name, email, password, city than login into the website and make an appointment with a  doctor's name(doctor's ID will be stored in the table), 
