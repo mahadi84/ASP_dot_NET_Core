@@ -1,18 +1,15 @@
 
 
-"I want to create a .NET core mvc web app  for a banking system with the following information:
+" create a .NET core mvc web app  for a banking system with the following information:
 Customers can:
 -Register with name, email, password and city, after registration customer will get 5 digit account number by which he/she can login
 -Deposit and withdraw money
 -Get a downloadable pdf mini-statement (last 10 transaction details like: transaction date and time, amount)
-
 The customer can see his information only,.
 
-01. Create database, tables with join and  model 
+01. Create database, tables with join and  model 
 02. Create all Model, Controller, View, Services with DTO and Repository pattern it needs, with form validation, and login authentication and authorization
-03. Create all eye-catching  UI with Bootstrap 5" Also explain the code in Bangla
-
-
+03. Create all eye-catching  UI with Bootstrap 5" give me complete codes step by step so that I can copy and paste to run this Also explain the code in Bangla
 
 
 
