@@ -1,0 +1,350 @@
+
+=================================================================================================
+✅ Features' List + Table Mapping + Class/Service Mapping,   category-wise
+=================================================================================================
+
+
+## 🔐 1) Authentication & User Management
+
+### ✅ Customer Registration
+
+কাজ: 
+Name, Email, City, Password দিয়ে register → ৫ ডিজিট Auto-generated 5-digit Account Number
+* Email unique (duplicate হলে register হবে না)
+* Password BCrypt hash হয়ে DB-তে store হয়
+
+Tables (DB):
+    -Customers (insert)
+    -Accounts (insert, Balance=0)
+    -AuditLogs (insert: REGISTER)
+
+Classes/Services:
+    - Controller: AccountController → Register()
+    - ViewModel: RegisterVm
+    - Interface: IAuthService
+    - Implementation: AuthService.RegisterAsync()
+    - Domain Entities: Customer, Account, AuditLog
+    - Helper: PasswordHasher.Hash()
+    - Audit Helper: AuditWriter.WriteAsync("REGISTER",...)
+
+
+
+### ✅ 2) Customer Login + Lockout (লগইন + ভুল পাসওয়ার্ডে লক)
+
+কাজ: 
+* Login হয় Account Number + Password দিয়ে  ৫ বার ভুল হলে ১৫ মিনিট lock
+    * 5 বার ভুল password দিলে:
+    * Account 15 মিনিটের জন্য lock
+    * Lock থাকা অবস্থায় login block হয়
+    * Successful login হলে:
+     * Failed login counter reset
+* Cookie-based authentication
+* Secure cookies:
+
+  * HttpOnly
+  * SameSite = Strict
+  * Secure (HTTPS friendly)
+
+
+Tables (DB):
+    - Customers (read/update: FailedLoginCount, LockedUntilUtc)
+    - AuditLogs (LOGIN_SUCCESS / LOGIN_FAIL / LOGIN_LOCKED / LOGIN_BLOCKED)
+
+Classes/Services:
+    - Controller: AccountController → Login()
+    - ViewModel: LoginVm
+    - Interface: IAuthService
+    - Implementation: AuthService.ValidateLoginAsync()
+    - Domain Entity: Customer, AuditLog
+    - Cookie Auth: Claims (CustomerId, AccountNumber, IsAdmin)
+
+---
+
+## 💰 2) Core Banking Features
+
+### ✅ Deposit Money
+
+* Positive amount check
+* Balance বাড়ে
+* Transaction table-এ record হয়
+* Audit log তৈরি হয়
+
+Tables (DB):
+    - Accounts (Balance update +)
+    - Transactions (insert: Deposit)
+    - AuditLogs (insert: DEPOSIT)
+
+Classes/Services:
+    - Controller: BankingController → Deposit()
+    - ViewModel: AmountVm
+    - Interface: IBankingService
+    - Implementation: BankingService.DepositAsync()
+    - Domain Entity: Account, Transaction, AuditLog
+    - Audit: AuditWriter.WriteAsync("DEPOSIT",...)
+
+
+
+
+### ✅ Withdraw Money
+
+* Balance sufficient না হলে withdraw হবে না
+* Minimum Balance Rule enforced
+* Transaction record হয়
+* Audit log হয়
+
+
+Tables (DB):
+    - Accounts (Balance update -)
+    - Transactions (insert: Withdraw)
+    - AuditLogs (insert: WITHDRAW)
+
+Classes/Services:
+    - Controller: BankingController → Withdraw()
+    - ViewModel: AmountVm
+    - Interface: IBankingService
+    - Implementation: BankingService.WithdrawAsync()
+    - Rule used: BankingRulesOptions.MinimumBalance
+    - Domain Entity: Account, Transaction, AuditLog
+    - Audit: AuditWriter.WriteAsync("WITHDRAW",...)
+
+
+
+
+### ✅ Transfer Money
+
+* এক account থেকে অন্য account-এ transfer
+* Same account-এ transfer block
+* Receiver account exist না করলে fail
+* Daily Transfer Limit enforced
+* Minimum balance after transfer enforce
+* Sender → TransferOut
+* Receiver → TransferIn
+* Double transaction entry (ledger style)
+* Audit log হয় (actor + target)
+
+
+Tables (DB):
+    -Customers (receiver account lookup)
+    -Accounts (sender balance -, receiver balance +)
+    -Transactions (insert 2 rows):
+      - sender: TransferOut
+      - receiver: TransferIn
+    - AuditLogs (insert: TRANSFER)
+
+Classes/Services:
+    - Controller: BankingController → Transfer()
+    - ViewModel: TransferVm
+    - Interface: IBankingService
+    - Implementation: BankingService.TransferAsync()
+
+Rules used:
+    > BankingRulesOptions.DailyTransferLimit
+    > BankingRulesOptions.MinimumBalance
+    > Domain Entity: Customer, Account, Transaction, AuditLog
+    > Audit: AuditWriter.WriteAsync("TRANSFER",...)
+
+
+
+---
+
+## 📄 3) Transaction History & Statement
+
+### ✅ Last 10 Transactions
+
+* Dashboard-এ last 10 transaction দেখা যায়
+* UTC time store হয় (DB)
+
+Tables (DB):
+    - Customers + Accounts (profile + balance read)
+    - Transactions (last 10 read)
+Classes/Services:
+    - Controller: BankingController → Dashboard()
+    - Interface: IBankingService
+    - Implementation: BankingService.GetProfileAsync(), GetLastTransactionsAsync()
+    - Domain Entity: Transaction
+    - View: Views/Banking/Dashboard.cshtml
+    - Options/Rules: BankingRulesOptions (Currency, TimeZone, MinBalance, DailyLimit)
+
+
+### ✅ PDF Mini Statement
+
+* Downloadable PDF
+* Last 10 transactions
+* Customer name, account number
+* Current balance
+* Asia/Dhaka time conversion
+* Currency symbol configurable (৳ / € / $)
+
+কাজ: last 10 transaction PDF download
+Special: DB-তে time UTC, PDF-এ Dhaka time convert + currency symbol
+
+Tables (DB):
+    - Customers + Accounts (customer name + account + balance read)
+    - Transactions (last 10 read)
+
+Classes/Services:
+    - Controller: BankingController → MiniStatementPdf()
+
+Services:
+    - IBankingService.GetProfileAsync()
+    - IBankingService.GetLastTransactionsAsync()
+    - IStatementPdfService.BuildMiniStatementPdf()
+Implementation: StatementPdfService
+Library: QuestPDF
+Rules used:
+BankingRulesOptions.TimeZoneId
+BankingRulesOptions.CurrencySymbol
+Domain Entity: Transaction
+
+
+
+
+---
+
+## 🛡️ 4) Security Features
+
+* Password hashing (BCrypt)
+* CSRF protection (Auto Anti-Forgery)
+* Brute-force protection (lockout)
+* Cookie hardening
+* Secure headers:
+
+  * X-Frame-Options
+  * X-Content-Type-Options
+  * CSP
+* HTTPS ready (IIS friendly)
+
+কাজ: নির্দিষ্ট customer lock/unlock
+Tables (DB):
+    - Customers (update: LockedUntilUtc, FailedLoginCount)
+    - AuditLogs (ADMIN_LOCK / ADMIN_UNLOCK)
+Classes/Services:
+    - Controller: AdminController → Lock(), Unlock()
+    - Interface: IAdminService
+    - Implementation: AdminService.LockAsync(), UnlockAsync()
+    - Domain Entity: Customer, AuditLog
+    - Audit: AuditWriter
+
+---
+
+## 👨‍💼 5) Admin Panel (Role Based)
+
+### ✅ Admin Account (Auto-seeded)
+
+* First run এ admin auto create হয়
+* Console-এ admin account number দেখায়
+
+Tables (DB):
+    -Customers (read all)
+Classes/Services:
+    - Controller: AdminController → Customers()
+    - Authorization: [Authorize(Policy="AdminOnly")]
+    - Interface: IAdminService
+    - Implementation: AdminService.GetCustomersAsync()
+    - View: Views/Admin/Customers.cshtml
+    - Domain Entity: Customer
+
+### ✅ Admin Functionalities
+
+* All customers list view
+* Make / Remove Admin
+* Lock customer account (manual)
+* Unlock customer account
+* Reset customer password
+* View full Audit Logs
+
+
+
+কাজ: customer কে admin বানানো/সরানো
+Tables (DB):
+    - Customers (update: IsAdmin)
+    - AuditLogs (ADMIN_SET_ROLE)
+Classes/Services:
+    - Controller: AdminController → SetAdmin()
+    - Interface: IAdminService
+    - Implementation: AdminService.SetAdminAsync()
+    - Domain Entity: Customer, AuditLog
+    - Audit: AuditWriter
+
+কাজ: admin user-এর password reset করতে পারে
+Tables (DB):
+    - Customers (update: PasswordHash + unlock fields reset)
+    - AuditLogs (ADMIN_RESET_PASSWORD)
+
+Classes/Services:
+    - Controller: AdminController → ResetPassword(GET/POST)
+    - ViewModel: AdminResetPasswordVm
+    - Interface: IAdminService
+    - Implementation: AdminService.ResetPasswordAsync()
+    - Helper: PasswordHasher.Hash()
+    - Domain Entity: Customer, AuditLog
+
+
+
+
+---
+
+## 🧾 6) Audit & Monitoring
+
+### ✅ Audit Logs (Real Banking Feature)
+
+Every sensitive action record হয়:
+
+* Register
+* Login success / fail
+* Account locked
+* Deposit / Withdraw / Transfer
+* Admin actions
+
+
+কাজ: system কে কখন কী করেছে দেখতে পারা
+Tables (DB):
+    - AuditLogs (read latest)
+
+Classes/Services:
+    - Controller: AdminController → Audit()
+    - Interface: IAdminService
+    - Implementation: AdminService.GetLatestAuditAsync()
+    - View: Views/Admin/Audit.cshtml
+    - Domain Entity: AuditLog
+
+
+
+
+Audit-এ থাকে:
+
+* Action name
+* Actor account number
+* Target account number
+* IP address
+* User agent
+* Timestamp
+
+
+
+
+---
+
+## 🧱 7)  Configuration Based Rules
+
+সব rule `appsettings.json` থেকে control করা যায়:
+
+* Currency symbol
+* TimeZone
+* Minimum balance
+* Daily transfer limit
+* Admin seed credentials
+
+---
+
+## 🖥️ 9) Deployment Ready (Windows Server)
+
+* IIS compatible
+* MySQL compatible
+* HTTPS ready
+* Production config friendly
+
+
+
+
+
