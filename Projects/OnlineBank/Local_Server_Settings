@@ -1,0 +1,166 @@
+
+
+
+========================================================================================================================
+Local server settings
+========================================================================================================================
+দারুণ—Local run করে verify করার জন্য নিচে একদম practical checklist + command sequence দিলাম। এগুলো follow করলে ৯০% common error আগেই avoid হবে।
+
+---
+
+## 1) MySQL Setup (Local)
+
+1. MySQL চালু আছে কিনা চেক করুন।
+2. একটা DB বানান:
+
+```sql
+CREATE DATABASE onlinebanking_db;
+```
+
+3. `src/OnlineBanking.Web/appsettings.json` এ আপনার password বসান:
+
+```json
+"server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;TreatTinyAsBoolean=true;"
+```
+
+> যদি আপনার MySQL user/root আলাদা হয়, সেটা লিখবেন।
+
+---
+
+## 2) Important Local Settings (দুটি জিনিস)
+
+### ✅ A) HTTPS issue (সবচেয়ে common)
+
+আমাদের `Program.cs` এ cookie `SecurePolicy = Always` আছে।
+Local run এ HTTPS না থাকলে login cookie কাজ নাও করতে পারে।
+
+Solution (Local only): `Program.cs` এ নিচের lineটা temporarily দিন:
+
+```csharp
+opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+```
+
+Production এ আবার Always করবেন।
+
+---
+
+### ✅ B) TimeZone issue (Windows এ)
+
+যদি `Asia/Dhaka` timezone error দেয়, `appsettings.json` এ এটা দিন:
+
+```json
+"TimeZoneId": "Bangladesh Standard Time"
+```
+
+---
+
+## 3) EF Migration + DB Update
+
+Solution root folder থেকে রান করবেন:
+
+```bash
+cd OnlineBanking
+dotnet restore
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+```
+
+✅ এতে MySQL এ tables তৈরি হবে:
+
+* Customers
+* Accounts
+* Transactions
+* AuditLogs
+
+---
+
+## 4) Run (Local)
+
+```bash
+dotnet run --project src/OnlineBanking.Web
+```
+
+প্রথম run এ:
+
+* DB migrate হবে
+* Admin seed হবে
+* Console এ Admin এর AccountNumber print হবে
+
+✅ Console output এ এমন দেখবেন:
+`Seeded Admin AccountNumber: 12345`
+
+---
+
+## 5) Browser Testing Steps (Verify Checklist)
+
+### ✅ Step 1: Register customer
+
+* `/Account/Register`
+* Name, Email, City, Password দিন
+  ✅ success page এ 5-digit account number পাবেন
+
+### ✅ Step 2: Customer login
+
+* `/Account/Login`
+* Account number + password
+  ✅ Dashboard দেখাবে
+
+### ✅ Step 3: Deposit
+
+* 1000 deposit করুন
+  ✅ Balance বাড়বে + transaction row add হবে
+
+### ✅ Step 4: Withdraw (minimum balance test)
+
+* MinimumBalance যদি 100 থাকে, তাহলে এমন withdraw দিন যাতে balance 100 এর নিচে চলে যায়
+  ✅ Fail message দেখাবে
+
+### ✅ Step 5: Transfer (daily limit test)
+
+* অন্য account register করে নিন
+* Transfer করুন
+  ✅ sender এ TransferOut, receiver এ TransferIn record হবে
+* বারবার transfer করে limit cross করুন
+  ✅ “Daily transfer limit exceeded” দেখাবে
+
+### ✅ Step 6: PDF mini statement
+
+* Dashboard এ “Download Mini Statement”
+  ✅ PDF download হবে, Dhaka time দেখাবে
+
+### ✅ Step 7: Admin verify
+
+* Admin account দিয়ে login (console থেকে পাওয়া account number)
+* Navbar এ “Admin” & “Audit” দেখবেন
+* Customers list / lock/unlock / reset password try করুন
+  ✅ Audit logs এ record হবে
+
+---
+
+## 6) Common Errors & Fix (সবচেয়ে দরকারি)
+
+### ❌ “Access denied for user root”
+
+✅ connection string এ username/password ভুল
+
+* MySQL user/pass ঠিক করুন
+
+### ❌ “Unknown database onlinebanking_db”
+
+✅ DB create করা হয়নি
+
+* `CREATE DATABASE onlinebanking_db;`
+
+### ❌ “TimeZoneInfo not found”
+
+✅ `Asia/Dhaka` কাজ না করলে
+
+* `Bangladesh Standard Time` দিন
+
+### ❌ Login হচ্ছে কিন্তু Dashboard redirect হচ্ছে না
+
+✅ cookie secure policy / HTTPS issue
+
+* Local এ `SameAsRequest` করুন
+
+
