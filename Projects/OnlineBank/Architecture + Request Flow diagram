@@ -1,0 +1,324 @@
+
+
+=======================================================================================================
+নিচে আমি আপনার প্রজেক্টটার জন্য 
+(1) Architecture + Request Flow diagram, 
+2) Exam/Interview-style ব্যাখ্যা, আর 
+3) GitHub-ready README.md একসাথে দিলাম—আপনি সরাসরি copy/paste করে ব্যবহার করতে পারবেন।
+=======================================================================================================
+
+---
+
+## 1) Clean Architecture Diagram (Layered)
+
+### 1.1 High-level architecture (ASCII)
+
+```
+┌──────────────────────────────┐
+│        OnlineBanking.Web      │
+│  MVC (Controllers/Views/Auth) │
+└───────────────┬──────────────┘
+                │ calls interfaces
+┌───────────────▼──────────────┐
+│   OnlineBanking.Application   │
+│ Contracts + Result + Options  │
+│  (Use-case boundaries)        │
+└───────────────┬──────────────┘
+                │ implements interfaces
+┌───────────────▼──────────────┐
+│ OnlineBanking.Infrastructure  │
+│ EF Core + MySQL + Services    │
+│ Auth/Banking/Admin/PDF/Audit  │
+└───────────────┬──────────────┘
+                │ persists
+┌───────────────▼──────────────┐
+│          MySQL Database       │
+│ Customers / Accounts / Tx /   │
+│ AuditLogs                     │
+└──────────────────────────────┘
+
+Domain layer sits in the middle as pure business entities:
+OnlineBanking.Domain (Entities)  <-- referenced by Application & Infrastructure & Web
+```
+
+### 1.2 Dependency rule (সবচেয়ে গুরুত্বপূর্ণ)
+
+* Web → Application → Domain
+* Infrastructure → Application + Domain
+* Domain কারো উপর depend করে না ✅
+  এটাই Clean Architecture এর মূল কথা।
+
+---
+
+## 2) Request Flow Diagrams (আপনার ফিচারগুলো কীভাবে কাজ করে)
+
+### 2.1 Register Flow
+
+```
+Browser
+  │ POST /Account/Register (Name, Email, City, Password)
+  ▼
+AccountController.Register()
+  │ calls IAuthService.RegisterAsync(...)
+  ▼
+AuthService.RegisterAsync()
+  │ - email unique check
+  │ - generate unique 5-digit account number
+  │ - hash password (BCrypt)
+  │ - create Customer + Account(Balance=0)
+  │ - SaveChanges()
+  │ - AuditWriter: REGISTER
+  ▼
+DB (Customers, Accounts, AuditLogs)
+  ▲
+Controller redirects to RegisterSuccess with AccountNumber
+```
+
+### 2.2 Login Flow (with lockout)
+
+```
+Browser
+  │ POST /Account/Login (AccountNumber, Password)
+  ▼
+AccountController.Login()
+  │ calls ValidateLoginAsync(account, pass, ip, ua)
+  ▼
+AuthService.ValidateLoginAsync()
+  │ - customer exists?
+  │ - LockedUntilUtc check
+  │ - password verify (BCrypt.Verify)
+  │ - wrong => FailedLoginCount++ (>=5 => lock 15 min)
+  │ - success => reset counts, write LOGIN_SUCCESS
+  ▼
+Controller sets Cookie Auth Claims:
+  CustomerId, AccountNumber, IsAdmin
+  ▼
+Redirect /Banking/Dashboard
+```
+
+### 2.3 Deposit / Withdraw / Transfer (transaction safe + rules)
+
+Deposit
+
+```
+Dashboard -> POST /Banking/Deposit (Amount)
+  -> BankingService.DepositAsync()
+     - BeginTransaction()
+     - Balance += amount
+     - Insert Transaction(Deposit)
+     - Commit
+     - Audit: DEPOSIT
+```
+
+Withdraw
+
+```
+Dashboard -> POST /Banking/Withdraw (Amount)
+  -> BankingService.WithdrawAsync()
+     - Balance >= amount?
+     - newBalance >= MinimumBalance?
+     - record Transaction(Withdraw)
+     - Audit: WITHDRAW
+```
+
+Transfer
+
+```
+Dashboard -> POST /Banking/Transfer (ToAccount, Amount)
+  -> BankingService.TransferAsync()
+     - receiver exists?
+     - daily transfer limit check (sum TransferOut today)
+     - newBalance >= MinimumBalance?
+     - sender Balance -= amount, receiver Balance += amount
+     - insert 2 transactions: TransferOut + TransferIn
+     - Audit: TRANSFER (actor + target)
+```
+
+### 2.4 Mini Statement PDF
+
+```
+GET /Banking/MiniStatementPdf
+  -> BankingService.GetProfileAsync()  (name, account, balance)
+  -> BankingService.GetLastTransactionsAsync(10)
+  -> StatementPdfService.BuildMiniStatementPdf(currency, tzId, ...)
+     - UTC -> Asia/Dhaka conversion
+  -> returns File(pdfBytes, "application/pdf")
+```
+
+### 2.5 Admin Panel (Policy based)
+
+```
+AdminController has [Authorize(Policy="AdminOnly")]
+
+AdminOnly Policy checks claim:
+  IsAdmin == "true"
+
+Admin actions:
+  Customers list, Lock/Unlock, SetAdmin, ResetPassword, View Audit logs
+```
+
+---
+
+## 3) Exam/Interview-Friendly Explanation (Bangla)
+
+### 3.1 কেন Clean Architecture ব্যবহার করেছি?
+
+কারণ ব্যাংকিং সিস্টেমে rules change হয়, কিন্তু UI বা DB change হলেও business rules stable রাখা লাগে।
+
+* Domain: “ব্যাংকিং-এর core data” (Customer, Account, Transaction, AuditLog)
+* Application: “কী কী কাজ হবে তার contract” (interfaces) + options/rules
+* Infrastructure: “কিভাবে কাজ হবে” (EF Core/MySQL, PDF generator, hashing)
+* Web: “UI + Request handling” (MVC, Controllers, Views, Cookie Auth)
+
+### 3.2 Security decisions (আপনার কোডে যা আছে)
+
+* Password plain text না → BCrypt hash
+* Cookie auth → HttpOnly, SameSite=Strict, SecurePolicy=Always (HTTPS needed)
+* Auto anti-forgery on all POST (CSRF protection)
+* Lockout mechanism (brute-force protect)
+* Audit logs (who did what + ip/ua)
+
+### 3.3 Banking rules (real-world flavor)
+
+* MinimumBalance: Withdraw/Transfer শেষে ব্যালেন্স minimum এর নিচে যেতে পারবে না
+* DailyTransferLimit: একদিনে TransferOut টোটাল সীমা cross করতে পারবে না
+* Ledger-like transactions: Balance change এর সাথে Transaction record রাখে
+
+---
+
+## 4) GitHub-Ready README.md (copy/paste)
+
+```md
+# OnlineBanking (.NET 9 MVC + MySQL) - Clean Architecture
+
+A secure, scalable starter online banking web application built with:
+- ASP.NET Core MVC (.NET 9)
+- EF Core + MySQL (Pomelo provider)
+- Clean Architecture (Domain/Application/Infrastructure/Web)
+- Cookie Authentication
+- PDF Mini Statement (QuestPDF)
+- Admin Panel + Audit Logs
+- Banking Rules: Minimum Balance + Daily Transfer Limit
+- TimeZone conversion (Asia/Dhaka) for statements
+
+## Features
+### Customer
+- Register (name, email, city, password) → auto 5-digit account number
+- Login with account number + password (lockout after repeated failures)
+- Deposit / Withdraw / Transfer
+- Download Mini Statement PDF (last 10 transactions)
+
+### Admin
+- View customers list
+- Lock / Unlock accounts
+- Set / Remove admin role
+- Reset customer password
+- View audit logs
+
+## Tech Stack
+- .NET 9, ASP.NET Core MVC
+- MySQL
+- EF Core (Pomelo.EntityFrameworkCore.MySql)
+- BCrypt.Net-Next
+- QuestPDF
+
+## Project Structure
+```
+
+OnlineBanking/
+src/
+OnlineBanking.Domain/
+OnlineBanking.Application/
+OnlineBanking.Infrastructure/
+OnlineBanking.Web/
+
+````
+
+## Prerequisites
+- .NET SDK 9
+- MySQL Server 8+
+- Windows (for IIS deployment)
+
+## Setup
+1) Create database:
+```sql
+CREATE DATABASE onlinebanking_db;
+````
+
+2. Update `src/OnlineBanking.Web/appsettings.json` connection string:
+
+```json
+"server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;"
+```
+
+3. Run migrations:
+
+```bash
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+```
+
+4. Run:
+
+```bash
+dotnet run --project src/OnlineBanking.Web
+```
+
+## Admin Seed
+
+On first run, the app seeds an admin user from `AdminSeed` in appsettings.
+The seeded admin account number is printed in console.
+
+Default config:
+
+* [admin@bank.local](mailto:admin@bank.local)
+* Admin@12345
+
+## Banking Rules
+
+Configured in `BankingRules` section:
+
+* CurrencySymbol (৳)
+* TimeZoneId (Asia/Dhaka)
+* MinimumBalance (e.g., 100.00)
+* DailyTransferLimit (e.g., 50000.00)
+
+## IIS Deployment (Windows Server)
+
+1. Install ASP.NET Core Hosting Bundle on server.
+2. Publish:
+
+```bash
+dotnet publish src/OnlineBanking.Web -c Release -o publish
+```
+
+3. Create IIS site pointing to `publish` folder.
+4. Enable HTTPS (required because cookie is SecurePolicy=Always).
+5. Set production connection string and rules.
+
+## Notes
+
+This is a starter template. Production banking requires additional controls:
+MFA/OTP, KYC/AML, fraud monitoring, rate limiting gateway, secure key management, etc.
+
+````
+
+---
+
+## 5) Next practical step (আমি যেটা সাজেস্ট করছি)
+আপনি যেহেতু “copy/paste করে রান” করছেন—সবচেয়ে common issue হয়:
+
+1) TimeZone ID Windows এ “Asia/Dhaka” কাজ না করলে  
+Windows কখনো কখনো IANA timezone না চিনে (depending on runtime).  
+যদি আপনার মেশিনে error দেয়, আপনি `BankingRules:TimeZoneId` এ এটা দিন:
+- `"Bangladesh Standard Time"` (Windows ID)
+
+2) Cookie secure policy Always → HTTPS ছাড়া login cookie কাজ করবে না (dev এ warning/issue হতে পারে)  
+Dev এ যদি HTTPS সমস্যা হয়, temporarily:
+```csharp
+opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+````
+
+Production এ আবার Always করবেন।
+
+---
