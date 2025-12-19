@@ -1,0 +1,609 @@
+# 5) INFRASTRUCTURE Layer (EF Core + Services)
+
+## 5.1 DbContext
+
+`src/OnlineBanking.Infrastructure/Persistence/AppDbContext.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Infrastructure.Persistence;
+
+public sealed class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
+
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        b.Entity<Customer>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+            e.Property(x => x.City).HasMaxLength(100).IsRequired();
+
+            e.Property(x => x.AccountNumber).HasMaxLength(5).IsRequired();
+            e.Property(x => x.PasswordHash).IsRequired();
+
+            e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.AccountNumber).IsUnique();
+
+            e.HasOne(x => x.Account)
+                .WithOne(a => a.Customer)
+                .HasForeignKey<Account>(a => a.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Account>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Balance).HasPrecision(18,2);
+            e.Property(x => x.RowVersion).IsRowVersion();
+        });
+
+        b.Entity<Transaction>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasPrecision(18,2);
+            e.Property(x => x.BalanceAfter).HasPrecision(18,2);
+            e.Property(x => x.Reference).HasMaxLength(200);
+            e.HasIndex(x => x.CreatedAtUtc);
+        });
+
+        b.Entity<AuditLog>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            e.Property(x => x.ActorAccountNumber).HasMaxLength(20).IsRequired();
+            e.Property(x => x.TargetAccountNumber).HasMaxLength(20);
+            e.Property(x => x.Ip).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(300);
+            e.Property(x => x.Message).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.HasIndex(x => x.Action);
+        });
+    }
+}
+```
+
+## 5.2 Password hashing
+
+`src/OnlineBanking.Infrastructure/Security/PasswordHasher.cs`
+
+```csharp
+namespace OnlineBanking.Infrastructure.Security;
+
+public static class PasswordHasher
+{
+    public static string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password);
+    public static bool Verify(string password, string hash) => BCrypt.Net.BCrypt.Verify(password, hash);
+}
+```
+
+## 5.3 Audit writer helper
+
+`src/OnlineBanking.Infrastructure/Services/AuditWriter.cs`
+
+```csharp
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AuditWriter
+{
+    private readonly AppDbContext _db;
+    public AuditWriter(AppDbContext db) => _db = db;
+
+    public async Task WriteAsync(string action, string actorAcc, string? targetAcc, string ip, string ua, string message)
+    {
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Action = action,
+            ActorAccountNumber = actorAcc,
+            TargetAccountNumber = targetAcc,
+            Ip = ip,
+            UserAgent = ua,
+            Message = message
+        });
+        await _db.SaveChangesAsync();
+    }
+}
+```
+
+## 5.4 AuthService (Register/Login + lockout + audit)
+
+Logic:
+
+* Register → unique 5-digit account number generate
+* Login → lock check, password verify, fail count increase, 5 fail হলে 15 min lock
+* Audit logs write
+
+`src/OnlineBanking.Infrastructure/Services/AuthService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+using OnlineBanking.Infrastructure.Security;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AuthService : IAuthService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+
+    public AuthService(AppDbContext db, AuditWriter audit)
+    {
+        _db = db;
+        _audit = audit;
+    }
+
+    public async Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent)
+    {
+        email = email.Trim().ToLowerInvariant();
+
+        if (await _db.Customers.AnyAsync(x => x.Email == email))
+            return Result<string>.Fail("Email already exists.");
+
+        // generate unique 5-digit account number
+        string acc;
+        int guard = 0;
+        do
+        {
+            acc = Random.Shared.Next(10000, 100000).ToString();
+            guard++;
+            if (guard > 50) return Result<string>.Fail("Could not generate account number. Try again.");
+        }
+        while (await _db.Customers.AnyAsync(x => x.AccountNumber == acc));
+
+        var customer = new Customer
+        {
+            Name = name.Trim(),
+            Email = email,
+            City = city.Trim(),
+            AccountNumber = acc,
+            PasswordHash = PasswordHasher.Hash(password),
+            IsAdmin = false,
+            Account = new Account { Balance = 0m }
+        };
+
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("REGISTER", acc, acc, ip, userAgent, $"New customer registered: {customer.Email}");
+
+        return Result<string>.Ok(acc, "Registered successfully.");
+    }
+
+    public async Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent)
+    {
+        accountNumber = accountNumber.Trim();
+
+        var customer = await _db.Customers.FirstOrDefaultAsync(x => x.AccountNumber == accountNumber);
+        if (customer is null)
+        {
+            await _audit.WriteAsync("LOGIN_FAIL", "UNKNOWN", accountNumber, ip, userAgent, "Account not found.");
+            return Result<(Guid, bool)>.Fail("Invalid account number or password.");
+        }
+
+        if (customer.LockedUntilUtc.HasValue && customer.LockedUntilUtc.Value > DateTimeOffset.UtcNow)
+        {
+            await _audit.WriteAsync("LOGIN_BLOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Account locked.");
+            return Result<(Guid, bool)>.Fail("Account is locked. Try later.");
+        }
+
+        if (!PasswordHasher.Verify(password, customer.PasswordHash))
+        {
+            customer.FailedLoginCount += 1;
+
+            // lock after 5 failed attempts for 15 minutes
+            if (customer.FailedLoginCount >= 5)
+            {
+                customer.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15);
+                customer.FailedLoginCount = 0;
+                await _db.SaveChangesAsync();
+
+                await _audit.WriteAsync("LOGIN_LOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Locked due to failed attempts.");
+                return Result<(Guid, bool)>.Fail("Too many failed attempts. Account locked for 15 minutes.");
+            }
+
+            await _db.SaveChangesAsync();
+            await _audit.WriteAsync("LOGIN_FAIL", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Wrong password.");
+            return Result<(Guid, bool)>.Fail("Invalid account number or password.");
+        }
+
+        // success: reset fail count
+        customer.FailedLoginCount = 0;
+        customer.LockedUntilUtc = null;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("LOGIN_SUCCESS", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Login ok.");
+
+        return Result<(Guid, bool)>.Ok((customer.Id, customer.IsAdmin), "Login ok.");
+    }
+}
+```
+
+## 5.5 BankingService (min balance + daily limit + audit)
+
+Rules:
+
+* Withdraw/Transfer শেষে balance >= MinimumBalance
+* Transfer: আজকের total transferout <= DailyTransferLimit
+* Audit: deposit/withdraw/transfer write
+
+`src/OnlineBanking.Infrastructure/Services/BankingService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Application.Options;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class BankingService : IBankingService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+    private readonly BankingRulesOptions _rules;
+
+    public BankingService(AppDbContext db, AuditWriter audit, IOptions<BankingRulesOptions> rules)
+    {
+        _db = db;
+        _audit = audit;
+        _rules = rules.Value;
+    }
+
+    public async Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId)
+    {
+        var row = await _db.Customers.AsNoTracking()
+            .Where(c => c.Id == customerId)
+            .Select(c => new { c.Name, c.AccountNumber, Balance = c.Account.Balance })
+            .FirstAsync();
+
+        return (row.Name, row.AccountNumber, row.Balance);
+    }
+
+    public async Task<decimal> GetBalanceAsync(Guid customerId)
+    {
+        return await _db.Accounts.AsNoTracking()
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Balance)
+            .FirstAsync();
+    }
+
+    public async Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
+        customer.Account.Balance += amount;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = customer.Account.Id,
+            Type = TransactionType.Deposit,
+            Amount = amount,
+            BalanceAfter = customer.Account.Balance,
+            Reference = "Cash deposit"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("DEPOSIT", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Deposit {amount:0.00}");
+
+        return Result.Ok("Deposit successful.");
+    }
+
+    public async Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
+
+        if (customer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
+
+        var newBalance = customer.Account.Balance - amount;
+        if (newBalance < _rules.MinimumBalance)
+            return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
+
+        customer.Account.Balance = newBalance;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = customer.Account.Id,
+            Type = TransactionType.Withdraw,
+            Amount = amount,
+            BalanceAfter = customer.Account.Balance,
+            Reference = "Cash withdraw"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("WITHDRAW", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Withdraw {amount:0.00}");
+
+        return Result.Ok("Withdraw successful.");
+    }
+
+    public async Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+        toAccountNumber = toAccountNumber.Trim();
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var fromCustomer = await _db.Customers.Include(c => c.Account)
+            .FirstAsync(c => c.Id == customerId);
+
+        var toCustomer = await _db.Customers.Include(c => c.Account)
+            .FirstOrDefaultAsync(c => c.AccountNumber == toAccountNumber);
+
+        if (toCustomer is null) return Result.Fail("Receiver account not found.");
+        if (toCustomer.Id == fromCustomer.Id) return Result.Fail("Cannot transfer to same account.");
+
+        // daily transfer limit check (sum of TransferOut today UTC date)
+        var todayUtc = DateTimeOffset.UtcNow.Date;
+        var fromAccountId = fromCustomer.Account.Id;
+
+        var todayTransferOut = await _db.Transactions.AsNoTracking()
+            .Where(t => t.AccountId == fromAccountId
+                        && t.Type == TransactionType.TransferOut
+                        && t.CreatedAtUtc >= todayUtc
+                        && t.CreatedAtUtc < todayUtc.AddDays(1))
+            .SumAsync(t => (decimal?)t.Amount) ?? 0m;
+
+        if (todayTransferOut + amount > _rules.DailyTransferLimit)
+            return Result.Fail($"Daily transfer limit exceeded. Limit: {_rules.DailyTransferLimit:0.00}");
+
+        if (fromCustomer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
+
+        var newBalance = fromCustomer.Account.Balance - amount;
+        if (newBalance < _rules.MinimumBalance)
+            return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
+
+        // apply
+        fromCustomer.Account.Balance = newBalance;
+        toCustomer.Account.Balance += amount;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = fromCustomer.Account.Id,
+            Type = TransactionType.TransferOut,
+            Amount = amount,
+            BalanceAfter = fromCustomer.Account.Balance,
+            Reference = $"Transfer to {toCustomer.AccountNumber}"
+        });
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = toCustomer.Account.Id,
+            Type = TransactionType.TransferIn,
+            Amount = amount,
+            BalanceAfter = toCustomer.Account.Balance,
+            Reference = $"Transfer from {fromCustomer.AccountNumber}"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("TRANSFER", fromCustomer.AccountNumber, toCustomer.AccountNumber, ip, userAgent, $"Transfer {amount:0.00} to {toCustomer.AccountNumber}");
+
+        return Result.Ok("Transfer successful.");
+    }
+
+    public async Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10)
+    {
+        var accountId = await _db.Accounts
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstAsync();
+
+        return await _db.Transactions.AsNoTracking()
+            .Where(t => t.AccountId == accountId)
+            .OrderByDescending(t => t.CreatedAtUtc)
+            .Take(take)
+            .ToListAsync();
+    }
+}
+```
+
+## 5.6 PDF Statement Service (DB name + Dhaka time + currency)
+
+কাজ: last 10 tx table + Dhaka time conversion
+
+`src/OnlineBanking.Infrastructure/Services/StatementPdfService.cs`
+
+```csharp
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class StatementPdfService : IStatementPdfService
+{
+    public byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10)
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+
+        string ToLocal(DateTimeOffset utc)
+        {
+            var local = TimeZoneInfo.ConvertTime(utc, tz);
+            return local.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+
+        var doc = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(30);
+                page.Size(PageSizes.A4);
+
+                page.Header().Column(col =>
+                {
+                    col.Item().Text("Mini Statement (Last 10 Transactions)").FontSize(18).SemiBold();
+                    col.Item().Text($"Account: {accountNumber}").FontSize(12);
+                    col.Item().Text($"Customer: {customerName}").FontSize(12);
+                    col.Item().Text($"Current Balance: {currency}{currentBalance:0.00}").FontSize(12);
+                    col.Item().Text($"Time Zone: {tzId}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                    col.Item().LineHorizontal(1);
+                });
+
+                page.Content().Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(3);
+                        columns.RelativeColumn(2);
+                        columns.RelativeColumn(2);
+                    });
+
+                    table.Header(header =>
+                    {
+                        header.Cell().Element(CellStyle).Text($"Date & Time ({tzId})").SemiBold();
+                        header.Cell().Element(CellStyle).Text("Type").SemiBold();
+                        header.Cell().Element(CellStyle).Text("Amount").SemiBold();
+                    });
+
+                    foreach (var t in last10.OrderByDescending(x => x.CreatedAtUtc))
+                    {
+                        table.Cell().Element(CellStyle).Text(ToLocal(t.CreatedAtUtc));
+                        table.Cell().Element(CellStyle).Text(t.Type.ToString());
+                        table.Cell().Element(CellStyle).Text($"{currency}{t.Amount:0.00}");
+                    }
+
+                    static IContainer CellStyle(IContainer container) =>
+                        container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(6);
+                });
+
+                page.Footer().AlignRight().Text($"Generated (UTC): {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss}");
+            });
+        });
+
+        return doc.GeneratePdf();
+    }
+}
+```
+
+## 5.7 AdminService (User management + audit read)
+
+`src/OnlineBanking.Infrastructure/Services/AdminService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+using OnlineBanking.Infrastructure.Security;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AdminService : IAdminService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+
+    public AdminService(AppDbContext db, AuditWriter audit)
+    {
+        _db = db;
+        _audit = audit;
+    }
+
+    public async Task<IReadOnlyList<Customer>> GetCustomersAsync()
+    {
+        return await _db.Customers.AsNoTracking()
+            .OrderBy(c => c.AccountNumber)
+            .ToListAsync();
+    }
+
+    public async Task<Customer?> GetCustomerByAccountAsync(string accountNumber)
+    {
+        accountNumber = accountNumber.Trim();
+        return await _db.Customers.FirstOrDefaultAsync(c => c.AccountNumber == accountNumber);
+    }
+
+    public async Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.IsAdmin = isAdmin;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_SET_ROLE", actorAcc, c.AccountNumber, ip, ua, $"Set IsAdmin={isAdmin}");
+        return Result.Ok("Role updated.");
+    }
+
+    public async Task<Result> LockAsync(string accountNumber, int minutes, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(minutes);
+        c.FailedLoginCount = 0;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_LOCK", actorAcc, c.AccountNumber, ip, ua, $"Locked for {minutes} minutes");
+        return Result.Ok("Locked.");
+    }
+
+    public async Task<Result> UnlockAsync(string accountNumber, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.LockedUntilUtc = null;
+        c.FailedLoginCount = 0;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_UNLOCK", actorAcc, c.AccountNumber, ip, ua, "Unlocked");
+        return Result.Ok("Unlocked.");
+    }
+
+    public async Task<Result> ResetPasswordAsync(string accountNumber, string newPassword, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+
+        c.PasswordHash = PasswordHasher.Hash(newPassword);
+        c.FailedLoginCount = 0;
+        c.LockedUntilUtc = null;
+
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("ADMIN_RESET_PASSWORD", actorAcc, c.AccountNumber, ip, ua, "Password reset");
+        return Result.Ok("Password reset done.");
+    }
+
+    public async Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100)
+    {
+        return await _db.AuditLogs.AsNoTracking()
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(take)
+            .ToListAsync();
+    }
+}
+```
+
+---
