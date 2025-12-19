@@ -1,0 +1,87 @@
+
+
+# 11) Step-by-step “কোন ফাংশন কী করে” (Bangla explanation)
+
+## RegisterAsync()
+
+* Email duplicate check
+* 5-digit unique AccountNumber generate
+* Password bcrypt hash
+* Customer + Account create
+* Audit log: REGISTER
+
+## ValidateLoginAsync()
+
+* Account exists check
+* LockedUntilUtc চেক (locked হলে block)
+* Password wrong হলে FailedLoginCount++
+* 5 বার ভুল → 15 মিনিট lock
+* Success হলে fail count reset + audit LOGIN_SUCCESS
+
+## DepositAsync()
+
+* Amount > 0 চেক
+* Transaction শুরু (DB tx)
+* Balance += amount
+* Transaction row add
+* Commit
+* Audit: DEPOSIT
+
+## WithdrawAsync()
+
+* Amount > 0
+* Balance sufficient
+* Withdraw এর পরে balance < MinimumBalance হলে fail
+* Transaction add
+* Audit: WITHDRAW
+
+## TransferAsync()
+
+* Receiver exists
+* Same account transfer block
+* Today’s transferout sum বের করে DailyTransferLimit enforce
+* Transfer এর পরে balance < MinimumBalance হলে fail
+* Sender: TransferOut + Receiver: TransferIn entry
+* Audit: TRANSFER
+
+## PDF
+
+* DB থেকে name+balance নিয়ে PDF
+* Last10 tx list
+* UTC → Asia/Dhaka convert
+* CurrencySymbol দিয়ে amount format
+
+## Admin
+
+* Customers list
+* SetAdmin: role change
+* Lock/Unlock: account lock control
+* Reset password: bcrypt hash reset
+* Audit page: system trace
+
+---
+
+# 12) Windows Server IIS (short, practical)
+
+1. Server এ ASP.NET Core Hosting Bundle install
+2. Publish করুন:
+
+   ```bash
+   dotnet publish src/OnlineBanking.Web -c Release -o publish
+   ```
+3. IIS → New Website → Physical path = `publish`
+4. HTTPS binding enable (Let’s Encrypt বা cert)
+5. Production `appsettings.json` এ MySQL connection string দিন
+6. DB server firewall allow
+
+---
+
+## আপনি এখনই যা করবেন (Quick checklist)
+
+1. `appsettings.json` এ MySQL password বসান
+2. Database create
+3. Migration চালান
+4. Run করুন
+5. Console থেকে admin accountNumber নিন এবং login করুন → Admin tab দেখবেন
+
+---
