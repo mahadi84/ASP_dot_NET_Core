@@ -1,1 +1,119 @@
 
+
+
+====================================================================
+# 📁 OnlineBanking – Folder Structure (Clean Architecture)
+====================================================================
+
+```
+OnlineBanking
+│
+├── OnlineBanking.sln
+│
+└── src
+    │
+    ├── OnlineBanking.Domain
+    │   │
+    │   ├── OnlineBanking.Domain.csproj
+    │   │
+    │   └── Entities
+    │       ├── Account.cs
+    │       ├── AuditLog.cs
+    │       ├── Customer.cs
+    │       └── Transaction.cs
+    │
+    ├── OnlineBanking.Application
+    │   │
+    │   ├── OnlineBanking.Application.csproj
+    │   │
+    │   ├── Common
+    │   │   └── Result.cs
+    │   │
+    │   ├── Contracts
+    │   │   ├── IAdminService.cs
+    │   │   ├── IAuthService.cs
+    │   │   ├── IBankingService.cs
+    │   │   └── IStatementPdfService.cs
+    │   │
+    │   └── Options
+    │       └── BankingRulesOptions.cs
+    │
+    ├── OnlineBanking.Infrastructure
+    │   │
+    │   ├── OnlineBanking.Infrastructure.csproj
+    │   │
+    │   ├── Persistence
+    │   │   └── AppDbContext.cs
+    │   │
+    │   ├── Security
+    │   │   └── PasswordHasher.cs
+    │   │
+    │   └── Services
+    │       ├── AdminService.cs
+    │       ├── AuditWriter.cs
+    │       ├── AuthService.cs
+    │       ├── BankingService.cs
+    │       └── StatementPdfService.cs
+    │
+    └── OnlineBanking.Web
+        │
+        ├── OnlineBanking.Web.csproj
+        ├── Program.cs
+        ├── appsettings.json
+        │
+        ├── Controllers
+        │   ├── AccountController.cs
+        │   ├── AdminController.cs
+        │   └── BankingController.cs
+        │
+        ├── Models
+        │   ├── AdminResetPasswordVm.cs
+        │   ├── AmountVm.cs
+        │   ├── LoginVm.cs
+        │   ├── RegisterVm.cs
+        │   └── TransferVm.cs
+        │
+        ├── Views
+        │   │
+        │   ├── Account
+        │   │   ├── Login.cshtml
+        │   │   ├── Register.cshtml
+        │   │   └── RegisterSuccess.cshtml
+        │   │
+        │   ├── Admin
+        │   │   ├── Audit.cshtml
+        │   │   ├── Customers.cshtml
+        │   │   └── ResetPassword.cshtml
+        │   │
+        │   ├── Banking
+        │   │   └── Dashboard.cshtml
+        │   │
+        │   └── Shared
+        │       └── _Layout.cshtml
+        │
+        └── wwwroot
+            └── (empty – future css/js/images)
+```
+
+---
+
+# 🧠 মনে রাখার সহজ Rule (Exam + Interview friendly)
+
+### ✅ Domain
+➡ Business rules + entities only
+❌ No EF Core, No HTTP, No UI
+
+### ✅ Application
+➡ Interfaces + use-case logic + rules config
+❌ No database, No MVC
+
+### ✅ Infrastructure
+➡ Database, EF Core, PDF, hashing, services implementation
+
+### ✅ Web
+➡ Controllers, Views, ViewModels, Auth, UI
+
+
+
+
+.
