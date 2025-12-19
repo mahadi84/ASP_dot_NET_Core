@@ -1,0 +1,122 @@
+
+# 3) DOMAIN Layer (Entities + Business meaning)
+
+## 3.1 Customer (User) entity
+
+কেন দরকার: Customer info + login credential + role + lock state (security)
+
+`src/OnlineBanking.Domain/Entities/Customer.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class Customer
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string City { get; set; } = "";
+
+    // 5-digit account number used for login
+    public string AccountNumber { get; set; } = "";
+
+    public string PasswordHash { get; set; } = "";
+
+    // admin panel support
+    public bool IsAdmin { get; set; } = false;
+
+    // security: lock account after too many failed logins
+    public int FailedLoginCount { get; set; } = 0;
+    public DateTimeOffset? LockedUntilUtc { get; set; }
+
+    public Account Account { get; set; } = new();
+}
+```
+
+## 3.2 Account
+
+`RowVersion` দিয়ে concurrency control (একই সময়ে ২টা transfer হলে issue কমবে)
+
+`src/OnlineBanking.Domain/Entities/Account.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class Account
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid CustomerId { get; set; }
+    public Customer Customer { get; set; } = default!;
+
+    public decimal Balance { get; set; } = 0m;
+
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    public List<Transaction> Transactions { get; set; } = new();
+}
+```
+
+## 3.3 Transaction
+
+Transfer-এ দুইটা entry হবে: out + in
+`Reference` এ “to 12345” লেখা থাকবে।
+
+`src/OnlineBanking.Domain/Entities/Transaction.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public enum TransactionType
+{
+    Deposit = 1,
+    Withdraw = 2,
+    TransferOut = 3,
+    TransferIn = 4
+}
+
+public sealed class Transaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid AccountId { get; set; }
+    public Account Account { get; set; } = default!;
+
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public TransactionType Type { get; set; }
+
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+
+    public string? Reference { get; set; }
+}
+```
+
+## 3.4 AuditLog (Real-world trace)
+
+এটা real banking এ খুব দরকার: কে কখন কী করেছে।
+
+`src/OnlineBanking.Domain/Entities/AuditLog.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class AuditLog
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public string Action { get; set; } = "";          // e.g. LOGIN_SUCCESS, TRANSFER, ADMIN_RESET_PASSWORD
+    public string ActorAccountNumber { get; set; } = ""; // who did it (accountNumber) or "SYSTEM"
+    public string? TargetAccountNumber { get; set; }     // optional
+    public string? Ip { get; set; }
+    public string? UserAgent { get; set; }
+
+    public string Message { get; set; } = "";
+}
+```
+
+---
