@@ -1,0 +1,80 @@
+
+
+# 1) Project Create (Step-by-step)
+
+## 1.1 Solution + Projects
+
+```bash
+mkdir OnlineBanking
+cd OnlineBanking
+
+dotnet new sln -n OnlineBanking
+mkdir src
+cd src
+
+dotnet new classlib -n OnlineBanking.Domain
+dotnet new classlib -n OnlineBanking.Application
+dotnet new classlib -n OnlineBanking.Infrastructure
+dotnet new mvc -n OnlineBanking.Web
+
+cd ..
+dotnet sln add src/OnlineBanking.Domain/OnlineBanking.Domain.csproj
+dotnet sln add src/OnlineBanking.Application/OnlineBanking.Application.csproj
+dotnet sln add src/OnlineBanking.Infrastructure/OnlineBanking.Infrastructure.csproj
+dotnet sln add src/OnlineBanking.Web/OnlineBanking.Web.csproj
+
+dotnet add src/OnlineBanking.Application reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Application
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Application
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Infrastructure
+```
+
+## 1.2 NuGet Packages
+
+```bash
+dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql
+dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design
+dotnet add src/OnlineBanking.Infrastructure package BCrypt.Net-Next
+dotnet add src/OnlineBanking.Infrastructure package QuestPDF
+
+dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design
+```
+
+---
+
+# 2) Configuration (appsettings.json)
+
+✅ এখানে Currency, TimeZone, MinBalance, DailyTransferLimit সেট করবেন
+
+`src/OnlineBanking.Web/appsettings.json`
+
+```json
+{
+  "ConnectionStrings": {
+    "MySql": "server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;TreatTinyAsBoolean=true;"
+  },
+  "BankingRules": {
+    "CurrencySymbol": "৳",
+    "TimeZoneId": "Asia/Dhaka",
+    "MinimumBalance": 100.00,
+    "DailyTransferLimit": 50000.00
+  },
+  "AdminSeed": {
+    "Email": "admin@bank.local",
+    "Password": "Admin@12345",
+    "Name": "System Admin",
+    "City": "Dhaka"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+---
