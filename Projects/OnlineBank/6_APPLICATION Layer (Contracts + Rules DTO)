@@ -1,0 +1,113 @@
+
+
+# 4) APPLICATION Layer (Contracts + Rules DTO)
+
+## 4.1 Rules config model
+
+`src/OnlineBanking.Application/Options/BankingRulesOptions.cs`
+
+```csharp
+namespace OnlineBanking.Application.Options;
+
+public sealed class BankingRulesOptions
+{
+    public string CurrencySymbol { get; set; } = "৳";
+    public string TimeZoneId { get; set; } = "Asia/Dhaka";
+    public decimal MinimumBalance { get; set; } = 0m;
+    public decimal DailyTransferLimit { get; set; } = 0m;
+}
+```
+
+## 4.2 Result wrapper (success/fail)
+
+`src/OnlineBanking.Application/Common/Result.cs`
+
+```csharp
+namespace OnlineBanking.Application.Common;
+
+public sealed record Result(bool Success, string Message)
+{
+    public static Result Ok(string msg = "OK") => new(true, msg);
+    public static Result Fail(string msg) => new(false, msg);
+}
+
+public sealed record Result<T>(bool Success, string Message, T? Data)
+{
+    public static Result<T> Ok(T data, string msg = "OK") => new(true, msg, data);
+    public static Result<T> Fail(string msg) => new(false, msg, default);
+}
+```
+
+## 4.3 Contracts
+
+`src/OnlineBanking.Application/Contracts/IAuthService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IAuthService
+{
+    Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent);
+    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IBankingService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IBankingService
+{
+    Task<decimal> GetBalanceAsync(Guid customerId);
+    Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent);
+    Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent);
+    Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent);
+
+    Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId);
+
+    Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IStatementPdfService.cs`
+
+```csharp
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IStatementPdfService
+{
+    byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IAdminService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IAdminService
+{
+    Task<IReadOnlyList<Customer>> GetCustomersAsync();
+    Task<Customer?> GetCustomerByAccountAsync(string accountNumber);
+
+    Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua);
+    Task<Result> LockAsync(string accountNumber, int minutes, string actorAcc, string ip, string ua);
+    Task<Result> UnlockAsync(string accountNumber, string actorAcc, string ip, string ua);
+    Task<Result> ResetPasswordAsync(string accountNumber, string newPassword, string actorAcc, string ip, string ua);
+
+    Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100);
+}
+```
+
+---
