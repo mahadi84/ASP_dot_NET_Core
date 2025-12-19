@@ -1,0 +1,398 @@
+
+# 7) Controllers + ViewModels + Views (Bootstrap UI)
+
+## 7.1 ViewModels
+
+`src/OnlineBanking.Web/Models/RegisterVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class RegisterVm
+{
+    [Required, StringLength(100)]
+    public string Name { get; set; } = "";
+
+    [Required, EmailAddress, StringLength(200)]
+    public string Email { get; set; } = "";
+
+    [Required, StringLength(100)]
+    public string City { get; set; } = "";
+
+    [Required, MinLength(6), MaxLength(100)]
+    public string Password { get; set; } = "";
+}
+```
+
+`src/OnlineBanking.Web/Models/LoginVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class LoginVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string AccountNumber { get; set; } = "";
+
+    [Required]
+    public string Password { get; set; } = "";
+}
+```
+
+`src/OnlineBanking.Web/Models/AmountVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class AmountVm
+{
+    [Required]
+    [Range(0.01, 100000000)]
+    public decimal Amount { get; set; }
+}
+```
+
+`src/OnlineBanking.Web/Models/TransferVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class TransferVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string ToAccountNumber { get; set; } = "";
+
+    [Required]
+    [Range(0.01, 100000000)]
+    public decimal Amount { get; set; }
+}
+```
+
+`src/OnlineBanking.Web/Models/AdminResetPasswordVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class AdminResetPasswordVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string AccountNumber { get; set; } = "";
+
+    [Required, MinLength(6), MaxLength(100)]
+    public string NewPassword { get; set; } = "";
+}
+```
+
+---
+
+## 7.2 AccountController (Register/Login/Logout)
+
+ব্যাখ্যা (Bangla):
+
+* `Register` POST → IAuthService.RegisterAsync কল করে
+* Success হলে account number দেখায়
+* `Login` POST → ValidateLoginAsync → Cookie sign-in with claims
+* Admin হলে claim `IsAdmin=true` বসায় → Admin policy কাজ করবে
+
+`src/OnlineBanking.Web/Controllers/AccountController.cs`
+
+```csharp
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+public sealed class AccountController : Controller
+{
+    private readonly IAuthService _auth;
+    public AccountController(IAuthService auth) => _auth = auth;
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public IActionResult Register() => View(new RegisterVm());
+
+    [HttpPost]
+    public async Task<IActionResult> Register(RegisterVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var (ip, ua) = ClientInfo();
+        var res = await _auth.RegisterAsync(vm.Name, vm.Email, vm.Password, vm.City, ip, ua);
+
+        if (!res.Success)
+        {
+            ModelState.AddModelError("", res.Message);
+            return View(vm);
+        }
+
+        TempData["AccountNumber"] = res.Data;
+        return RedirectToAction(nameof(RegisterSuccess));
+    }
+
+    [HttpGet]
+    public IActionResult RegisterSuccess()
+    {
+        ViewBag.AccountNumber = TempData["AccountNumber"]?.ToString();
+        return View();
+    }
+
+    [HttpGet]
+    public IActionResult Login() => View(new LoginVm());
+
+    [HttpPost]
+    public async Task<IActionResult> Login(LoginVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var (ip, ua) = ClientInfo();
+        var res = await _auth.ValidateLoginAsync(vm.AccountNumber, vm.Password, ip, ua);
+
+        if (!res.Success)
+        {
+            ModelState.AddModelError("", res.Message);
+            return View(vm);
+        }
+
+        var (customerId, isAdmin) = res.Data!.Value;
+
+        var claims = new List<Claim>
+        {
+            new Claim("CustomerId", customerId.ToString()),
+            new Claim("AccountNumber", vm.AccountNumber),
+            new Claim(ClaimTypes.Name, vm.AccountNumber),
+            new Claim("IsAdmin", isAdmin ? "true" : "false")
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+        return RedirectToAction("Dashboard", "Banking");
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction(nameof(Login));
+    }
+}
+```
+
+---
+
+## 7.3 BankingController (Dashboard + actions + PDF)
+
+ব্যাখ্যা:
+
+* `Dashboard` → balance + last10 দেখায়
+* Deposit/Withdraw/Transfer → IBankingService কল করে
+* PDF → profile (name+acc+balance) + last10 → pdf bytes generate
+
+`src/OnlineBanking.Web/Controllers/BankingController.cs`
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Application.Options;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+[Authorize]
+public sealed class BankingController : Controller
+{
+    private readonly IBankingService _banking;
+    private readonly IStatementPdfService _pdf;
+    private readonly BankingRulesOptions _rules;
+
+    public BankingController(IBankingService banking, IStatementPdfService pdf, IOptions<BankingRulesOptions> rules)
+    {
+        _banking = banking;
+        _pdf = pdf;
+        _rules = rules.Value;
+    }
+
+    private Guid CustomerId => Guid.Parse(User.Claims.First(x => x.Type == "CustomerId").Value);
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Dashboard()
+    {
+        ViewBag.Rules = _rules;
+        ViewBag.Profile = await _banking.GetProfileAsync(CustomerId);
+        ViewBag.Last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Deposit(AmountVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.DepositAsync(CustomerId, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Withdraw(AmountVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.WithdrawAsync(CustomerId, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Transfer(TransferVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid transfer input."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.TransferAsync(CustomerId, vm.ToAccountNumber, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> MiniStatementPdf()
+    {
+        var profile = await _banking.GetProfileAsync(CustomerId);
+        var last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
+
+        var pdfBytes = _pdf.BuildMiniStatementPdf(
+            currency: _rules.CurrencySymbol,
+            tzId: _rules.TimeZoneId,
+            accountNumber: profile.AccountNumber,
+            customerName: profile.CustomerName,
+            currentBalance: profile.Balance,
+            last10: last10);
+
+        return File(pdfBytes, "application/pdf", $"mini-statement-{profile.AccountNumber}.pdf");
+    }
+}
+```
+
+---
+
+## 7.4 AdminController (Admin panel)
+
+ব্যাখ্যা:
+
+* `[Authorize(Policy="AdminOnly")]` → শুধু admin ঢুকতে পারবে
+* Customers list
+* lock/unlock/set admin/reset password
+* audit logs view
+
+`src/OnlineBanking.Web/Controllers/AdminController.cs`
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+[Authorize(Policy = "AdminOnly")]
+public sealed class AdminController : Controller
+{
+    private readonly IAdminService _admin;
+
+    public AdminController(IAdminService admin) => _admin = admin;
+
+    private string ActorAcc => User.Claims.First(x => x.Type == "AccountNumber").Value;
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Customers()
+    {
+        var list = await _admin.GetCustomersAsync();
+        return View(list);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetAdmin(string accountNumber, bool isAdmin)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.SetAdminAsync(accountNumber, isAdmin, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Lock(string accountNumber, int minutes = 30)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.LockAsync(accountNumber, minutes, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Unlock(string accountNumber)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.UnlockAsync(accountNumber, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpGet]
+    public IActionResult ResetPassword() => View(new AdminResetPasswordVm());
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(AdminResetPasswordVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) return View(vm);
+        var res = await _admin.ResetPasswordAsync(vm.AccountNumber, vm.NewPassword, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Audit()
+    {
+        var logs = await _admin.GetLatestAuditAsync(150);
+        return View(logs);
+    }
+}
+```
+
+---
