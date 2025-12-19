@@ -1,0 +1,477 @@
+Date: 19 Dec 2025
+
+# 🚀 3–6 Months Software Developer Learning Roadmap
+
+
+### 🎯 Target:Strong Mid-Level Developer: 🎓 After 6 Months — Now I  Say:
+                1. আমি Clean Architecture design করতে পারি
+                2. আমি banking-level security বুঝি
+                3. আমি production deployment জানি
+                4. আমি juniorদের system বুঝিয়ে দিতে পারি
+
+
+
+
+########################################################################   
+        🟢 Month 1:Foundation শক্ত করা (Professional Basics)
+########################################################################   
+
+
+### 🎯 Goal: বর্তমান knowledge কে production-ready করা
+
+### 🔹 What to Learn
+
+1️⃣ Advanced C# / .NET
+* async / await (real DB scenario)
+* Task vs Thread
+* Exception handling (global middleware)
+* SOLID principles (real code example)
+
+2️⃣ ASP.NET Core Internals
+* Middleware pipeline
+* Filters (Action / Exception)
+* Dependency Injection (Scoped vs Singleton vs Transient)
+
+3️⃣ Security Basics (Must for banking)
+* Authentication vs Authorization
+* Cookie vs JWT (কখন কোনটা)
+* CSRF, XSS, SQL Injection (OWASP Top 10)
+
+### 🛠 Practice
+* আপনার banking project এ:
+  * Global exception handler যোগ করুন
+  * Custom action filter লিখুন (audit/logging)
+
+---
+
+########################################################################  
+             🟡 Month 2:Database & Transaction Mastery
+########################################################################  
+
+### 🎯 Goal
+DB শুধু CRUD না, data safety + performance বোঝা
+
+### 🔹 What to Learn
+1️⃣ SQL (MySQL / PostgreSQL)
+* Index (why & when)
+* Transactions (ACID)
+* Isolation levels (dirty read, phantom read)
+* Deadlock concept
+
+2️⃣ EF Core Advanced
+* Tracking vs NoTracking
+* Concurrency control (RowVersion)
+* N+1 problem
+* Migration best practices
+
+### 🛠 Practice
+* Transfer feature এ:
+  * Deadlock scenario চিন্তা করুন
+  * Explain করুন কেন DB transaction দরকার
+
+
+########################################################################   
+      🔵 Month 3:Testing + Clean Code (Mid-level boundary)
+########################################################################  
+
+### 🎯 Goal: “কাজ করছে” না—“ভুল হলে ধরা পড়বে”
+
+1️⃣ Unit Testing
+* xUnit / NUnit
+* Mocking (Moq)
+* Testing business rules
+
+2️⃣ Integration Testing
+* Test DB (in-memory / docker)
+* API-level tests
+
+3️⃣ Clean Code
+* Method naming
+* Fat controller vs thin controller
+* Code smells
+
+### 🛠 Practice
+* Test লিখুন:
+  * Minimum balance rule
+  * Daily transfer limit rule
+* একটাও controller logic test ছাড়াই রাখবেন না
+
+
+########################################################################  
+        🟣 Month 4:System Design Thinking (Real Mid-level)
+ ########################################################################  
+
+### 🎯 Goal: “একটা feature” না—পুরো system ভাবা
+
+### 🔹 What to Learn
+
+1️⃣ Architecture
+* Clean Architecture deep dive
+* CQRS (basic)
+* Repository pattern (pros/cons)
+
+2️⃣ Scalability Concepts
+* Caching (in-memory vs Redis)
+* Stateless web apps
+* Background jobs
+
+3️⃣ Failure Handling
+* Retry pattern
+* Circuit breaker (concept)
+* Graceful degradation
+
+### 🛠 Practice
+* Question নিজেকে করুন:
+  * “১০ লাখ user হলে কী বদলাবে?”
+  * “DB slow হলে কী করবো?”
+
+########################################################################  
+         🟠 Month 5:DevOps + Deployment (Industry Skill)
+########################################################################  
+
+### 🎯 Goal: Code শুধু local না—real server-ready
+
+### 🔹 What to Learn
+
+1️⃣ Deployment
+* IIS deep dive
+* Windows Server basics
+* Environment-based config
+
+2️⃣ CI/CD Basics
+* Git branching strategy
+* GitHub Actions (basic)
+* Build → Test → Deploy pipeline
+
+3️⃣ Monitoring & Logging
+* Structured logging
+* Error monitoring concept
+* Health checks
+
+### 🛠 Practice
+* Banking project:
+  * Publish করুন
+  * IIS এ host করুন
+  * Separate dev/prod config বানান
+
+
+########################################################################  
+ 🔴 Month 6:Senior Mindset Preparation (Optional but Powerful)
+########################################################################  
+
+### 🎯 Goal: Mid → Senior transition mindset
+
+### 🔹 What to Learn
+
+1️⃣ Design Patterns
+* Factory
+* Strategy
+* Decorator
+* Observer (real use-case)
+
+2️⃣ Microservices Concepts
+* When NOT to use microservices
+* API Gateway
+* Service-to-service communication
+
+3️⃣ Professional Skills
+* Writing technical documentation
+* Explaining system to non-technical people
+* Code review mindset
+
+### 🛠 Practice
+* আপনার banking system কে:
+  * “Future microservice” perspective থেকে explain করুন
+  * Diagram আঁকুন
+
+---
+
+
+
+-------------------------------------------------------------------------------------------------------------
+
+
+======================================================================================================================
+       Daily Task Breakdown” দিলাম—এইটা follow করলে আপনি ধীরে ধীরে Junior → Strong Mid-level হয়ে উঠবেন।
+======================================================================================================================
+
+আমি ধরে নিচ্ছি:
+* ⏱ সময়:প্রতিদিন ~১–১.৫ ঘণ্টা
+* 📅 ৫ দিন/সপ্তাহ (Sat–Wed বা Sun–Thu যেটা আপনার সুবিধা)
+
+---
+
+# 📅 3–6 Months Daily Task Breakdown (Step-by-Step)
+
+---
+
+## 🟢 MONTH 1:.NET Foundation + Security
+
+### 🎯 Goal
+ASP.NET Core ভিতর থেকে বোঝা + secure coding habit
+
+---
+
+### Week 1 – Advanced C#
+
+Day 1:
+* async / await concept
+* Task vs Thread
+* Practice:async method লিখুন DB-like delay দিয়ে
+
+Day 2:
+* Exception handling (try/catch/finally)
+* Custom exception class
+* Practice:banking exception তৈরি করুন
+
+Day 3:
+* SOLID principles (SRP, DIP focus)
+* Practice:Controller থেকে logic সরান
+
+Day 4:
+* Dependency Injection (Scoped/Transient/Singleton)
+* Practice:Service lifetime change করে observe করুন
+
+Day 5:
+* Week recap + notes
+* 5 viva question নিজে নিজে answer করুন
+
+---
+
+### Week 2 – ASP.NET Core Internals
+
+Day 6:
+* Middleware pipeline
+* Request lifecycle diagram আঁকুন
+
+Day 7:
+* Custom middleware (logging)
+* Practice:request time log করুন
+
+Day 8:
+* Filters (Action/Exception)
+* Practice:global exception filter
+
+Day 9:
+* Model validation & Anti-forgery
+* Practice:invalid data test করুন
+
+Day 10:
+* Week recap + mini demo
+
+---
+
+### Week 3 – Security (Must for Banking)
+
+Day 11:
+* AuthN vs AuthZ
+* Cookie vs JWT (when to use)
+
+Day 12:
+* CSRF attack + prevention
+* Practice:CSRF token inspect
+
+Day 13:
+* XSS, SQL Injection
+* Practice:input sanitize test
+
+Day 14:
+* OWASP Top 10 overview
+* Banking risks discussion
+
+Day 15:
+* Week recap + security checklist লিখুন
+
+---
+
+### Week 4 – Refactoring Practice
+
+Day 16:
+* Fat controller problem
+* Practice:thin controller refactor
+
+Day 17:
+* Logging best practices
+* Practice:structured log
+
+Day 18:
+* Error handling strategy
+* Practice:global exception handler
+
+Day 19:
+* Security headers
+* Practice:CSP header explain
+
+Day 20: Month recap + self-evaluation
+
+---
+
+## 🟡 MONTH 2:Database & Transactions
+
+### 🎯 Goal
+
+“DB safe না হলে banking safe না”
+
+---
+
+### Week 5 – SQL & ACID
+
+Day 21:
+* ACID properties
+* Real transfer example
+
+Day 22:
+* Transactions & rollback
+* Practice:fail scenario imagine
+
+Day 23:
+* Isolation levels
+* Dirty read example
+
+Day 24:
+* Deadlock concept
+* Banking transfer deadlock
+
+Day 25: Week recap + diagram
+
+---
+
+### Week 6 – EF Core Advanced
+
+Day 26:
+* Tracking vs NoTracking
+* Performance test
+
+Day 27:
+* Concurrency (RowVersion)
+* Practice:conflict scenario
+
+Day 28:
+* N+1 problem
+* Fix with Include
+
+Day 29:
+* Migration strategy
+* Rename column safely
+
+Day 30: Month recap + DB notes
+
+---
+
+## 🔵 MONTH 3:Testing & Clean Code
+
+### 🎯 Goal
+Code prove করা—not assume
+
+---
+
+### Week 7 – Unit Testing
+
+Day 31:
+* Unit test basics
+* xUnit intro
+
+Day 32:
+* Mocking (Moq)
+* Service mock
+
+Day 33: Test business rule (Min balance)
+Day 34: Test transfer limit rule
+Day 35: Week recap + test review
+
+---
+
+### Week 8 – Integration Testing
+
+Day 36: Integration vs Unit test
+Day 37: In-memory DB tests
+Day 38: Controller integration test
+Day 39: Test failure scenario
+Day 40: Month recap + confidence check
+
+---
+
+## 🟣 MONTH 4:System Design Thinking
+
+### 🎯 Goal
+
+Think like system designer
+
+---
+
+### Week 9 – Architecture
+
+Day 41: Clean Architecture deep dive
+Day 42: CQRS intro
+Day 43: Repository pattern pros/cons
+Day 44: Architecture diagram practice
+Day 45: Week recap
+
+---
+
+### Week 10 – Scalability
+
+Day 46: Stateless apps
+Day 47: Caching basics
+Day 48: Background jobs concept
+Day 49: Load scenario thinking
+Day 50: Month recap
+
+---
+
+## 🟠 MONTH 5:DevOps & Deployment
+
+### 🎯 Goal
+Production readiness
+
+---
+
+### Week 11 – Deployment
+
+Day 51: IIS basics
+Day 52: Publish .NET app
+Day 53: HTTPS & cert concept
+Day 54: Config per environment
+Day 55: Week recap
+
+---
+
+### Week 12 – CI/CD
+
+Day 56: Git branching
+Day 57: GitHub Actions intro
+Day 58: Build pipeline
+Day 59: Deploy pipeline
+Day 60: Month recap
+
+---
+
+## 🔴 MONTH 6 (Optional):Senior Prep
+
+### 🎯 Goal
+
+Next-level mindset
+
+---
+
+### Week 13
+
+Day 61–65:
+* Design patterns (1/day)
+* Factory, Strategy, Decorator
+
+---
+
+## 🧠 Golden Rule (Follow this daily)
+
+> Learn → Apply → Explain (to yourself)
+
+---
+
+## ✅ End Result (After 3–6 months)
+
+* Strong Mid-level .NET Developer
+* Banking-grade architecture understanding
+* Interview confident
+
+
