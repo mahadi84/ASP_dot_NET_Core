@@ -26,6 +26,2567 @@ The customer can see his information only,.
 02. Create all Model, Controller, View, Services with DTO and Repository pattern it needs, with form validation, and login authentication and authorization
 03. Create all eye-catching  UI with Bootstrap 5" give me complete codes step by step so that I can copy and paste to run this Also explain the code in Bangla
 
+.
+
+=============================================================================================================================================================
+
+
+
+
+# 📁 OnlineBanking – Folder Structure (Clean Architecture)
+
+```
+OnlineBanking
+│
+├── OnlineBanking.sln
+│
+└── src
+    │
+    ├── OnlineBanking.Domain
+    │   │
+    │   ├── OnlineBanking.Domain.csproj
+    │   │
+    │   └── Entities
+    │       ├── Account.cs
+    │       ├── AuditLog.cs
+    │       ├── Customer.cs
+    │       └── Transaction.cs
+    │
+    ├── OnlineBanking.Application
+    │   │
+    │   ├── OnlineBanking.Application.csproj
+    │   │
+    │   ├── Common
+    │   │   └── Result.cs
+    │   │
+    │   ├── Contracts
+    │   │   ├── IAdminService.cs
+    │   │   ├── IAuthService.cs
+    │   │   ├── IBankingService.cs
+    │   │   └── IStatementPdfService.cs
+    │   │
+    │   └── Options
+    │       └── BankingRulesOptions.cs
+    │
+    ├── OnlineBanking.Infrastructure
+    │   │
+    │   ├── OnlineBanking.Infrastructure.csproj
+    │   │
+    │   ├── Persistence
+    │   │   └── AppDbContext.cs
+    │   │
+    │   ├── Security
+    │   │   └── PasswordHasher.cs
+    │   │
+    │   └── Services
+    │       ├── AdminService.cs
+    │       ├── AuditWriter.cs
+    │       ├── AuthService.cs
+    │       ├── BankingService.cs
+    │       └── StatementPdfService.cs
+    │
+    └── OnlineBanking.Web
+        │
+        ├── OnlineBanking.Web.csproj
+        ├── Program.cs
+        ├── appsettings.json
+        │
+        ├── Controllers
+        │   ├── AccountController.cs
+        │   ├── AdminController.cs
+        │   └── BankingController.cs
+        │
+        ├── Models
+        │   ├── AdminResetPasswordVm.cs
+        │   ├── AmountVm.cs
+        │   ├── LoginVm.cs
+        │   ├── RegisterVm.cs
+        │   └── TransferVm.cs
+        │
+        ├── Views
+        │   │
+        │   ├── Account
+        │   │   ├── Login.cshtml
+        │   │   ├── Register.cshtml
+        │   │   └── RegisterSuccess.cshtml
+        │   │
+        │   ├── Admin
+        │   │   ├── Audit.cshtml
+        │   │   ├── Customers.cshtml
+        │   │   └── ResetPassword.cshtml
+        │   │
+        │   ├── Banking
+        │   │   └── Dashboard.cshtml
+        │   │
+        │   └── Shared
+        │       └── _Layout.cshtml
+        │
+        └── wwwroot
+            └── (empty – future css/js/images)
+```
+
+---
+
+# 🧠 মনে রাখার সহজ Rule (Exam + Interview friendly)
+
+### ✅ Domain
+
+➡ Business rules + entities only
+❌ No EF Core, No HTTP, No UI
+
+### ✅ Application
+
+➡ Interfaces + use-case logic + rules config
+❌ No database, No MVC
+
+### ✅ Infrastructure
+
+➡ Database, EF Core, PDF, hashing, services implementation
+
+### ✅ Web
+
+➡ Controllers, Views, ViewModels, Auth, UI
+
+---
+
+# 🚀 আপনি এখন কী করবেন (Step order)
+
+1️⃣ এই structure অনুযায়ী folder তৈরি করুন
+2️⃣ আগের দেওয়া code গুলো exact file নাম অনুযায়ী paste করুন
+3️⃣ `appsettings.json` এ MySQL password দিন
+4️⃣ Migration → `dotnet ef database update`
+5️⃣ Run → `dotnet run`
+
+---
+
+
+########################################################### CODE =====================================================
+
+✅ আপনার চাওয়া “আরও real-world” যোগ করেছি:
+
+* PDF-এ Customer নাম DB থেকে আসবে
+* Statement-এ Asia/Dhaka time দেখাবে
+* Currency configurable (BDT/EUR ইত্যাদি)
+* Minimum balance rule (Withdraw/Transfer এর পরে ব্যালেন্স কমে যাবে না)
+* Daily transfer limit (দিনে সর্বোচ্চ X টাকা transfer)
+* Admin panel: Customers list, user lock/unlock, reset password, set admin, audit logs
+* Audit log: Deposit/Withdraw/Transfer/Login/Failed login সব record হবে
+* UI: Bootstrap layout
+
+> ⚠️ নোট: এটা production-ready starter। ব্যাংক লেভেলে যাওয়ার জন্য MFA/OTP, KYC/AML, device fingerprinting, fraud scoring, WAF, HSM, key rotation যোগ লাগে—কিন্তু starter হিসেবে এটা শক্ত base।
+
+---
+
+# 1) Project Create (Step-by-step)
+
+## 1.1 Solution + Projects
+
+```bash
+mkdir OnlineBanking
+cd OnlineBanking
+
+dotnet new sln -n OnlineBanking
+mkdir src
+cd src
+
+dotnet new classlib -n OnlineBanking.Domain
+dotnet new classlib -n OnlineBanking.Application
+dotnet new classlib -n OnlineBanking.Infrastructure
+dotnet new mvc -n OnlineBanking.Web
+
+cd ..
+dotnet sln add src/OnlineBanking.Domain/OnlineBanking.Domain.csproj
+dotnet sln add src/OnlineBanking.Application/OnlineBanking.Application.csproj
+dotnet sln add src/OnlineBanking.Infrastructure/OnlineBanking.Infrastructure.csproj
+dotnet sln add src/OnlineBanking.Web/OnlineBanking.Web.csproj
+
+dotnet add src/OnlineBanking.Application reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Application
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Domain
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Application
+dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Infrastructure
+```
+
+## 1.2 NuGet Packages
+
+```bash
+dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql
+dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design
+dotnet add src/OnlineBanking.Infrastructure package BCrypt.Net-Next
+dotnet add src/OnlineBanking.Infrastructure package QuestPDF
+
+dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design
+```
+
+---
+
+# 2) Configuration (appsettings.json)
+
+✅ এখানে Currency, TimeZone, MinBalance, DailyTransferLimit সেট করবেন
+
+`src/OnlineBanking.Web/appsettings.json`
+
+```json
+{
+  "ConnectionStrings": {
+    "MySql": "server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;TreatTinyAsBoolean=true;"
+  },
+  "BankingRules": {
+    "CurrencySymbol": "৳",
+    "TimeZoneId": "Asia/Dhaka",
+    "MinimumBalance": 100.00,
+    "DailyTransferLimit": 50000.00
+  },
+  "AdminSeed": {
+    "Email": "admin@bank.local",
+    "Password": "Admin@12345",
+    "Name": "System Admin",
+    "City": "Dhaka"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+---
+
+# 3) DOMAIN Layer (Entities + Business meaning)
+
+## 3.1 Customer (User) entity
+
+কেন দরকার: Customer info + login credential + role + lock state (security)
+
+`src/OnlineBanking.Domain/Entities/Customer.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class Customer
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string City { get; set; } = "";
+
+    // 5-digit account number used for login
+    public string AccountNumber { get; set; } = "";
+
+    public string PasswordHash { get; set; } = "";
+
+    // admin panel support
+    public bool IsAdmin { get; set; } = false;
+
+    // security: lock account after too many failed logins
+    public int FailedLoginCount { get; set; } = 0;
+    public DateTimeOffset? LockedUntilUtc { get; set; }
+
+    public Account Account { get; set; } = new();
+}
+```
+
+## 3.2 Account
+
+`RowVersion` দিয়ে concurrency control (একই সময়ে ২টা transfer হলে issue কমবে)
+
+`src/OnlineBanking.Domain/Entities/Account.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class Account
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid CustomerId { get; set; }
+    public Customer Customer { get; set; } = default!;
+
+    public decimal Balance { get; set; } = 0m;
+
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    public List<Transaction> Transactions { get; set; } = new();
+}
+```
+
+## 3.3 Transaction
+
+Transfer-এ দুইটা entry হবে: out + in
+`Reference` এ “to 12345” লেখা থাকবে।
+
+`src/OnlineBanking.Domain/Entities/Transaction.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public enum TransactionType
+{
+    Deposit = 1,
+    Withdraw = 2,
+    TransferOut = 3,
+    TransferIn = 4
+}
+
+public sealed class Transaction
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid AccountId { get; set; }
+    public Account Account { get; set; } = default!;
+
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public TransactionType Type { get; set; }
+
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+
+    public string? Reference { get; set; }
+}
+```
+
+## 3.4 AuditLog (Real-world trace)
+
+এটা real banking এ খুব দরকার: কে কখন কী করেছে।
+
+`src/OnlineBanking.Domain/Entities/AuditLog.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class AuditLog
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    public string Action { get; set; } = "";          // e.g. LOGIN_SUCCESS, TRANSFER, ADMIN_RESET_PASSWORD
+    public string ActorAccountNumber { get; set; } = ""; // who did it (accountNumber) or "SYSTEM"
+    public string? TargetAccountNumber { get; set; }     // optional
+    public string? Ip { get; set; }
+    public string? UserAgent { get; set; }
+
+    public string Message { get; set; } = "";
+}
+```
+
+---
+
+# 4) APPLICATION Layer (Contracts + Rules DTO)
+
+## 4.1 Rules config model
+
+`src/OnlineBanking.Application/Options/BankingRulesOptions.cs`
+
+```csharp
+namespace OnlineBanking.Application.Options;
+
+public sealed class BankingRulesOptions
+{
+    public string CurrencySymbol { get; set; } = "৳";
+    public string TimeZoneId { get; set; } = "Asia/Dhaka";
+    public decimal MinimumBalance { get; set; } = 0m;
+    public decimal DailyTransferLimit { get; set; } = 0m;
+}
+```
+
+## 4.2 Result wrapper (success/fail)
+
+`src/OnlineBanking.Application/Common/Result.cs`
+
+```csharp
+namespace OnlineBanking.Application.Common;
+
+public sealed record Result(bool Success, string Message)
+{
+    public static Result Ok(string msg = "OK") => new(true, msg);
+    public static Result Fail(string msg) => new(false, msg);
+}
+
+public sealed record Result<T>(bool Success, string Message, T? Data)
+{
+    public static Result<T> Ok(T data, string msg = "OK") => new(true, msg, data);
+    public static Result<T> Fail(string msg) => new(false, msg, default);
+}
+```
+
+## 4.3 Contracts
+
+`src/OnlineBanking.Application/Contracts/IAuthService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IAuthService
+{
+    Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent);
+    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IBankingService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IBankingService
+{
+    Task<decimal> GetBalanceAsync(Guid customerId);
+    Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent);
+    Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent);
+    Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent);
+
+    Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId);
+
+    Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IStatementPdfService.cs`
+
+```csharp
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IStatementPdfService
+{
+    byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10);
+}
+```
+
+`src/OnlineBanking.Application/Contracts/IAdminService.cs`
+
+```csharp
+using OnlineBanking.Application.Common;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Application.Contracts;
+
+public interface IAdminService
+{
+    Task<IReadOnlyList<Customer>> GetCustomersAsync();
+    Task<Customer?> GetCustomerByAccountAsync(string accountNumber);
+
+    Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua);
+    Task<Result> LockAsync(string accountNumber, int minutes, string actorAcc, string ip, string ua);
+    Task<Result> UnlockAsync(string accountNumber, string actorAcc, string ip, string ua);
+    Task<Result> ResetPasswordAsync(string accountNumber, string newPassword, string actorAcc, string ip, string ua);
+
+    Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100);
+}
+```
+
+---
+
+# 5) INFRASTRUCTURE Layer (EF Core + Services)
+
+## 5.1 DbContext
+
+`src/OnlineBanking.Infrastructure/Persistence/AppDbContext.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Domain.Entities;
+
+namespace OnlineBanking.Infrastructure.Persistence;
+
+public sealed class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
+
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        b.Entity<Customer>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+            e.Property(x => x.City).HasMaxLength(100).IsRequired();
+
+            e.Property(x => x.AccountNumber).HasMaxLength(5).IsRequired();
+            e.Property(x => x.PasswordHash).IsRequired();
+
+            e.HasIndex(x => x.Email).IsUnique();
+            e.HasIndex(x => x.AccountNumber).IsUnique();
+
+            e.HasOne(x => x.Account)
+                .WithOne(a => a.Customer)
+                .HasForeignKey<Account>(a => a.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Account>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Balance).HasPrecision(18,2);
+            e.Property(x => x.RowVersion).IsRowVersion();
+        });
+
+        b.Entity<Transaction>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasPrecision(18,2);
+            e.Property(x => x.BalanceAfter).HasPrecision(18,2);
+            e.Property(x => x.Reference).HasMaxLength(200);
+            e.HasIndex(x => x.CreatedAtUtc);
+        });
+
+        b.Entity<AuditLog>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Action).HasMaxLength(80).IsRequired();
+            e.Property(x => x.ActorAccountNumber).HasMaxLength(20).IsRequired();
+            e.Property(x => x.TargetAccountNumber).HasMaxLength(20);
+            e.Property(x => x.Ip).HasMaxLength(64);
+            e.Property(x => x.UserAgent).HasMaxLength(300);
+            e.Property(x => x.Message).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.HasIndex(x => x.Action);
+        });
+    }
+}
+```
+
+## 5.2 Password hashing
+
+`src/OnlineBanking.Infrastructure/Security/PasswordHasher.cs`
+
+```csharp
+namespace OnlineBanking.Infrastructure.Security;
+
+public static class PasswordHasher
+{
+    public static string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password);
+    public static bool Verify(string password, string hash) => BCrypt.Net.BCrypt.Verify(password, hash);
+}
+```
+
+## 5.3 Audit writer helper
+
+`src/OnlineBanking.Infrastructure/Services/AuditWriter.cs`
+
+```csharp
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AuditWriter
+{
+    private readonly AppDbContext _db;
+    public AuditWriter(AppDbContext db) => _db = db;
+
+    public async Task WriteAsync(string action, string actorAcc, string? targetAcc, string ip, string ua, string message)
+    {
+        _db.AuditLogs.Add(new AuditLog
+        {
+            Action = action,
+            ActorAccountNumber = actorAcc,
+            TargetAccountNumber = targetAcc,
+            Ip = ip,
+            UserAgent = ua,
+            Message = message
+        });
+        await _db.SaveChangesAsync();
+    }
+}
+```
+
+## 5.4 AuthService (Register/Login + lockout + audit)
+
+Logic:
+
+* Register → unique 5-digit account number generate
+* Login → lock check, password verify, fail count increase, 5 fail হলে 15 min lock
+* Audit logs write
+
+`src/OnlineBanking.Infrastructure/Services/AuthService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+using OnlineBanking.Infrastructure.Security;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AuthService : IAuthService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+
+    public AuthService(AppDbContext db, AuditWriter audit)
+    {
+        _db = db;
+        _audit = audit;
+    }
+
+    public async Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent)
+    {
+        email = email.Trim().ToLowerInvariant();
+
+        if (await _db.Customers.AnyAsync(x => x.Email == email))
+            return Result<string>.Fail("Email already exists.");
+
+        // generate unique 5-digit account number
+        string acc;
+        int guard = 0;
+        do
+        {
+            acc = Random.Shared.Next(10000, 100000).ToString();
+            guard++;
+            if (guard > 50) return Result<string>.Fail("Could not generate account number. Try again.");
+        }
+        while (await _db.Customers.AnyAsync(x => x.AccountNumber == acc));
+
+        var customer = new Customer
+        {
+            Name = name.Trim(),
+            Email = email,
+            City = city.Trim(),
+            AccountNumber = acc,
+            PasswordHash = PasswordHasher.Hash(password),
+            IsAdmin = false,
+            Account = new Account { Balance = 0m }
+        };
+
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("REGISTER", acc, acc, ip, userAgent, $"New customer registered: {customer.Email}");
+
+        return Result<string>.Ok(acc, "Registered successfully.");
+    }
+
+    public async Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent)
+    {
+        accountNumber = accountNumber.Trim();
+
+        var customer = await _db.Customers.FirstOrDefaultAsync(x => x.AccountNumber == accountNumber);
+        if (customer is null)
+        {
+            await _audit.WriteAsync("LOGIN_FAIL", "UNKNOWN", accountNumber, ip, userAgent, "Account not found.");
+            return Result<(Guid, bool)>.Fail("Invalid account number or password.");
+        }
+
+        if (customer.LockedUntilUtc.HasValue && customer.LockedUntilUtc.Value > DateTimeOffset.UtcNow)
+        {
+            await _audit.WriteAsync("LOGIN_BLOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Account locked.");
+            return Result<(Guid, bool)>.Fail("Account is locked. Try later.");
+        }
+
+        if (!PasswordHasher.Verify(password, customer.PasswordHash))
+        {
+            customer.FailedLoginCount += 1;
+
+            // lock after 5 failed attempts for 15 minutes
+            if (customer.FailedLoginCount >= 5)
+            {
+                customer.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15);
+                customer.FailedLoginCount = 0;
+                await _db.SaveChangesAsync();
+
+                await _audit.WriteAsync("LOGIN_LOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Locked due to failed attempts.");
+                return Result<(Guid, bool)>.Fail("Too many failed attempts. Account locked for 15 minutes.");
+            }
+
+            await _db.SaveChangesAsync();
+            await _audit.WriteAsync("LOGIN_FAIL", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Wrong password.");
+            return Result<(Guid, bool)>.Fail("Invalid account number or password.");
+        }
+
+        // success: reset fail count
+        customer.FailedLoginCount = 0;
+        customer.LockedUntilUtc = null;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("LOGIN_SUCCESS", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Login ok.");
+
+        return Result<(Guid, bool)>.Ok((customer.Id, customer.IsAdmin), "Login ok.");
+    }
+}
+```
+
+## 5.5 BankingService (min balance + daily limit + audit)
+
+Rules:
+
+* Withdraw/Transfer শেষে balance >= MinimumBalance
+* Transfer: আজকের total transferout <= DailyTransferLimit
+* Audit: deposit/withdraw/transfer write
+
+`src/OnlineBanking.Infrastructure/Services/BankingService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Application.Options;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class BankingService : IBankingService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+    private readonly BankingRulesOptions _rules;
+
+    public BankingService(AppDbContext db, AuditWriter audit, IOptions<BankingRulesOptions> rules)
+    {
+        _db = db;
+        _audit = audit;
+        _rules = rules.Value;
+    }
+
+    public async Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId)
+    {
+        var row = await _db.Customers.AsNoTracking()
+            .Where(c => c.Id == customerId)
+            .Select(c => new { c.Name, c.AccountNumber, Balance = c.Account.Balance })
+            .FirstAsync();
+
+        return (row.Name, row.AccountNumber, row.Balance);
+    }
+
+    public async Task<decimal> GetBalanceAsync(Guid customerId)
+    {
+        return await _db.Accounts.AsNoTracking()
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Balance)
+            .FirstAsync();
+    }
+
+    public async Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
+        customer.Account.Balance += amount;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = customer.Account.Id,
+            Type = TransactionType.Deposit,
+            Amount = amount,
+            BalanceAfter = customer.Account.Balance,
+            Reference = "Cash deposit"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("DEPOSIT", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Deposit {amount:0.00}");
+
+        return Result.Ok("Deposit successful.");
+    }
+
+    public async Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
+
+        if (customer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
+
+        var newBalance = customer.Account.Balance - amount;
+        if (newBalance < _rules.MinimumBalance)
+            return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
+
+        customer.Account.Balance = newBalance;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = customer.Account.Id,
+            Type = TransactionType.Withdraw,
+            Amount = amount,
+            BalanceAfter = customer.Account.Balance,
+            Reference = "Cash withdraw"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("WITHDRAW", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Withdraw {amount:0.00}");
+
+        return Result.Ok("Withdraw successful.");
+    }
+
+    public async Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent)
+    {
+        if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+        toAccountNumber = toAccountNumber.Trim();
+
+        await using var tx = await _db.Database.BeginTransactionAsync();
+
+        var fromCustomer = await _db.Customers.Include(c => c.Account)
+            .FirstAsync(c => c.Id == customerId);
+
+        var toCustomer = await _db.Customers.Include(c => c.Account)
+            .FirstOrDefaultAsync(c => c.AccountNumber == toAccountNumber);
+
+        if (toCustomer is null) return Result.Fail("Receiver account not found.");
+        if (toCustomer.Id == fromCustomer.Id) return Result.Fail("Cannot transfer to same account.");
+
+        // daily transfer limit check (sum of TransferOut today UTC date)
+        var todayUtc = DateTimeOffset.UtcNow.Date;
+        var fromAccountId = fromCustomer.Account.Id;
+
+        var todayTransferOut = await _db.Transactions.AsNoTracking()
+            .Where(t => t.AccountId == fromAccountId
+                        && t.Type == TransactionType.TransferOut
+                        && t.CreatedAtUtc >= todayUtc
+                        && t.CreatedAtUtc < todayUtc.AddDays(1))
+            .SumAsync(t => (decimal?)t.Amount) ?? 0m;
+
+        if (todayTransferOut + amount > _rules.DailyTransferLimit)
+            return Result.Fail($"Daily transfer limit exceeded. Limit: {_rules.DailyTransferLimit:0.00}");
+
+        if (fromCustomer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
+
+        var newBalance = fromCustomer.Account.Balance - amount;
+        if (newBalance < _rules.MinimumBalance)
+            return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
+
+        // apply
+        fromCustomer.Account.Balance = newBalance;
+        toCustomer.Account.Balance += amount;
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = fromCustomer.Account.Id,
+            Type = TransactionType.TransferOut,
+            Amount = amount,
+            BalanceAfter = fromCustomer.Account.Balance,
+            Reference = $"Transfer to {toCustomer.AccountNumber}"
+        });
+
+        _db.Transactions.Add(new Transaction
+        {
+            AccountId = toCustomer.Account.Id,
+            Type = TransactionType.TransferIn,
+            Amount = amount,
+            BalanceAfter = toCustomer.Account.Balance,
+            Reference = $"Transfer from {fromCustomer.AccountNumber}"
+        });
+
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await _audit.WriteAsync("TRANSFER", fromCustomer.AccountNumber, toCustomer.AccountNumber, ip, userAgent, $"Transfer {amount:0.00} to {toCustomer.AccountNumber}");
+
+        return Result.Ok("Transfer successful.");
+    }
+
+    public async Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10)
+    {
+        var accountId = await _db.Accounts
+            .Where(a => a.CustomerId == customerId)
+            .Select(a => a.Id)
+            .FirstAsync();
+
+        return await _db.Transactions.AsNoTracking()
+            .Where(t => t.AccountId == accountId)
+            .OrderByDescending(t => t.CreatedAtUtc)
+            .Take(take)
+            .ToListAsync();
+    }
+}
+```
+
+## 5.6 PDF Statement Service (DB name + Dhaka time + currency)
+
+কাজ: last 10 tx table + Dhaka time conversion
+
+`src/OnlineBanking.Infrastructure/Services/StatementPdfService.cs`
+
+```csharp
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class StatementPdfService : IStatementPdfService
+{
+    public byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10)
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
+
+        string ToLocal(DateTimeOffset utc)
+        {
+            var local = TimeZoneInfo.ConvertTime(utc, tz);
+            return local.ToString("yyyy-MM-dd HH:mm:ss");
+        }
+
+        var doc = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(30);
+                page.Size(PageSizes.A4);
+
+                page.Header().Column(col =>
+                {
+                    col.Item().Text("Mini Statement (Last 10 Transactions)").FontSize(18).SemiBold();
+                    col.Item().Text($"Account: {accountNumber}").FontSize(12);
+                    col.Item().Text($"Customer: {customerName}").FontSize(12);
+                    col.Item().Text($"Current Balance: {currency}{currentBalance:0.00}").FontSize(12);
+                    col.Item().Text($"Time Zone: {tzId}").FontSize(10).FontColor(Colors.Grey.Darken2);
+                    col.Item().LineHorizontal(1);
+                });
+
+                page.Content().Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(3);
+                        columns.RelativeColumn(2);
+                        columns.RelativeColumn(2);
+                    });
+
+                    table.Header(header =>
+                    {
+                        header.Cell().Element(CellStyle).Text($"Date & Time ({tzId})").SemiBold();
+                        header.Cell().Element(CellStyle).Text("Type").SemiBold();
+                        header.Cell().Element(CellStyle).Text("Amount").SemiBold();
+                    });
+
+                    foreach (var t in last10.OrderByDescending(x => x.CreatedAtUtc))
+                    {
+                        table.Cell().Element(CellStyle).Text(ToLocal(t.CreatedAtUtc));
+                        table.Cell().Element(CellStyle).Text(t.Type.ToString());
+                        table.Cell().Element(CellStyle).Text($"{currency}{t.Amount:0.00}");
+                    }
+
+                    static IContainer CellStyle(IContainer container) =>
+                        container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(6);
+                });
+
+                page.Footer().AlignRight().Text($"Generated (UTC): {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss}");
+            });
+        });
+
+        return doc.GeneratePdf();
+    }
+}
+```
+
+## 5.7 AdminService (User management + audit read)
+
+`src/OnlineBanking.Infrastructure/Services/AdminService.cs`
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using OnlineBanking.Application.Common;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Domain.Entities;
+using OnlineBanking.Infrastructure.Persistence;
+using OnlineBanking.Infrastructure.Security;
+
+namespace OnlineBanking.Infrastructure.Services;
+
+public sealed class AdminService : IAdminService
+{
+    private readonly AppDbContext _db;
+    private readonly AuditWriter _audit;
+
+    public AdminService(AppDbContext db, AuditWriter audit)
+    {
+        _db = db;
+        _audit = audit;
+    }
+
+    public async Task<IReadOnlyList<Customer>> GetCustomersAsync()
+    {
+        return await _db.Customers.AsNoTracking()
+            .OrderBy(c => c.AccountNumber)
+            .ToListAsync();
+    }
+
+    public async Task<Customer?> GetCustomerByAccountAsync(string accountNumber)
+    {
+        accountNumber = accountNumber.Trim();
+        return await _db.Customers.FirstOrDefaultAsync(c => c.AccountNumber == accountNumber);
+    }
+
+    public async Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.IsAdmin = isAdmin;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_SET_ROLE", actorAcc, c.AccountNumber, ip, ua, $"Set IsAdmin={isAdmin}");
+        return Result.Ok("Role updated.");
+    }
+
+    public async Task<Result> LockAsync(string accountNumber, int minutes, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(minutes);
+        c.FailedLoginCount = 0;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_LOCK", actorAcc, c.AccountNumber, ip, ua, $"Locked for {minutes} minutes");
+        return Result.Ok("Locked.");
+    }
+
+    public async Task<Result> UnlockAsync(string accountNumber, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+        c.LockedUntilUtc = null;
+        c.FailedLoginCount = 0;
+        await _db.SaveChangesAsync();
+
+        await _audit.WriteAsync("ADMIN_UNLOCK", actorAcc, c.AccountNumber, ip, ua, "Unlocked");
+        return Result.Ok("Unlocked.");
+    }
+
+    public async Task<Result> ResetPasswordAsync(string accountNumber, string newPassword, string actorAcc, string ip, string ua)
+    {
+        var c = await GetCustomerByAccountAsync(accountNumber);
+        if (c is null) return Result.Fail("Customer not found.");
+
+        c.PasswordHash = PasswordHasher.Hash(newPassword);
+        c.FailedLoginCount = 0;
+        c.LockedUntilUtc = null;
+
+        await _db.SaveChangesAsync();
+        await _audit.WriteAsync("ADMIN_RESET_PASSWORD", actorAcc, c.AccountNumber, ip, ua, "Password reset");
+        return Result.Ok("Password reset done.");
+    }
+
+    public async Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100)
+    {
+        return await _db.AuditLogs.AsNoTracking()
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(take)
+            .ToListAsync();
+    }
+}
+```
+
+---
+
+# 6) WEB Layer (MVC + Bootstrap UI + Cookie auth + Admin policy)
+
+## 6.1 Program.cs
+
+✅ এখানে:
+
+* DB connect
+* Rules options bind
+* Cookie auth + secure cookie
+* Admin authorization policy
+* Seed admin user (startup এ admin create করবে)
+
+`src/OnlineBanking.Web/Program.cs`
+
+```csharp
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Application.Options;
+using OnlineBanking.Infrastructure.Persistence;
+using OnlineBanking.Infrastructure.Services;
+using OnlineBanking.Infrastructure.Security;
+using OnlineBanking.Domain.Entities;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+});
+
+builder.Services.Configure<BankingRulesOptions>(builder.Configuration.GetSection("BankingRules"));
+
+builder.Services.AddDbContext<AppDbContext>(opt =>
+{
+    var cs = builder.Configuration.GetConnectionString("MySql");
+    opt.UseMySql(cs, ServerVersion.AutoDetect(cs));
+});
+
+// Auth cookie
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(opt =>
+    {
+        opt.LoginPath = "/Account/Login";
+        opt.LogoutPath = "/Account/Logout";
+        opt.AccessDeniedPath = "/Account/Login";
+        opt.Cookie.HttpOnly = true;
+        opt.Cookie.SameSite = SameSiteMode.Strict;
+        opt.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS required
+        opt.SlidingExpiration = true;
+        opt.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    });
+
+builder.Services.AddAuthorization(opt =>
+{
+    opt.AddPolicy("AdminOnly", policy =>
+        policy.RequireClaim("IsAdmin", "true"));
+});
+
+builder.Services.AddScoped<AuditWriter>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBankingService, BankingService>();
+builder.Services.AddScoped<IStatementPdfService, StatementPdfService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+
+var app = builder.Build();
+
+// Seed Admin on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await db.Database.MigrateAsync();
+
+    var adminCfg = app.Configuration.GetSection("AdminSeed");
+    var email = adminCfg["Email"]!;
+    var pass = adminCfg["Password"]!;
+    var name = adminCfg["Name"] ?? "Admin";
+    var city = adminCfg["City"] ?? "Dhaka";
+
+    if (!await db.Customers.AnyAsync(c => c.Email == email.ToLower()))
+    {
+        // create admin with random 5-digit account
+        string acc;
+        int guard = 0;
+        do
+        {
+            acc = Random.Shared.Next(10000, 100000).ToString();
+            guard++;
+            if (guard > 50) throw new Exception("Could not seed admin account number.");
+        } while (await db.Customers.AnyAsync(x => x.AccountNumber == acc));
+
+        var admin = new Customer
+        {
+            Name = name,
+            Email = email.ToLower(),
+            City = city,
+            AccountNumber = acc,
+            PasswordHash = PasswordHasher.Hash(pass),
+            IsAdmin = true,
+            Account = new Account { Balance = 0m }
+        };
+
+        db.Customers.Add(admin);
+        await db.SaveChangesAsync();
+
+        db.AuditLogs.Add(new AuditLog
+        {
+            Action = "SYSTEM_SEED_ADMIN",
+            ActorAccountNumber = "SYSTEM",
+            TargetAccountNumber = acc,
+            Message = $"Admin seeded: {email}"
+        });
+        await db.SaveChangesAsync();
+
+        Console.WriteLine($"Seeded Admin AccountNumber: {acc}");
+    }
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+// basic security headers
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    ctx.Response.Headers["X-Frame-Options"] = "DENY";
+    ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+    ctx.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'";
+    await next();
+});
+
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Banking}/{action=Dashboard}/{id?}");
+
+app.Run();
+```
+
+---
+
+# 7) Controllers + ViewModels + Views (Bootstrap UI)
+
+## 7.1 ViewModels
+
+`src/OnlineBanking.Web/Models/RegisterVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class RegisterVm
+{
+    [Required, StringLength(100)]
+    public string Name { get; set; } = "";
+
+    [Required, EmailAddress, StringLength(200)]
+    public string Email { get; set; } = "";
+
+    [Required, StringLength(100)]
+    public string City { get; set; } = "";
+
+    [Required, MinLength(6), MaxLength(100)]
+    public string Password { get; set; } = "";
+}
+```
+
+`src/OnlineBanking.Web/Models/LoginVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class LoginVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string AccountNumber { get; set; } = "";
+
+    [Required]
+    public string Password { get; set; } = "";
+}
+```
+
+`src/OnlineBanking.Web/Models/AmountVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class AmountVm
+{
+    [Required]
+    [Range(0.01, 100000000)]
+    public decimal Amount { get; set; }
+}
+```
+
+`src/OnlineBanking.Web/Models/TransferVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class TransferVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string ToAccountNumber { get; set; } = "";
+
+    [Required]
+    [Range(0.01, 100000000)]
+    public decimal Amount { get; set; }
+}
+```
+
+`src/OnlineBanking.Web/Models/AdminResetPasswordVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace OnlineBanking.Web.Models;
+
+public sealed class AdminResetPasswordVm
+{
+    [Required, StringLength(5, MinimumLength = 5)]
+    public string AccountNumber { get; set; } = "";
+
+    [Required, MinLength(6), MaxLength(100)]
+    public string NewPassword { get; set; } = "";
+}
+```
+
+---
+
+## 7.2 AccountController (Register/Login/Logout)
+
+ব্যাখ্যা (Bangla):
+
+* `Register` POST → IAuthService.RegisterAsync কল করে
+* Success হলে account number দেখায়
+* `Login` POST → ValidateLoginAsync → Cookie sign-in with claims
+* Admin হলে claim `IsAdmin=true` বসায় → Admin policy কাজ করবে
+
+`src/OnlineBanking.Web/Controllers/AccountController.cs`
+
+```csharp
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+public sealed class AccountController : Controller
+{
+    private readonly IAuthService _auth;
+    public AccountController(IAuthService auth) => _auth = auth;
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public IActionResult Register() => View(new RegisterVm());
+
+    [HttpPost]
+    public async Task<IActionResult> Register(RegisterVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var (ip, ua) = ClientInfo();
+        var res = await _auth.RegisterAsync(vm.Name, vm.Email, vm.Password, vm.City, ip, ua);
+
+        if (!res.Success)
+        {
+            ModelState.AddModelError("", res.Message);
+            return View(vm);
+        }
+
+        TempData["AccountNumber"] = res.Data;
+        return RedirectToAction(nameof(RegisterSuccess));
+    }
+
+    [HttpGet]
+    public IActionResult RegisterSuccess()
+    {
+        ViewBag.AccountNumber = TempData["AccountNumber"]?.ToString();
+        return View();
+    }
+
+    [HttpGet]
+    public IActionResult Login() => View(new LoginVm());
+
+    [HttpPost]
+    public async Task<IActionResult> Login(LoginVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var (ip, ua) = ClientInfo();
+        var res = await _auth.ValidateLoginAsync(vm.AccountNumber, vm.Password, ip, ua);
+
+        if (!res.Success)
+        {
+            ModelState.AddModelError("", res.Message);
+            return View(vm);
+        }
+
+        var (customerId, isAdmin) = res.Data!.Value;
+
+        var claims = new List<Claim>
+        {
+            new Claim("CustomerId", customerId.ToString()),
+            new Claim("AccountNumber", vm.AccountNumber),
+            new Claim(ClaimTypes.Name, vm.AccountNumber),
+            new Claim("IsAdmin", isAdmin ? "true" : "false")
+        };
+
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+        return RedirectToAction("Dashboard", "Banking");
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        return RedirectToAction(nameof(Login));
+    }
+}
+```
+
+---
+
+## 7.3 BankingController (Dashboard + actions + PDF)
+
+ব্যাখ্যা:
+
+* `Dashboard` → balance + last10 দেখায়
+* Deposit/Withdraw/Transfer → IBankingService কল করে
+* PDF → profile (name+acc+balance) + last10 → pdf bytes generate
+
+`src/OnlineBanking.Web/Controllers/BankingController.cs`
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Application.Options;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+[Authorize]
+public sealed class BankingController : Controller
+{
+    private readonly IBankingService _banking;
+    private readonly IStatementPdfService _pdf;
+    private readonly BankingRulesOptions _rules;
+
+    public BankingController(IBankingService banking, IStatementPdfService pdf, IOptions<BankingRulesOptions> rules)
+    {
+        _banking = banking;
+        _pdf = pdf;
+        _rules = rules.Value;
+    }
+
+    private Guid CustomerId => Guid.Parse(User.Claims.First(x => x.Type == "CustomerId").Value);
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Dashboard()
+    {
+        ViewBag.Rules = _rules;
+        ViewBag.Profile = await _banking.GetProfileAsync(CustomerId);
+        ViewBag.Last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Deposit(AmountVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.DepositAsync(CustomerId, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Withdraw(AmountVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.WithdrawAsync(CustomerId, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Transfer(TransferVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid transfer input."; return RedirectToAction(nameof(Dashboard)); }
+        var res = await _banking.TransferAsync(CustomerId, vm.ToAccountNumber, vm.Amount, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Dashboard));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> MiniStatementPdf()
+    {
+        var profile = await _banking.GetProfileAsync(CustomerId);
+        var last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
+
+        var pdfBytes = _pdf.BuildMiniStatementPdf(
+            currency: _rules.CurrencySymbol,
+            tzId: _rules.TimeZoneId,
+            accountNumber: profile.AccountNumber,
+            customerName: profile.CustomerName,
+            currentBalance: profile.Balance,
+            last10: last10);
+
+        return File(pdfBytes, "application/pdf", $"mini-statement-{profile.AccountNumber}.pdf");
+    }
+}
+```
+
+---
+
+## 7.4 AdminController (Admin panel)
+
+ব্যাখ্যা:
+
+* `[Authorize(Policy="AdminOnly")]` → শুধু admin ঢুকতে পারবে
+* Customers list
+* lock/unlock/set admin/reset password
+* audit logs view
+
+`src/OnlineBanking.Web/Controllers/AdminController.cs`
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using OnlineBanking.Application.Contracts;
+using OnlineBanking.Web.Models;
+
+namespace OnlineBanking.Web.Controllers;
+
+[Authorize(Policy = "AdminOnly")]
+public sealed class AdminController : Controller
+{
+    private readonly IAdminService _admin;
+
+    public AdminController(IAdminService admin) => _admin = admin;
+
+    private string ActorAcc => User.Claims.First(x => x.Type == "AccountNumber").Value;
+
+    private (string ip, string ua) ClientInfo()
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        return (ip, ua);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Customers()
+    {
+        var list = await _admin.GetCustomersAsync();
+        return View(list);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetAdmin(string accountNumber, bool isAdmin)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.SetAdminAsync(accountNumber, isAdmin, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Lock(string accountNumber, int minutes = 30)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.LockAsync(accountNumber, minutes, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Unlock(string accountNumber)
+    {
+        var (ip, ua) = ClientInfo();
+        var res = await _admin.UnlockAsync(accountNumber, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpGet]
+    public IActionResult ResetPassword() => View(new AdminResetPasswordVm());
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(AdminResetPasswordVm vm)
+    {
+        var (ip, ua) = ClientInfo();
+        if (!ModelState.IsValid) return View(vm);
+        var res = await _admin.ResetPasswordAsync(vm.AccountNumber, vm.NewPassword, ActorAcc, ip, ua);
+        TempData["Msg"] = res.Message;
+        return RedirectToAction(nameof(Customers));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Audit()
+    {
+        var logs = await _admin.GetLatestAuditAsync(150);
+        return View(logs);
+    }
+}
+```
+
+---
+
+# 8) Bootstrap UI (Layout + Views)
+
+## 8.1 Shared Layout
+
+`src/OnlineBanking.Web/Views/Shared/_Layout.cshtml`
+
+```html
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@ViewData["Title"] - OnlineBanking</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="/">OnlineBanking</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav me-auto">
+        @if (User.Identity?.IsAuthenticated ?? false)
+        {
+          <li class="nav-item"><a class="nav-link" href="/Banking/Dashboard">Dashboard</a></li>
+          @if (User.Claims.FirstOrDefault(c => c.Type == "IsAdmin")?.Value == "true")
+          {
+            <li class="nav-item"><a class="nav-link" href="/Admin/Customers">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="/Admin/Audit">Audit</a></li>
+          }
+        }
+      </ul>
+
+      <ul class="navbar-nav">
+        @if (User.Identity?.IsAuthenticated ?? false)
+        {
+          <li class="nav-item">
+            <form method="post" action="/Account/Logout">
+              <button class="btn btn-sm btn-outline-light" type="submit">Logout</button>
+            </form>
+          </li>
+        }
+        else
+        {
+          <li class="nav-item"><a class="nav-link" href="/Account/Login">Login</a></li>
+          <li class="nav-item"><a class="nav-link" href="/Account/Register">Register</a></li>
+        }
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  @if (TempData["Msg"] != null)
+  {
+    <div class="alert alert-info">@TempData["Msg"]</div>
+  }
+  @RenderBody()
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+```
+
+## 8.2 Account Views
+
+`Views/Account/Register.cshtml`
+
+```html
+@model OnlineBanking.Web.Models.RegisterVm
+@{ ViewData["Title"] = "Register"; }
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h3>Register</h3>
+    <form method="post" class="card card-body">
+      <div asp-validation-summary="All" class="text-danger"></div>
+
+      <label class="form-label">Name</label>
+      <input class="form-control" asp-for="Name" />
+
+      <label class="form-label mt-2">Email</label>
+      <input class="form-control" asp-for="Email" />
+
+      <label class="form-label mt-2">City</label>
+      <input class="form-control" asp-for="City" />
+
+      <label class="form-label mt-2">Password</label>
+      <input class="form-control" asp-for="Password" type="password" />
+
+      <button class="btn btn-primary mt-3" type="submit">Register</button>
+    </form>
+  </div>
+</div>
+```
+
+`Views/Account/RegisterSuccess.cshtml`
+
+```html
+@{ ViewData["Title"] = "Success"; }
+<div class="alert alert-success">
+  <h4>Registration Successful</h4>
+  <p>Your 5-digit Account Number: <b>@ViewBag.AccountNumber</b></p>
+  <p>Use this account number to login.</p>
+</div>
+<a class="btn btn-dark" href="/Account/Login">Go to Login</a>
+```
+
+`Views/Account/Login.cshtml`
+
+```html
+@model OnlineBanking.Web.Models.LoginVm
+@{ ViewData["Title"] = "Login"; }
+
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <h3>Login</h3>
+    <form method="post" class="card card-body">
+      <div asp-validation-summary="All" class="text-danger"></div>
+
+      <label class="form-label">Account Number</label>
+      <input class="form-control" asp-for="AccountNumber" />
+
+      <label class="form-label mt-2">Password</label>
+      <input class="form-control" asp-for="Password" type="password" />
+
+      <button class="btn btn-primary mt-3" type="submit">Login</button>
+      <a class="btn btn-link mt-2" href="/Account/Register">Create account</a>
+    </form>
+  </div>
+</div>
+```
+
+## 8.3 Banking Dashboard view
+
+`Views/Banking/Dashboard.cshtml`
+
+```html
+@{
+  ViewData["Title"] = "Dashboard";
+  var profile = ((string CustomerName, string AccountNumber, decimal Balance))ViewBag.Profile;
+  var rules = ViewBag.Rules;
+  var last10 = (IEnumerable<dynamic>)ViewBag.Last10;
+}
+<h3>Welcome, @profile.CustomerName</h3>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card card-body">
+      <p><b>Account:</b> @profile.AccountNumber</p>
+      <p><b>Balance:</b> @rules.CurrencySymbol@profile.Balance</p>
+      <p class="text-muted mb-0">
+        Min Balance: @rules.CurrencySymbol@rules.MinimumBalance |
+        Daily Transfer Limit: @rules.CurrencySymbol@rules.DailyTransferLimit |
+        TZ: @rules.TimeZoneId
+      </p>
+      <a class="btn btn-outline-dark mt-3" href="/Banking/MiniStatementPdf">Download Mini Statement (PDF)</a>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card card-body">
+      <h5>Deposit</h5>
+      <form method="post" action="/Banking/Deposit" class="d-flex gap-2">
+        <input class="form-control" name="Amount" placeholder="Amount" />
+        <button class="btn btn-success" type="submit">Deposit</button>
+      </form>
+
+      <h5 class="mt-4">Withdraw</h5>
+      <form method="post" action="/Banking/Withdraw" class="d-flex gap-2">
+        <input class="form-control" name="Amount" placeholder="Amount" />
+        <button class="btn btn-warning" type="submit">Withdraw</button>
+      </form>
+
+      <h5 class="mt-4">Transfer</h5>
+      <form method="post" action="/Banking/Transfer" class="row g-2">
+        <div class="col-6"><input class="form-control" name="ToAccountNumber" placeholder="To (5-digit)" /></div>
+        <div class="col-6"><input class="form-control" name="Amount" placeholder="Amount" /></div>
+        <div class="col-12"><button class="btn btn-primary w-100" type="submit">Transfer</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card card-body mt-4">
+  <h5>Last 10 Transactions (UTC stored; PDF shows Dhaka time)</h5>
+  <table class="table table-sm table-striped">
+    <thead>
+      <tr>
+        <th>UTC Time</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Reference</th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach (var t in last10)
+    {
+      <tr>
+        <td>@t.CreatedAtUtc</td>
+        <td>@t.Type</td>
+        <td>@rules.CurrencySymbol@t.Amount</td>
+        <td>@rules.CurrencySymbol@t.BalanceAfter</td>
+        <td>@t.Reference</td>
+      </tr>
+    }
+    </tbody>
+  </table>
+</div>
+```
+
+## 8.4 Admin views
+
+`Views/Admin/Customers.cshtml`
+
+```html
+@model IEnumerable<OnlineBanking.Domain.Entities.Customer>
+@{ ViewData["Title"] = "Admin - Customers"; }
+
+<h3>Customers</h3>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>Acc</th><th>Name</th><th>Email</th><th>City</th><th>Admin</th><th>LockedUntil(UTC)</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  @foreach (var c in Model)
+  {
+    <tr>
+      <td>@c.AccountNumber</td>
+      <td>@c.Name</td>
+      <td>@c.Email</td>
+      <td>@c.City</td>
+      <td>@c.IsAdmin</td>
+      <td>@c.LockedUntilUtc</td>
+      <td>
+        <form method="post" action="/Admin/SetAdmin" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <input type="hidden" name="isAdmin" value="@(c.IsAdmin ? "false" : "true")" />
+          <button class="btn btn-sm btn-outline-primary" type="submit">
+            @(c.IsAdmin ? "Remove Admin" : "Make Admin")
+          </button>
+        </form>
+
+        <form method="post" action="/Admin/Lock" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <input type="hidden" name="minutes" value="30" />
+          <button class="btn btn-sm btn-outline-warning" type="submit">Lock 30m</button>
+        </form>
+
+        <form method="post" action="/Admin/Unlock" class="d-inline">
+          <input type="hidden" name="accountNumber" value="@c.AccountNumber" />
+          <button class="btn btn-sm btn-outline-success" type="submit">Unlock</button>
+        </form>
+      </td>
+    </tr>
+  }
+  </tbody>
+</table>
+
+<a class="btn btn-dark" href="/Admin/ResetPassword">Reset User Password</a>
+```
+
+`Views/Admin/ResetPassword.cshtml`
+
+```html
+@model OnlineBanking.Web.Models.AdminResetPasswordVm
+@{ ViewData["Title"] = "Admin - Reset Password"; }
+
+<h3>Reset Password</h3>
+
+<form method="post" class="card card-body col-md-6">
+  <div asp-validation-summary="All" class="text-danger"></div>
+
+  <label class="form-label">Account Number</label>
+  <input class="form-control" asp-for="AccountNumber" />
+
+  <label class="form-label mt-2">New Password</label>
+  <input class="form-control" asp-for="NewPassword" />
+
+  <button class="btn btn-primary mt-3" type="submit">Reset</button>
+</form>
+```
+
+`Views/Admin/Audit.cshtml`
+
+```html
+@model IEnumerable<OnlineBanking.Domain.Entities.AuditLog>
+@{ ViewData["Title"] = "Admin - Audit Logs"; }
+
+<h3>Audit Logs (Latest)</h3>
+
+<table class="table table-sm table-striped">
+  <thead>
+    <tr>
+      <th>UTC</th><th>Action</th><th>Actor</th><th>Target</th><th>IP</th><th>Message</th>
+    </tr>
+  </thead>
+  <tbody>
+  @foreach (var a in Model)
+  {
+    <tr>
+      <td>@a.CreatedAtUtc</td>
+      <td>@a.Action</td>
+      <td>@a.ActorAccountNumber</td>
+      <td>@a.TargetAccountNumber</td>
+      <td>@a.Ip</td>
+      <td>@a.Message</td>
+    </tr>
+  }
+  </tbody>
+</table>
+```
+
+---
+
+# 9) Database Migration (MySQL)
+
+## 9.1 Create database
+
+```sql
+CREATE DATABASE onlinebanking_db;
+```
+
+## 9.2 EF migration + update
+
+```bash
+cd OnlineBanking
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+```
+
+---
+
+# 10) Run
+
+```bash
+dotnet run --project src/OnlineBanking.Web
+```
+
+✅ প্রথম রানেই DB migrate হবে এবং AdminSeed অনুযায়ী admin user create হবে।
+Console এ admin এর AccountNumber print হবে—ওটা দিয়ে login করুন।
+
+---
+
+# 11) Step-by-step “কোন ফাংশন কী করে” (Bangla explanation)
+
+## RegisterAsync()
+
+* Email duplicate check
+* 5-digit unique AccountNumber generate
+* Password bcrypt hash
+* Customer + Account create
+* Audit log: REGISTER
+
+## ValidateLoginAsync()
+
+* Account exists check
+* LockedUntilUtc চেক (locked হলে block)
+* Password wrong হলে FailedLoginCount++
+* 5 বার ভুল → 15 মিনিট lock
+* Success হলে fail count reset + audit LOGIN_SUCCESS
+
+## DepositAsync()
+
+* Amount > 0 চেক
+* Transaction শুরু (DB tx)
+* Balance += amount
+* Transaction row add
+* Commit
+* Audit: DEPOSIT
+
+## WithdrawAsync()
+
+* Amount > 0
+* Balance sufficient
+* Withdraw এর পরে balance < MinimumBalance হলে fail
+* Transaction add
+* Audit: WITHDRAW
+
+## TransferAsync()
+
+* Receiver exists
+* Same account transfer block
+* Today’s transferout sum বের করে DailyTransferLimit enforce
+* Transfer এর পরে balance < MinimumBalance হলে fail
+* Sender: TransferOut + Receiver: TransferIn entry
+* Audit: TRANSFER
+
+## PDF
+
+* DB থেকে name+balance নিয়ে PDF
+* Last10 tx list
+* UTC → Asia/Dhaka convert
+* CurrencySymbol দিয়ে amount format
+
+## Admin
+
+* Customers list
+* SetAdmin: role change
+* Lock/Unlock: account lock control
+* Reset password: bcrypt hash reset
+* Audit page: system trace
+
+---
+
+# 12) Windows Server IIS (short, practical)
+
+1. Server এ ASP.NET Core Hosting Bundle install
+2. Publish করুন:
+
+   ```bash
+   dotnet publish src/OnlineBanking.Web -c Release -o publish
+   ```
+3. IIS → New Website → Physical path = `publish`
+4. HTTPS binding enable (Let’s Encrypt বা cert)
+5. Production `appsettings.json` এ MySQL connection string দিন
+6. DB server firewall allow
+
+---
+
+## আপনি এখনই যা করবেন (Quick checklist)
+
+1. `appsettings.json` এ MySQL password বসান
+2. Database create
+3. Migration চালান
+4. Run করুন
+5. Console থেকে admin accountNumber নিন এবং login করুন → Admin tab দেখবেন
+
+---
+
+যদি আপনি চান, আমি পরের মেসেজে একটা “production hardening checklist” (rate limiting, antifraud patterns, secure headers আরও strict, password policy, CSRF/anti replay, backup/restore, IIS config) একদম ব্যাংকিং style এ দিয়ে দেব—কিন্তু আপনার কোডটা এখনই রান করার জন্য এটা যথেষ্ট।
+
+
+
+
+=======================================================================================================
+নিচে আমি আপনার প্রজেক্টটার জন্য 
+(1) Architecture + Request Flow diagram, 
+2) Exam/Interview-style ব্যাখ্যা, আর 
+3) GitHub-ready README.md একসাথে দিলাম—আপনি সরাসরি copy/paste করে ব্যবহার করতে পারবেন।
+=======================================================================================================
+
+---
+
+## 1) Clean Architecture Diagram (Layered)
+
+### 1.1 High-level architecture (ASCII)
+
+```
+┌──────────────────────────────┐
+│        OnlineBanking.Web      │
+│  MVC (Controllers/Views/Auth) │
+└───────────────┬──────────────┘
+                │ calls interfaces
+┌───────────────▼──────────────┐
+│   OnlineBanking.Application   │
+│ Contracts + Result + Options  │
+│  (Use-case boundaries)        │
+└───────────────┬──────────────┘
+                │ implements interfaces
+┌───────────────▼──────────────┐
+│ OnlineBanking.Infrastructure  │
+│ EF Core + MySQL + Services    │
+│ Auth/Banking/Admin/PDF/Audit  │
+└───────────────┬──────────────┘
+                │ persists
+┌───────────────▼──────────────┐
+│          MySQL Database       │
+│ Customers / Accounts / Tx /   │
+│ AuditLogs                     │
+└──────────────────────────────┘
+
+Domain layer sits in the middle as pure business entities:
+OnlineBanking.Domain (Entities)  <-- referenced by Application & Infrastructure & Web
+```
+
+### 1.2 Dependency rule (সবচেয়ে গুরুত্বপূর্ণ)
+
+* Web → Application → Domain
+* Infrastructure → Application + Domain
+* Domain কারো উপর depend করে না ✅
+  এটাই Clean Architecture এর মূল কথা।
+
+---
+
+## 2) Request Flow Diagrams (আপনার ফিচারগুলো কীভাবে কাজ করে)
+
+### 2.1 Register Flow
+
+```
+Browser
+  │ POST /Account/Register (Name, Email, City, Password)
+  ▼
+AccountController.Register()
+  │ calls IAuthService.RegisterAsync(...)
+  ▼
+AuthService.RegisterAsync()
+  │ - email unique check
+  │ - generate unique 5-digit account number
+  │ - hash password (BCrypt)
+  │ - create Customer + Account(Balance=0)
+  │ - SaveChanges()
+  │ - AuditWriter: REGISTER
+  ▼
+DB (Customers, Accounts, AuditLogs)
+  ▲
+Controller redirects to RegisterSuccess with AccountNumber
+```
+
+### 2.2 Login Flow (with lockout)
+
+```
+Browser
+  │ POST /Account/Login (AccountNumber, Password)
+  ▼
+AccountController.Login()
+  │ calls ValidateLoginAsync(account, pass, ip, ua)
+  ▼
+AuthService.ValidateLoginAsync()
+  │ - customer exists?
+  │ - LockedUntilUtc check
+  │ - password verify (BCrypt.Verify)
+  │ - wrong => FailedLoginCount++ (>=5 => lock 15 min)
+  │ - success => reset counts, write LOGIN_SUCCESS
+  ▼
+Controller sets Cookie Auth Claims:
+  CustomerId, AccountNumber, IsAdmin
+  ▼
+Redirect /Banking/Dashboard
+```
+
+### 2.3 Deposit / Withdraw / Transfer (transaction safe + rules)
+
+Deposit
+
+```
+Dashboard -> POST /Banking/Deposit (Amount)
+  -> BankingService.DepositAsync()
+     - BeginTransaction()
+     - Balance += amount
+     - Insert Transaction(Deposit)
+     - Commit
+     - Audit: DEPOSIT
+```
+
+Withdraw
+
+```
+Dashboard -> POST /Banking/Withdraw (Amount)
+  -> BankingService.WithdrawAsync()
+     - Balance >= amount?
+     - newBalance >= MinimumBalance?
+     - record Transaction(Withdraw)
+     - Audit: WITHDRAW
+```
+
+Transfer
+
+```
+Dashboard -> POST /Banking/Transfer (ToAccount, Amount)
+  -> BankingService.TransferAsync()
+     - receiver exists?
+     - daily transfer limit check (sum TransferOut today)
+     - newBalance >= MinimumBalance?
+     - sender Balance -= amount, receiver Balance += amount
+     - insert 2 transactions: TransferOut + TransferIn
+     - Audit: TRANSFER (actor + target)
+```
+
+### 2.4 Mini Statement PDF
+
+```
+GET /Banking/MiniStatementPdf
+  -> BankingService.GetProfileAsync()  (name, account, balance)
+  -> BankingService.GetLastTransactionsAsync(10)
+  -> StatementPdfService.BuildMiniStatementPdf(currency, tzId, ...)
+     - UTC -> Asia/Dhaka conversion
+  -> returns File(pdfBytes, "application/pdf")
+```
+
+### 2.5 Admin Panel (Policy based)
+
+```
+AdminController has [Authorize(Policy="AdminOnly")]
+
+AdminOnly Policy checks claim:
+  IsAdmin == "true"
+
+Admin actions:
+  Customers list, Lock/Unlock, SetAdmin, ResetPassword, View Audit logs
+```
+
+---
+
+## 3) Exam/Interview-Friendly Explanation (Bangla)
+
+### 3.1 কেন Clean Architecture ব্যবহার করেছি?
+
+কারণ ব্যাংকিং সিস্টেমে rules change হয়, কিন্তু UI বা DB change হলেও business rules stable রাখা লাগে।
+
+* Domain: “ব্যাংকিং-এর core data” (Customer, Account, Transaction, AuditLog)
+* Application: “কী কী কাজ হবে তার contract” (interfaces) + options/rules
+* Infrastructure: “কিভাবে কাজ হবে” (EF Core/MySQL, PDF generator, hashing)
+* Web: “UI + Request handling” (MVC, Controllers, Views, Cookie Auth)
+
+### 3.2 Security decisions (আপনার কোডে যা আছে)
+
+* Password plain text না → BCrypt hash
+* Cookie auth → HttpOnly, SameSite=Strict, SecurePolicy=Always (HTTPS needed)
+* Auto anti-forgery on all POST (CSRF protection)
+* Lockout mechanism (brute-force protect)
+* Audit logs (who did what + ip/ua)
+
+### 3.3 Banking rules (real-world flavor)
+
+* MinimumBalance: Withdraw/Transfer শেষে ব্যালেন্স minimum এর নিচে যেতে পারবে না
+* DailyTransferLimit: একদিনে TransferOut টোটাল সীমা cross করতে পারবে না
+* Ledger-like transactions: Balance change এর সাথে Transaction record রাখে
+
+---
+
+## 4) GitHub-Ready README.md (copy/paste)
+
+```md
+# OnlineBanking (.NET 9 MVC + MySQL) - Clean Architecture
+
+A secure, scalable starter online banking web application built with:
+- ASP.NET Core MVC (.NET 9)
+- EF Core + MySQL (Pomelo provider)
+- Clean Architecture (Domain/Application/Infrastructure/Web)
+- Cookie Authentication
+- PDF Mini Statement (QuestPDF)
+- Admin Panel + Audit Logs
+- Banking Rules: Minimum Balance + Daily Transfer Limit
+- TimeZone conversion (Asia/Dhaka) for statements
+
+## Features
+### Customer
+- Register (name, email, city, password) → auto 5-digit account number
+- Login with account number + password (lockout after repeated failures)
+- Deposit / Withdraw / Transfer
+- Download Mini Statement PDF (last 10 transactions)
+
+### Admin
+- View customers list
+- Lock / Unlock accounts
+- Set / Remove admin role
+- Reset customer password
+- View audit logs
+
+## Tech Stack
+- .NET 9, ASP.NET Core MVC
+- MySQL
+- EF Core (Pomelo.EntityFrameworkCore.MySql)
+- BCrypt.Net-Next
+- QuestPDF
+
+## Project Structure
+```
+
+OnlineBanking/
+src/
+OnlineBanking.Domain/
+OnlineBanking.Application/
+OnlineBanking.Infrastructure/
+OnlineBanking.Web/
+
+````
+
+## Prerequisites
+- .NET SDK 9
+- MySQL Server 8+
+- Windows (for IIS deployment)
+
+## Setup
+1) Create database:
+```sql
+CREATE DATABASE onlinebanking_db;
+````
+
+2. Update `src/OnlineBanking.Web/appsettings.json` connection string:
+
+```json
+"server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;"
+```
+
+3. Run migrations:
+
+```bash
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+```
+
+4. Run:
+
+```bash
+dotnet run --project src/OnlineBanking.Web
+```
+
+## Admin Seed
+
+On first run, the app seeds an admin user from `AdminSeed` in appsettings.
+The seeded admin account number is printed in console.
+
+Default config:
+
+* [admin@bank.local](mailto:admin@bank.local)
+* Admin@12345
+
+## Banking Rules
+
+Configured in `BankingRules` section:
+
+* CurrencySymbol (৳)
+* TimeZoneId (Asia/Dhaka)
+* MinimumBalance (e.g., 100.00)
+* DailyTransferLimit (e.g., 50000.00)
+
+## IIS Deployment (Windows Server)
+
+1. Install ASP.NET Core Hosting Bundle on server.
+2. Publish:
+
+```bash
+dotnet publish src/OnlineBanking.Web -c Release -o publish
+```
+
+3. Create IIS site pointing to `publish` folder.
+4. Enable HTTPS (required because cookie is SecurePolicy=Always).
+5. Set production connection string and rules.
+
+## Notes
+
+This is a starter template. Production banking requires additional controls:
+MFA/OTP, KYC/AML, fraud monitoring, rate limiting gateway, secure key management, etc.
+
+````
+
+---
+
+## 5) Next practical step (আমি যেটা সাজেস্ট করছি)
+আপনি যেহেতু “copy/paste করে রান” করছেন—সবচেয়ে common issue হয়:
+
+1) TimeZone ID Windows এ “Asia/Dhaka” কাজ না করলে  
+Windows কখনো কখনো IANA timezone না চিনে (depending on runtime).  
+যদি আপনার মেশিনে error দেয়, আপনি `BankingRules:TimeZoneId` এ এটা দিন:
+- `"Bangladesh Standard Time"` (Windows ID)
+
+2) Cookie secure policy Always → HTTPS ছাড়া login cookie কাজ করবে না (dev এ warning/issue হতে পারে)  
+Dev এ যদি HTTPS সমস্যা হয়, temporarily:
+```csharp
+opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+````
+
+Production এ আবার Always করবেন।
+
+---
+
+আপনি চাইলে আমি পরের ধাপে একদম হাতে ধরে দেব:
+
+* TimeZone Windows/IANA compatible helper (auto-detect)
+* Better transaction table UI (local time দেখানো)
+* Unit tests (Minimum balance & daily limit rules)
+* Database indexes + performance tweaks for real load
+
+বলুন—আপনি কি Windows Server IIS এ ডিপ্লয় করবেন নাকি আগে Local run করে verify করবেন?
+
+
+========================================================================================================================
+Local server settings
+========================================================================================================================
+দারুণ—Local run করে verify করার জন্য নিচে একদম practical checklist + command sequence দিলাম। এগুলো follow করলে ৯০% common error আগেই avoid হবে।
+
+---
+
+## 1) MySQL Setup (Local)
+
+1. MySQL চালু আছে কিনা চেক করুন।
+2. একটা DB বানান:
+
+```sql
+CREATE DATABASE onlinebanking_db;
+```
+
+3. `src/OnlineBanking.Web/appsettings.json` এ আপনার password বসান:
+
+```json
+"server=localhost;port=3306;database=onlinebanking_db;user=root;password=YOUR_PASSWORD;TreatTinyAsBoolean=true;"
+```
+
+> যদি আপনার MySQL user/root আলাদা হয়, সেটা লিখবেন।
+
+---
+
+## 2) Important Local Settings (দুটি জিনিস)
+
+### ✅ A) HTTPS issue (সবচেয়ে common)
+
+আমাদের `Program.cs` এ cookie `SecurePolicy = Always` আছে।
+Local run এ HTTPS না থাকলে login cookie কাজ নাও করতে পারে।
+
+Solution (Local only): `Program.cs` এ নিচের lineটা temporarily দিন:
+
+```csharp
+opt.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+```
+
+Production এ আবার Always করবেন।
+
+---
+
+### ✅ B) TimeZone issue (Windows এ)
+
+যদি `Asia/Dhaka` timezone error দেয়, `appsettings.json` এ এটা দিন:
+
+```json
+"TimeZoneId": "Bangladesh Standard Time"
+```
+
+---
+
+## 3) EF Migration + DB Update
+
+Solution root folder থেকে রান করবেন:
+
+```bash
+cd OnlineBanking
+dotnet restore
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+```
+
+✅ এতে MySQL এ tables তৈরি হবে:
+
+* Customers
+* Accounts
+* Transactions
+* AuditLogs
+
+---
+
+## 4) Run (Local)
+
+```bash
+dotnet run --project src/OnlineBanking.Web
+```
+
+প্রথম run এ:
+
+* DB migrate হবে
+* Admin seed হবে
+* Console এ Admin এর AccountNumber print হবে
+
+✅ Console output এ এমন দেখবেন:
+`Seeded Admin AccountNumber: 12345`
+
+---
+
+## 5) Browser Testing Steps (Verify Checklist)
+
+### ✅ Step 1: Register customer
+
+* `/Account/Register`
+* Name, Email, City, Password দিন
+  ✅ success page এ 5-digit account number পাবেন
+
+### ✅ Step 2: Customer login
+
+* `/Account/Login`
+* Account number + password
+  ✅ Dashboard দেখাবে
+
+### ✅ Step 3: Deposit
+
+* 1000 deposit করুন
+  ✅ Balance বাড়বে + transaction row add হবে
+
+### ✅ Step 4: Withdraw (minimum balance test)
+
+* MinimumBalance যদি 100 থাকে, তাহলে এমন withdraw দিন যাতে balance 100 এর নিচে চলে যায়
+  ✅ Fail message দেখাবে
+
+### ✅ Step 5: Transfer (daily limit test)
+
+* অন্য account register করে নিন
+* Transfer করুন
+  ✅ sender এ TransferOut, receiver এ TransferIn record হবে
+* বারবার transfer করে limit cross করুন
+  ✅ “Daily transfer limit exceeded” দেখাবে
+
+### ✅ Step 6: PDF mini statement
+
+* Dashboard এ “Download Mini Statement”
+  ✅ PDF download হবে, Dhaka time দেখাবে
+
+### ✅ Step 7: Admin verify
+
+* Admin account দিয়ে login (console থেকে পাওয়া account number)
+* Navbar এ “Admin” & “Audit” দেখবেন
+* Customers list / lock/unlock / reset password try করুন
+  ✅ Audit logs এ record হবে
+
+---
+
+## 6) Common Errors & Fix (সবচেয়ে দরকারি)
+
+### ❌ “Access denied for user root”
+
+✅ connection string এ username/password ভুল
+
+* MySQL user/pass ঠিক করুন
+
+### ❌ “Unknown database onlinebanking_db”
+
+✅ DB create করা হয়নি
+
+* `CREATE DATABASE onlinebanking_db;`
+
+### ❌ “TimeZoneInfo not found”
+
+✅ `Asia/Dhaka` কাজ না করলে
+
+* `Bangladesh Standard Time` দিন
+
+### ❌ Login হচ্ছে কিন্তু Dashboard redirect হচ্ছে না
+
+✅ cookie secure policy / HTTPS issue
+
+* Local এ `SameAsRequest` করুন
+
+---
+
+আপনি Local run করতে গিয়ে যদি প্রথম error message পান (এক লাইন হলেও), সেটা এখানে paste করুন—আমি ঠিক সেই error অনুযায়ী fix বলে দেব।
+
+
+
 
 
 
