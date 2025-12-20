@@ -36,6 +36,10 @@ onlineBanking web application built with ASP.NET Core MVC.
      * CSP
    * HTTPS ready (IIS friendly)
 
+✅ Audit Logs (Real Banking Feature)
+   -Every sensitive action record হয়
+   -system কে কখন কী করেছে দেখতে পারা
+
 
 ✅ Withdraw Money
    * Balance sufficient না হলে withdraw হবে না
@@ -59,10 +63,6 @@ onlineBanking web application built with ASP.NET Core MVC.
    * Receiver → TransferIn
    * Double transaction entry (ledger style)
    * Audit log হয় (actor + target)
-
-✅ Audit Logs (Real Banking Feature)
-   -Every sensitive action record হয়
-   -system কে কখন কী করেছে দেখতে পারা
 
 
 ✅ PDF Mini Statement
