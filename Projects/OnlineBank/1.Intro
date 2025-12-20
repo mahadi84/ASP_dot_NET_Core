@@ -12,6 +12,10 @@ onlineBanking web application built with ASP.NET Core MVC.
     * Web (MVC + UI)
 
 
+✅ Customer Registration
+   Name, Email, City, Password দিয়ে register → ৫ ডিজিট Auto-generated 5-digit Account Number
+   * Email unique (duplicate হলে register হবে না)
+   * Password BCrypt hash হয়ে DB-তে store হয়
 
 ✅ Admin Functionalities:
     * All customers list view
