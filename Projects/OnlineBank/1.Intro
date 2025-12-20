@@ -43,7 +43,8 @@ This project is a secure online banking web application built with ASP.NET Core 
 * Audit log হয় (actor + target)
 
 ### ✅ Audit Logs (Real Banking Feature)
-Every sensitive action record হয়
+-Every sensitive action record হয়
+-system কে কখন কী করেছে দেখতে পারা
 
 
 ✅ আরও real-world” যোগ করেছি:
