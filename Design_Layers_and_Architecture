@@ -35,7 +35,18 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 
 ============================ 02. Architecture(s) ================================
 
-# 🧠 Architecture Comparison Table 
+## 🔁 Pattern vs Architecture (Quick note)
+
+-----------------------------------------------
+| বিষয়               | Pattern | Architecture |
+| ------------------ | ------- | ------------ |
+| MVC                | ✅       | ❌         |
+| Repository         | ✅       | ❌         |
+| Clean Architecture | ❌       | ✅         |
+| Microservices      | ❌       | ✅         |
+-----------------------------------------------
+
+# 🧠 Architecture Comparison Table :
 
 ----------------------------------------------------------------------------------------------------------------------------|
 | বিষয়                  | MVC                | N-Tier                 | Clean Architecture           | Microservices    |
@@ -215,16 +226,6 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 
 ---
 
-## 🔁 Pattern vs Architecture (Quick note)
-
-| বিষয়               | Pattern | Architecture |
-| ------------------ | ------- | ------------ |
-| MVC                | ✅       | ❌            |
-| Repository         | ✅       | ❌            |
-| Clean Architecture | ❌       | ✅            |
-| Microservices      | ❌       | ✅            |
-
----
 
 ## 🎓 Exam / Interview Ready Answers
 
