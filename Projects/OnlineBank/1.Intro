@@ -30,6 +30,20 @@ This project is a secure online banking web application built with ASP.NET Core 
     * Reset customer password
     * View full Audit Logs
 
+### ✅ Deposit/Withdraw/Transfer Money
+
+* এক account থেকে অন্য account-এ transfer
+* Same account-এ transfer block
+* Receiver account exist না করলে fail
+* Daily Transfer Limit enforced
+* Minimum balance after transfer enforce
+* Sender → TransferOut
+* Receiver → TransferIn
+* Double transaction entry (ledger style)
+* Audit log হয় (actor + target)
+
+
+
 ✅ আরও real-world” যোগ করেছি:
     * PDF-এ Customer নাম DB থেকে আসবে
     * Statement-এ Asia/Dhaka time দেখাবে
