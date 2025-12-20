@@ -3,12 +3,6 @@ Yesterday-Died: Sharif Usman Hadi
 
 
 This project is a secure online banking web application built with ASP.NET Core MVC following Clean Architecture, supporting 
--customer registration, 
--secure login, 
--deposit, withdrawal, fund transfer with banking rules,
--PDF statements, 
--admin management, and 
--full audit logging using MySQL.”
 
 
 ### ✅ Clean Architecture
@@ -17,10 +11,7 @@ This project is a secure online banking web application built with ASP.NET Core 
     * Infrastructure (DB, PDF, Security)
     * Web (MVC + UI)
 
-### ✅ Separation of Concerns
-    * Business logic Web-এ না
-    * DB logic Domain-এ না
-    * UI Infrastructure-এ না
+
 
 ✅ Admin Functionalities:
     * All customers list view
@@ -30,21 +21,31 @@ This project is a secure online banking web application built with ASP.NET Core 
     * Reset customer password
     * View full Audit Logs
 
-### ✅ Deposit/Withdraw/Transfer Money
+✅ Security Features:
+   * Password hashing (BCrypt)
+   * CSRF protection (Auto Anti-Forgery)
+   * Brute-force protection (lockout)
+   * Cookie hardening
+   * Secure headers:
+     * X-Frame-Options
+     * X-Content-Type-Options
+     * CSP
+   * HTTPS ready (IIS friendly)
 
-* এক account থেকে অন্য account-এ transfer
-* Same account-এ transfer block
-* Receiver account exist না করলে fail
-* Daily Transfer Limit enforced
-* Minimum balance after transfer enforce
-* Sender → TransferOut
-* Receiver → TransferIn
-* Double transaction entry (ledger style)
-* Audit log হয় (actor + target)
+✅ Deposit/Withdraw/Transfer Money
+   * এক account থেকে অন্য account-এ transfer
+   * Same account-এ transfer block
+   * Receiver account exist না করলে fail
+   * Daily Transfer Limit enforced
+   * Minimum balance after transfer enforce
+   * Sender → TransferOut
+   * Receiver → TransferIn
+   * Double transaction entry (ledger style)
+   * Audit log হয় (actor + target)
 
-### ✅ Audit Logs (Real Banking Feature)
--Every sensitive action record হয়
--system কে কখন কী করেছে দেখতে পারা
+✅ Audit Logs (Real Banking Feature)
+   -Every sensitive action record হয়
+   -system কে কখন কী করেছে দেখতে পারা
 
 
 ✅ আরও real-world” যোগ করেছি:
