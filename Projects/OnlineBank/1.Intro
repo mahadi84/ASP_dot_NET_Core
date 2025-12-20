@@ -32,7 +32,20 @@ onlineBanking web application built with ASP.NET Core MVC.
      * CSP
    * HTTPS ready (IIS friendly)
 
-✅ Deposit/Withdraw/Transfer Money
+
+✅ Withdraw Money
+   * Balance sufficient না হলে withdraw হবে না
+   * Minimum Balance Rule enforced
+   * Transaction record হয়
+   * Audit log হয়
+
+ ✅ Deposit Money
+   * Positive amount check
+   * Balance বাড়ে
+   * Transaction table-এ record হয়
+   * Audit log তৈরি হয়
+
+✅ Transfer Money
    * এক account থেকে অন্য account-এ transfer
    * Same account-এ transfer block
    * Receiver account exist না করলে fail
@@ -48,15 +61,13 @@ onlineBanking web application built with ASP.NET Core MVC.
    -system কে কখন কী করেছে দেখতে পারা
 
 
-✅ আরও real-world” যোগ করেছি:
-    * PDF-এ Customer নাম DB থেকে আসবে
-    * Statement-এ Asia/Dhaka time দেখাবে
-    * Currency configurable (BDT)
-    * Minimum balance rule (Withdraw/Transfer এর পরে ব্যালেন্স কমে যাবে না)
-    * Daily transfer limit (দিনে সর্বোচ্চ X টাকা transfer)
-    * Admin panel: Customers list, user lock/unlock, reset password, set admin, audit logs
-    * Audit log: Deposit/Withdraw/Transfer/Login/Failed login সব record হবে
-    * UI: Bootstrap layout
+✅ PDF Mini Statement
+   * Downloadable PDF
+   * Last 10 transactions
+   * Customer name, account number
+   * Current balance
+   * Asia/Dhaka time conversion
+   * Currency symbol configurable (৳ / € / $)
 
 > ⚠️ নোট: এটা production-ready starter। 
 ব্যাংক লেভেলে যাওয়ার জন্য MFA/OTP, KYC/AML, device fingerprinting, fraud scoring, WAF, HSM, key rotation যোগ লাগে—কিন্তু starter হিসেবে এটা শক্ত base।
