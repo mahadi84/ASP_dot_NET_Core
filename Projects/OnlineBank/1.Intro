@@ -17,6 +17,20 @@ onlineBanking web application built with ASP.NET Core MVC.
    * Email unique (duplicate হলে register হবে না)
    * Password BCrypt hash হয়ে DB-তে store হয়
 
+✅ Customer Login + Lockout (লগইন + ভুল পাসওয়ার্ডে লক)
+   * Login হয় Account Number + Password দিয়ে  ৫ বার ভুল হলে ১৫ মিনিট lock
+       * 5 বার ভুল password দিলে:
+       * Account 15 মিনিটের জন্য lock
+       * Lock থাকা অবস্থায় login block হয়
+       * Successful login হলে:
+        * Failed login counter reset
+   * Cookie-based authentication
+   * Secure cookies:
+     * HttpOnly
+     * SameSite = Strict
+     * Secure (HTTPS friendly)
+
+
 ✅ Admin Functionalities:
     * All customers list view
     * Make / Remove Admin
