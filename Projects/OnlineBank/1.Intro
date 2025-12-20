@@ -42,6 +42,8 @@ This project is a secure online banking web application built with ASP.NET Core 
 * Double transaction entry (ledger style)
 * Audit log হয় (actor + target)
 
+### ✅ Audit Logs (Real Banking Feature)
+Every sensitive action record হয়
 
 
 ✅ আরও real-world” যোগ করেছি:
