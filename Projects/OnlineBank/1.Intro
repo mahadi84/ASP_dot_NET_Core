@@ -30,15 +30,6 @@ onlineBanking web application built with ASP.NET Core MVC.
      * SameSite = Strict
      * Secure (HTTPS friendly)
 
-
-✅ Admin Functionalities:
-    * All customers list view
-    * Make / Remove Admin
-    * Lock customer account (manual)
-    * Unlock customer account
-    * Reset customer password
-    * View full Audit Logs
-
 ✅ Security Features:
    * Password hashing (BCrypt)
    * CSRF protection (Auto Anti-Forgery)
@@ -53,6 +44,15 @@ onlineBanking web application built with ASP.NET Core MVC.
 ✅ Audit Logs (Real Banking Feature)
    -Every sensitive action record হয়
    -system কে কখন কী করেছে দেখতে পারা
+
+
+✅ Admin Functionalities:
+    * All customers list view
+    * Make / Remove Admin
+    * Lock customer account (manual)
+    * Unlock customer account
+    * Reset customer password
+    * View full Audit Logs
 
 
 ✅ Withdraw Money
