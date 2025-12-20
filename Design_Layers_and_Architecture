@@ -282,8 +282,8 @@ A:> Yes. MVC is used as the presentation layer inside Clean Architecture.
                      │
         ┌────────────┴─────────────┐
         │        Domain Layer      │
-        │ Entities, Business Rules │
-        │ (Customer, Account...)  │
+        │ Entities, Business Rules │    **Entity: যার তথ্য নিয়ে system- কাজ(store/process/use) করে। Example: Student Table
+        │ (Customer, Account...)   │    **Database-এর সাথে Entity-র সম্পর্ক: >Entity → Table(Student) >Attribute → Column(Name) >Entity instance → Row(Muhammad Mahadi Hasan)   
         └────────────▲─────────────┘
                      │
         ┌────────────┴─────────────┐
