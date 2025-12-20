@@ -17,6 +17,17 @@ onlineBanking web application built with ASP.NET Core MVC.
    * Email unique (duplicate হলে register হবে না)
    * Password BCrypt hash হয়ে DB-তে store হয়
 
+✅ Security Features:
+   * Password hashing (BCrypt)
+   * CSRF protection (Auto Anti-Forgery)
+   * Brute-force protection (lockout)
+   * Cookie hardening
+   * Secure headers:
+     * X-Frame-Options
+     * X-Content-Type-Options
+     * CSP
+   * HTTPS ready (IIS friendly)
+
 ✅ Customer Login + Lockout (লগইন + ভুল পাসওয়ার্ডে লক)
    * Login হয় Account Number + Password দিয়ে  ৫ বার ভুল হলে ১৫ মিনিট lock
        * 5 বার ভুল password দিলে:
@@ -30,20 +41,11 @@ onlineBanking web application built with ASP.NET Core MVC.
      * SameSite = Strict
      * Secure (HTTPS friendly)
 
-✅ Security Features:
-   * Password hashing (BCrypt)
-   * CSRF protection (Auto Anti-Forgery)
-   * Brute-force protection (lockout)
-   * Cookie hardening
-   * Secure headers:
-     * X-Frame-Options
-     * X-Content-Type-Options
-     * CSP
-   * HTTPS ready (IIS friendly)
-
 ✅ Audit Logs (Real Banking Feature)
    -Every sensitive action record হয়
    -system কে কখন কী করেছে দেখতে পারা
+
+
 
 
 ✅ Admin Functionalities:
