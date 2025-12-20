@@ -21,11 +21,11 @@ onlineBanking web application built with ASP.NET Core MVC.
    * Password hashing (BCrypt)
    * CSRF protection (Auto Anti-Forgery)
    * Brute-force protection (lockout)
-   * Cookie hardening
-   * Secure headers:
-     * X-Frame-Options
-     * X-Content-Type-Options
-     * CSP
+   * Cookie hardening                 > cookie গুলোকে এমনভাবে সেট করা যাতে। চুরি, পরিবর্তন বা misuse করা কঠিন হয়। কেন দরকার? -Session hijacking ঠেকাতে -XSS attack থেকে cookie রক্ষা করতে
+   * Secure headers:                  > HTTP response-এর সাথে পাঠানো extra security নির্দেশনা, যা browser-কে বলে দেয় কীভাবে পেজ ব্যবহার করবে।
+     * X-Frame-Options                > এটা browser-কে বলে:“এই পেজ অন্য website-এর iframe-এ ঢুকতে পারবে কি না” -Clickjacking attack আটকাতে
+     * X-Content-Type-Options         > Browser-কে বলে: “যে file টাইপ বলা হয়েছে, সেটাই ধরো—guess কোরো না” -MIME-type confusion attack আটকাতে
+     * CSP(Content Security Policy)   > সবচেয়ে গুরুত্বপূর্ণ header। Browser-কে বলে: “Script, image, CSS—কোথা থেকে load হবে” - XSS (Cross-Site Scripting) attack আটকাতে Example:শুধু নিজের domain থেকে script allow
    * HTTPS ready (IIS friendly)
 
 ✅ Customer Login + Lockout (লগইন + ভুল পাসওয়ার্ডে লক)
@@ -37,7 +37,7 @@ onlineBanking web application built with ASP.NET Core MVC.
         * Failed login counter reset
    * Cookie-based authentication
    * Secure cookies:
-     * HttpOnly
+     * HttpOnly     → JavaScript cookie পড়তে পারবে না
      * SameSite = Strict
      * Secure (HTTPS friendly)
 
