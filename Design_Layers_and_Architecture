@@ -54,6 +54,23 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 | Monolithic         | ❌       | ✅         | 
 -----------------------------------------------
 
+### Types of Architectures and when to use what:
+---------------------------------------------
+Architecture নির্বাচন করা হয় system-এর size, lifetime, scalability ও maintainability requirement অনুযায়ী।
+
+🧠 One-Line Memory Tricks + When to Use (Exam Gold ✨)
+
+Monolithic → সব একসাথে → ছোট/medium project, দ্রুত বানাতে হলে
+N-Tier → Layer দিয়ে সাজানো → enterprise app, clear separation দরকার হলে
+MVC → UI clean → UI-based web/mobile app বানালে
+Clean → Business rules king → long-term, testable, maintainable system চাইলে
+Microservices → Scale & deploy আলাদা → বড় system, high traffic, multiple team হলে
+Event-Driven → ঘটনা ঘটলেই কাজ → real-time notification / async processing হলে
+Microkernel → Core + plugins → plugin-based system, feature add/remove দরকার হলে
+Hexagonal → Ports & adapters → business logic কে DB/UI থেকে পুরো আলাদা রাখতে চাইলে
+
+
+
 # 🧠 Architecture Comparison Table :
 
 ----------------------------------------------------------------------------------------------------------------------------|
