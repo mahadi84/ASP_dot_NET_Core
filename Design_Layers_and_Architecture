@@ -70,6 +70,8 @@ Microkernel → Core + plugins → plugin-based system, feature add/remove দ�
 Hexagonal → Ports & adapters → business logic কে DB/UI থেকে পুরো আলাদা রাখতে চাইলে
 
 
+***By default ASP.NET Core MVC এবং Web API একটি Monolithic N-Tier (Layered) Architecture ব্যবহার করে
+
 
 # 🧠 Architecture Comparison Table :
 
