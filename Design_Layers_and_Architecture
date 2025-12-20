@@ -135,6 +135,56 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 > কখন ব্যবহার করবেন: 
 যখন মাঝারি আকারের প্রজেক্টে কাজের দায়িত্বগুলো আলাদা আলাদা লেভেলে ভাগ করা প্রয়োজন হয়।
 
+           ####### CODE EXAMPLE:
+                      Catalog Service (Clean Architecture + N-Tier)
+                      
+                      একটি নির্দিষ্ট সার্ভিসের ভেতরে আমরা নিচের মতো লেয়ার বা টায়ার ভাগ করি। 
+                      Clean Architecture-এর মূল কথা হলো—Domain (Logic) থাকবে কেন্দ্রে, 
+                      আর বাইরের সব কিছু (Database, API) তার ওপর নির্ভর করবে।
+                      
+                      #### ক. Domain Layer (The Core)
+                      এখানে শুধু এনটিটি থাকে। এটি কোনো কিছুর ওপর নির্ভর করে না।                      
+                      // Project: Catalog.Domain
+                      public class Product {
+                          public int Id { get; set; }
+                          public string Name { get; set; }
+                      }
+                      
+                      #### খ. Application Layer (N-Tier: Business Logic)
+                      এখানে ইন্টারফেস এবং ব্যবসার নিয়ম থাকে।                      
+                      // Project: Catalog.Application
+                      public interface IProductRepository { Task<Product> GetByIdAsync(int id); }
+                      
+                      public class GetProductHandler {
+                          private readonly IProductRepository _repo;
+                          public GetProductHandler(IProductRepository repo) => _repo = repo;    
+                          public async Task<Product> Execute(int id) => await _repo.GetByIdAsync(id);
+                      }
+                      
+                      #### গ. Infrastructure Layer (N-Tier: Data Access)
+                      এখানে ডাটাবেজের আসল কোড থাকে।
+                      // Project: Catalog.Infrastructure
+                      public class ProductRepository : IProductRepository {
+                          private readonly AppDbContext _db;
+                          public ProductRepository(AppDbContext db) => _db = db;                      
+                          public async Task<Product> GetByIdAsync(int id) => await _db.Products.FindAsync(id);
+                      }
+                      
+                      #### ঘ. Presentation Layer (N-Tier: UI/API)
+                      এটি বাইরের দুনিয়ার সাথে কথা বলে।
+                      // Project: Catalog.API
+                      [ApiController]
+                      [Route("api/products")]
+                      public class ProductsController : ControllerBase {
+                          private readonly GetProductHandler _handler;
+                          public ProductsController(GetProductHandler handler) => _handler = handler;
+                      
+                          [HttpGet("{id}")]
+                          public async Task<IActionResult> Get(int id) => Ok(await _handler.Execute(id));
+                      }
+
+
+
 ### 💻 Software Example
 * ERP system
 * Payroll system
@@ -161,7 +211,9 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 আপনি চান না কোনো ফ্রেমওয়ার্ক (যেমন: Laravel বা .NET) বা ডেটাবেজ পরিবর্তন করলে আপনার মূল লজিক হাত দিতে হোক।
 এটি সবচেয়ে রক্ষণাবেক্ষণযোগ্য (Maintainable) পদ্ধতি।
 
+
 ### 💻 Software Example
+নিশ্চিত করে যে- আপনার "বিজনেস লজিক" যেন ডাটাবেজ বা ফ্রেমওয়ার্কের ওপর নির্ভরশীল না হয় (Dependency Inversion)।
 * Online Banking
 * Payment Gateway
 * Insurance system
