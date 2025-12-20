@@ -50,6 +50,7 @@ Design-এর সময় থেকেই software যেন দ্রুত, ন�
 | Repository         | ✅       | ❌         |
 | Clean Architecture | ❌       | ✅         |
 | Microservices      | ❌       | ✅         |
+| Monolithic         | ❌       | ✅         | 
 -----------------------------------------------
 
 # 🧠 Architecture Comparison Table :
