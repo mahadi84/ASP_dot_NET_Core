@@ -1,97 +1,157 @@
+# =====================================================
+# 7) ViewModels (UI input validation layer)
+# =====================================================
+
+/*
+ViewModel কী?
+- User থেকে আসা input ধরে
+- DataAnnotations দিয়ে validation করে
+- Controller এ ModelState.IsValid এর মাধ্যমে check হয়
+👉 Domain / Entity না, purely UI concern
+*/
 
 
-# 7) ViewModels
+// =====================================================
+// 7.1 RegisterVm
+// =====================================================
 
-## 7.1 ViewModels
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Models/RegisterVm.cs
+*/
 
-`src/OnlineBanking.Web/Models/RegisterVm.cs`
-
-```csharp
-using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations; // Validation attributes (Required, StringLength, etc.)
 
 namespace OnlineBanking.Web.Models;
 
 public sealed class RegisterVm
 {
+    // গ্রাহকের নাম আবশ্যক
+    // সর্বোচ্চ 100 character অনুমোদিত
     [Required, StringLength(100)]
     public string Name { get; set; } = "";
 
+    // Email অবশ্যই দিতে হবে
+    // Email format valid কিনা check করবে
+    // সর্বোচ্চ 200 character
     [Required, EmailAddress, StringLength(200)]
     public string Email { get; set; } = "";
 
+    // শহরের নাম আবশ্যক
+    // সর্বোচ্চ 100 character
     [Required, StringLength(100)]
     public string City { get; set; } = "";
 
+    // Password অবশ্যই দিতে হবে
+    // কমপক্ষে 6 character, সর্বোচ্চ 100
+    // (security baseline)
     [Required, MinLength(6), MaxLength(100)]
     public string Password { get; set; } = "";
 }
-```
 
-`src/OnlineBanking.Web/Models/LoginVm.cs`
 
-```csharp
+// =====================================================
+// 7.2 LoginVm
+// =====================================================
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Models/LoginVm.cs
+*/
+
 using System.ComponentModel.DataAnnotations;
 
 namespace OnlineBanking.Web.Models;
 
 public sealed class LoginVm
 {
+    // Account number আবশ্যক
+    // ঠিক ৫ ডিজিট হতে হবে (MinimumLength = 5, MaximumLength = 5)
     [Required, StringLength(5, MinimumLength = 5)]
     public string AccountNumber { get; set; } = "";
 
+    // Password field আবশ্যক
+    // format validation এখানে করা হয়নি (AuthService verify করবে)
     [Required]
     public string Password { get; set; } = "";
 }
-```
 
-`src/OnlineBanking.Web/Models/AmountVm.cs`
 
-```csharp
+// =====================================================
+// 7.3 AmountVm (Deposit / Withdraw)
+// =====================================================
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Models/AmountVm.cs
+*/
+
 using System.ComponentModel.DataAnnotations;
 
 namespace OnlineBanking.Web.Models;
 
 public sealed class AmountVm
 {
+    // Amount দেওয়া বাধ্যতামূলক
     [Required]
+
+    // Amount অবশ্যই 0.01 এর বেশি হতে হবে
+    // upper limit রাখা হয়েছে overflow/fraud রোধের জন্য
     [Range(0.01, 100000000)]
     public decimal Amount { get; set; }
 }
-```
 
-`src/OnlineBanking.Web/Models/TransferVm.cs`
 
-```csharp
+// =====================================================
+// 7.4 TransferVm
+// =====================================================
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Models/TransferVm.cs
+*/
+
 using System.ComponentModel.DataAnnotations;
 
 namespace OnlineBanking.Web.Models;
 
 public sealed class TransferVm
 {
+    // Receiver account number
+    // ঠিক ৫ ডিজিট হতে হবে
     [Required, StringLength(5, MinimumLength = 5)]
     public string ToAccountNumber { get; set; } = "";
 
+    // Transfer amount
+    // minimum 0.01, maximum 100,000,000
     [Required]
     [Range(0.01, 100000000)]
     public decimal Amount { get; set; }
 }
-```
 
-`src/OnlineBanking.Web/Models/AdminResetPasswordVm.cs`
 
-```csharp
+// =====================================================
+// 7.5 AdminResetPasswordVm
+// =====================================================
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Models/AdminResetPasswordVm.cs
+*/
+
 using System.ComponentModel.DataAnnotations;
 
 namespace OnlineBanking.Web.Models;
 
 public sealed class AdminResetPasswordVm
 {
+    // যেই account এর password reset হবে
+    // ঠিক ৫ ডিজিট account number
     [Required, StringLength(5, MinimumLength = 5)]
     public string AccountNumber { get; set; } = "";
 
+    // নতুন password
+    // minimum 6 character enforced
     [Required, MinLength(6), MaxLength(100)]
     public string NewPassword { get; set; } = "";
 }
-```
-
----
