@@ -22,16 +22,17 @@ dotnet new mvc -n OnlineBanking.Web                    # এটি আপনা�
 
 
 # সলিউশনে প্রজেক্টগুলো যুক্ত করা
-# dotnet sln add ... কমান্ডগুলো প্রতিটি আলাদা প্রজেক্টকে আপনার মূল সলিউশন ফাইলের (OnlineBanking.sln) সাথে লিংক করে দিচ্ছে 
+# dotnet sln add ... কমান্ডগুলো প্রতিটি আলাদা প্রজেক্টকে আপনার মূল সলিউশন ফাইলের (OnlineBanking/OnlineBanking.sln) সাথে লিংক করে দিচ্ছে 
 # যাতে আপনি Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
 
-cd ..       #cd .. কমান্ডটির মানে হলো বর্তমান ফোল্ডার থেকে এক ধাপ পেছনে বা এক স্তর ওপরে (OnlineBanking)যাওয়া।
+cd ..       #change directory .. কমান্ডটির মানে হলো বর্তমান ফোল্ডার থেকে এক ধাপ পেছনে বা এক স্তর ওপরে (OnlineBanking Folder)যাওয়া।
 dotnet sln add src/OnlineBanking.Domain/OnlineBanking.Domain.csproj
 dotnet sln add src/OnlineBanking.Application/OnlineBanking.Application.csproj
 dotnet sln add src/OnlineBanking.Infrastructure/OnlineBanking.Infrastructure.csproj
 dotnet sln add src/OnlineBanking.Web/OnlineBanking.Web.csproj
 
-dotnet add src/OnlineBanking.Application reference src/OnlineBanking.Domain
+# Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
+dotnet add src/OnlineBanking.Application reference src/OnlineBanking.Domain    # "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
 dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Domain
 dotnet add src/OnlineBanking.Infrastructure reference src/OnlineBanking.Application
 dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Domain
