@@ -43,12 +43,12 @@ dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Infrastructure
 ## 1.2 NuGet Packages
 
 ```bash
-dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql
-dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design
+dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0
+dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0
 dotnet add src/OnlineBanking.Infrastructure package BCrypt.Net-Next
 dotnet add src/OnlineBanking.Infrastructure package QuestPDF
 
-dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design
+dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0
 ```
 
 ---
