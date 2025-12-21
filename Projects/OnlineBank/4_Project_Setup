@@ -67,8 +67,8 @@ dotnet add src/OnlineBanking.Infrastructure package QuestPDF                    
   "BankingRules": {
     "CurrencySymbol": "৳",
     "TimeZoneId": "Asia/Dhaka",
-    "MinimumBalance": 100.00,
-    "DailyTransferLimit": 50000.00
+    "MinimumBalance": 500.00,
+    "DailyTransferLimit": 500000.00
   },
   "AdminSeed": {
     "Email": "admin@bank.local",
