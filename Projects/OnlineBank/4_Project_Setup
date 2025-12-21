@@ -43,12 +43,12 @@ dotnet add src/OnlineBanking.Web reference src/OnlineBanking.Infrastructure
 ## 1.2 NuGet Packages
 
 ```bash
-dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0
-dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0
-dotnet add src/OnlineBanking.Infrastructure package BCrypt.Net-Next
-dotnet add src/OnlineBanking.Infrastructure package QuestPDF
+dotnet add src/OnlineBanking.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0      # MySQL ডাটাবেসের সাথে কানেক্ট করার জন্য এটি একটি জনপ্রিয় ডাটাবেস প্রোভাইডার।
+dotnet add src/OnlineBanking.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
+dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
+dotnet add src/OnlineBanking.Infrastructure package BCrypt.Net-Next                                        # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
+dotnet add src/OnlineBanking.Infrastructure package QuestPDF                                               # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
 
-dotnet add src/OnlineBanking.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0
 ```
 
 ---
