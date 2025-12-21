@@ -139,6 +139,7 @@ Views/Account/Register.cshtml
 
     <!-- form POST হবে Account/Register এ (default route) -->
     <form method="post" class="card card-body">
+      @Html.AntiForgeryToken()
       <!-- validation errors summary show -->
       <div asp-validation-summary="All" class="text-danger"></div>
 
@@ -274,6 +275,7 @@ Views/Banking/Dashboard.cshtml
       <!-- Deposit form -->
       <h5>Deposit</h5>
       <form method="post" action="/Banking/Deposit" class="d-flex gap-2">
+           @Html.AntiForgeryToken()
         <!-- name="Amount" controller parameter binding এর জন্য -->
         <input class="form-control" name="Amount" placeholder="Amount" />
         <button class="btn btn-success" type="submit">Deposit</button>
@@ -282,6 +284,7 @@ Views/Banking/Dashboard.cshtml
       <!-- Withdraw form -->
       <h5 class="mt-4">Withdraw</h5>
       <form method="post" action="/Banking/Withdraw" class="d-flex gap-2">
+           @Html.AntiForgeryToken()
         <input class="form-control" name="Amount" placeholder="Amount" />
         <button class="btn btn-warning" type="submit">Withdraw</button>
       </form>
@@ -289,6 +292,7 @@ Views/Banking/Dashboard.cshtml
       <!-- Transfer form -->
       <h5 class="mt-4">Transfer</h5>
       <form method="post" action="/Banking/Transfer" class="row g-2">
+           @Html.AntiForgeryToken()
         <div class="col-6">
           <input class="form-control" name="ToAccountNumber" placeholder="To (5-digit)" />
         </div>
