@@ -71,8 +71,8 @@ dotnet add src/OnlineBanking.Infrastructure package QuestPDF                    
     "DailyTransferLimit": 500000.00
   },
   "AdminSeed": {
-    "Email": "admin@bank.local",
-    "Password": "Admin@12345",
+    "Email": "admin@onlinebank.com",
+    "Password": "Admin@123456",
     "Name": "System Admin",
     "City": "Dhaka"
   },
