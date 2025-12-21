@@ -83,6 +83,7 @@ src/OnlineBanking.Web/Views/Shared/_Layout.cshtml
           <li class="nav-item">
             <!-- Logout POST করা হচ্ছে (security best practice) -->
             <form method="post" action="/Account/Logout">
+                @Html.AntiForgeryToken()
               <button class="btn btn-sm btn-outline-light" type="submit">Logout</button>
             </form>
           </li>
