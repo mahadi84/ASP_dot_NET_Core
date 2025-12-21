@@ -1,4 +1,11 @@
+
+
+
 # 5) INFRASTRUCTURE Layer (EF Core + Services)
+
+
+
+
 
 ## 5.1 DbContext
 
@@ -12,65 +19,140 @@ namespace OnlineBanking.Infrastructure.Persistence;
 
 public sealed class AppDbContext : DbContext
 {
+    // DbContext এর constructor
+    // options এর মধ্যে connection string/provider/config থাকে
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
 
+    // Customers টেবিল/collection এর EF Core mapping
     public DbSet<Customer> Customers => Set<Customer>();
+
+    // Accounts টেবিল/collection এর EF Core mapping
     public DbSet<Account> Accounts => Set<Account>();
+
+    // Transactions টেবিল/collection এর EF Core mapping
     public DbSet<Transaction> Transactions => Set<Transaction>();
+
+    // AuditLogs টেবিল/collection এর EF Core mapping
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
+    // Model configuration (Fluent API)
+    // DB schema, constraints, relationships এখানে define করা হয়
     protected override void OnModelCreating(ModelBuilder b)
     {
+        // ---------------------------
+        // Customer entity mapping
+        // ---------------------------
         b.Entity<Customer>(e =>
         {
+            // Primary key
             e.HasKey(x => x.Id);
+
+            // Name field max length + required (NOT NULL)
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+
+            // Email field max length + required
             e.Property(x => x.Email).HasMaxLength(200).IsRequired();
+
+            // City field max length + required
             e.Property(x => x.City).HasMaxLength(100).IsRequired();
 
+            // AccountNumber 5 char + required
+            // (তুমি 5-digit ধরে নিয়েছ—DB লেভেলে max length 5 enforce হচ্ছে)
             e.Property(x => x.AccountNumber).HasMaxLength(5).IsRequired();
+
+            // PasswordHash required (plain password কখনো রাখা হবে না)
             e.Property(x => x.PasswordHash).IsRequired();
 
+            // Email unique index -> duplicate email ঢুকবে না
             e.HasIndex(x => x.Email).IsUnique();
+
+            // AccountNumber unique index -> duplicate account number ঢুকবে না
             e.HasIndex(x => x.AccountNumber).IsUnique();
 
+            // Customer ↔ Account (One-to-One)
+            // Customer has one Account, Account has one Customer
+            // ForeignKey: Account.CustomerId
+            // Cascade delete: Customer delete হলে Account delete হবে
             e.HasOne(x => x.Account)
                 .WithOne(a => a.Customer)
                 .HasForeignKey<Account>(a => a.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // ---------------------------
+        // Account entity mapping
+        // ---------------------------
         b.Entity<Account>(e =>
         {
+            // Primary key
             e.HasKey(x => x.Id);
+
+            // Balance decimal precision set (18,2) -> 999... with 2 decimal
             e.Property(x => x.Balance).HasPrecision(18,2);
+
+            // RowVersion কে concurrency token বানায়
+            // একই সময়ে update হলে EF Core conflict detect করবে
             e.Property(x => x.RowVersion).IsRowVersion();
         });
 
+        // ---------------------------
+        // Transaction entity mapping
+        // ---------------------------
         b.Entity<Transaction>(e =>
         {
+            // Primary key
             e.HasKey(x => x.Id);
+
+            // Amount precision (18,2)
             e.Property(x => x.Amount).HasPrecision(18,2);
+
+            // BalanceAfter precision (18,2)
             e.Property(x => x.BalanceAfter).HasPrecision(18,2);
+
+            // Reference optional text length limit
             e.Property(x => x.Reference).HasMaxLength(200);
+
+            // CreatedAtUtc এর উপর index -> statement / history query দ্রুত হবে
             e.HasIndex(x => x.CreatedAtUtc);
         });
 
+        // ---------------------------
+        // AuditLog entity mapping
+        // ---------------------------
         b.Entity<AuditLog>(e =>
         {
+            // Primary key
             e.HasKey(x => x.Id);
+
+            // Action required + length limit (ex: LOGIN_SUCCESS)
             e.Property(x => x.Action).HasMaxLength(80).IsRequired();
+
+            // ActorAccountNumber required + length limit
+            // কে কাজ করেছে (accountNumber / SYSTEM)
             e.Property(x => x.ActorAccountNumber).HasMaxLength(20).IsRequired();
+
+            // TargetAccountNumber optional + length limit
+            // যাকে নিয়ে কাজ (transfer receiver, etc.)
             e.Property(x => x.TargetAccountNumber).HasMaxLength(20);
+
+            // IP optional + length limit
             e.Property(x => x.Ip).HasMaxLength(64);
+
+            // UserAgent optional + length limit
             e.Property(x => x.UserAgent).HasMaxLength(300);
+
+            // Message required + length limit
             e.Property(x => x.Message).HasMaxLength(500).IsRequired();
+
+            // Index on CreatedAtUtc -> latest logs দ্রুত query
             e.HasIndex(x => x.CreatedAtUtc);
+
+            // Index on Action -> action filter (LOGIN_FAIL) দ্রুত
             e.HasIndex(x => x.Action);
         });
     }
 }
-```
+````
 
 ## 5.2 Password hashing
 
@@ -81,7 +163,12 @@ namespace OnlineBanking.Infrastructure.Security;
 
 public static class PasswordHasher
 {
+    // plain password কে BCrypt দিয়ে hash করে (secure)
+    // DB তে কখনো plain password save করা হয় না
     public static string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password);
+
+    // user input password কে stored hash এর সাথে মিলিয়ে দেখে
+    // match হলে true, না হলে false
     public static bool Verify(string password, string hash) => BCrypt.Net.BCrypt.Verify(password, hash);
 }
 ```
@@ -98,20 +185,43 @@ namespace OnlineBanking.Infrastructure.Services;
 
 public sealed class AuditWriter
 {
+    // DbContext dependency -> audit log DB তে write করবে
     private readonly AppDbContext _db;
+
+    // constructor injection
     public AuditWriter(AppDbContext db) => _db = db;
 
+    // যে কোনো action ঘটলে audit log লিখে
+    // action: LOGIN_SUCCESS, TRANSFER etc.
+    // actorAcc: যিনি কাজ করেছেন
+    // targetAcc: যার উপর কাজ হয়েছে (optional)
+    // ip/ua: traceability
+    // message: human readable details
     public async Task WriteAsync(string action, string actorAcc, string? targetAcc, string ip, string ua, string message)
     {
+        // AuditLogs টেবিলে নতুন row add
         _db.AuditLogs.Add(new AuditLog
         {
+            // কি action ঘটেছে
             Action = action,
+
+            // কে করেছে
             ActorAccountNumber = actorAcc,
+
+            // কার জন্য/কাকে target করা হয়েছে (optional)
             TargetAccountNumber = targetAcc,
+
+            // কোন IP থেকে request
             Ip = ip,
+
+            // কোন device/browser থেকে request
             UserAgent = ua,
+
+            // details message
             Message = message
         });
+
+        // DB তে persist করে
         await _db.SaveChangesAsync();
     }
 }
@@ -139,9 +249,13 @@ namespace OnlineBanking.Infrastructure.Services;
 
 public sealed class AuthService : IAuthService
 {
+    // DB access
     private readonly AppDbContext _db;
+
+    // audit helper (log writing)
     private readonly AuditWriter _audit;
 
+    // constructor injection
     public AuthService(AppDbContext db, AuditWriter audit)
     {
         _db = db;
@@ -150,85 +264,124 @@ public sealed class AuthService : IAuthService
 
     public async Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent)
     {
+        // email normalize: spaces remove + lower করা
         email = email.Trim().ToLowerInvariant();
 
+        // একই email আগে থেকেই আছে কিনা check
         if (await _db.Customers.AnyAsync(x => x.Email == email))
             return Result<string>.Fail("Email already exists.");
 
         // generate unique 5-digit account number
+        // guard রাখা হয়েছে যেন infinite loop না হয়
         string acc;
         int guard = 0;
         do
         {
+            // 10000..99999 range -> 5 digit
             acc = Random.Shared.Next(10000, 100000).ToString();
             guard++;
+
+            // 50 বার চেষ্টা করেও unique না পেলে fail
             if (guard > 50) return Result<string>.Fail("Could not generate account number. Try again.");
         }
         while (await _db.Customers.AnyAsync(x => x.AccountNumber == acc));
 
+        // নতুন customer object তৈরি
         var customer = new Customer
         {
+            // name trim করে রাখা
             Name = name.Trim(),
+
+            // normalized email
             Email = email,
+
+            // city trim করে রাখা
             City = city.Trim(),
+
+            // generated unique account number
             AccountNumber = acc,
+
+            // password hash করে save
             PasswordHash = PasswordHasher.Hash(password),
+
+            // default admin false
             IsAdmin = false,
+
+            // নতুন account create, balance=0
             Account = new Account { Balance = 0m }
         };
 
+        // DB তে add
         _db.Customers.Add(customer);
+
+        // persist
         await _db.SaveChangesAsync();
 
+        // audit log write (REGISTER)
         await _audit.WriteAsync("REGISTER", acc, acc, ip, userAgent, $"New customer registered: {customer.Email}");
 
+        // success response: account number ফেরত দিচ্ছে
         return Result<string>.Ok(acc, "Registered successfully.");
     }
 
     public async Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent)
     {
+        // input normalize
         accountNumber = accountNumber.Trim();
 
+        // accountNumber দিয়ে customer খোঁজা
         var customer = await _db.Customers.FirstOrDefaultAsync(x => x.AccountNumber == accountNumber);
+
+        // account না পাওয়া গেলে audit + fail
         if (customer is null)
         {
             await _audit.WriteAsync("LOGIN_FAIL", "UNKNOWN", accountNumber, ip, userAgent, "Account not found.");
             return Result<(Guid, bool)>.Fail("Invalid account number or password.");
         }
 
+        // locked কিনা check (lockedUntil এখনকার UTC এর পরে হলে blocked)
         if (customer.LockedUntilUtc.HasValue && customer.LockedUntilUtc.Value > DateTimeOffset.UtcNow)
         {
             await _audit.WriteAsync("LOGIN_BLOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Account locked.");
             return Result<(Guid, bool)>.Fail("Account is locked. Try later.");
         }
 
+        // password verify (BCrypt)
         if (!PasswordHasher.Verify(password, customer.PasswordHash))
         {
+            // fail counter বৃদ্ধি
             customer.FailedLoginCount += 1;
 
             // lock after 5 failed attempts for 15 minutes
             if (customer.FailedLoginCount >= 5)
             {
+                // lock set
                 customer.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(15);
+
+                // reset counter (lock হয়ে গেলে আবার 0)
                 customer.FailedLoginCount = 0;
+
                 await _db.SaveChangesAsync();
 
                 await _audit.WriteAsync("LOGIN_LOCKED", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Locked due to failed attempts.");
                 return Result<(Guid, bool)>.Fail("Too many failed attempts. Account locked for 15 minutes.");
             }
 
+            // 5 এর কম হলে শুধু save + audit fail
             await _db.SaveChangesAsync();
             await _audit.WriteAsync("LOGIN_FAIL", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Wrong password.");
             return Result<(Guid, bool)>.Fail("Invalid account number or password.");
         }
 
-        // success: reset fail count
+        // success: reset fail count + unlock
         customer.FailedLoginCount = 0;
         customer.LockedUntilUtc = null;
         await _db.SaveChangesAsync();
 
+        // audit success
         await _audit.WriteAsync("LOGIN_SUCCESS", customer.AccountNumber, customer.AccountNumber, ip, userAgent, "Login ok.");
 
+        // return customerId + role info
         return Result<(Guid, bool)>.Ok((customer.Id, customer.IsAdmin), "Login ok.");
     }
 }
@@ -257,29 +410,38 @@ namespace OnlineBanking.Infrastructure.Services;
 
 public sealed class BankingService : IBankingService
 {
+    // DB access
     private readonly AppDbContext _db;
+
+    // audit writer
     private readonly AuditWriter _audit;
+
+    // business rules (from config/appsettings)
     private readonly BankingRulesOptions _rules;
 
     public BankingService(AppDbContext db, AuditWriter audit, IOptions<BankingRulesOptions> rules)
     {
         _db = db;
         _audit = audit;
-        _rules = rules.Value;
+        _rules = rules.Value; // Options pattern থেকে actual rules object পাওয়া
     }
 
     public async Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId)
     {
+        // AsNoTracking -> শুধু read, change tracking off, faster
+        // Select -> শুধু প্রয়োজনীয় field আনা
         var row = await _db.Customers.AsNoTracking()
             .Where(c => c.Id == customerId)
             .Select(c => new { c.Name, c.AccountNumber, Balance = c.Account.Balance })
             .FirstAsync();
 
+        // tuple return -> UI friendly
         return (row.Name, row.AccountNumber, row.Balance);
     }
 
     public async Task<decimal> GetBalanceAsync(Guid customerId)
     {
+        // account table থেকে balance read
         return await _db.Accounts.AsNoTracking()
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Balance)
@@ -288,25 +450,36 @@ public sealed class BankingService : IBankingService
 
     public async Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent)
     {
+        // basic validation
         if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
 
+        // DB transaction start
+        // deposit + transaction entry atomic রাখতে
         await using var tx = await _db.Database.BeginTransactionAsync();
 
+        // customer + account include করে load
         var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
+
+        // balance increase
         customer.Account.Balance += amount;
 
+        // transaction table এ record add
         _db.Transactions.Add(new Transaction
         {
-            AccountId = customer.Account.Id,
-            Type = TransactionType.Deposit,
-            Amount = amount,
-            BalanceAfter = customer.Account.Balance,
-            Reference = "Cash deposit"
+            AccountId = customer.Account.Id,           // কোন account
+            Type = TransactionType.Deposit,            // deposit type
+            Amount = amount,                           // কত টাকা
+            BalanceAfter = customer.Account.Balance,   // নতুন balance
+            Reference = "Cash deposit"                 // reference text
         });
 
+        // persist
         await _db.SaveChangesAsync();
+
+        // commit transaction
         await tx.CommitAsync();
 
+        // audit log
         await _audit.WriteAsync("DEPOSIT", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Deposit {amount:0.00}");
 
         return Result.Ok("Deposit successful.");
@@ -314,20 +487,28 @@ public sealed class BankingService : IBankingService
 
     public async Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent)
     {
+        // basic validation
         if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
 
+        // DB transaction start (withdraw + transaction record atomic)
         await using var tx = await _db.Database.BeginTransactionAsync();
 
         var customer = await _db.Customers.Include(c => c.Account).FirstAsync(c => c.Id == customerId);
 
+        // যথেষ্ট balance আছে কিনা
         if (customer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
 
+        // withdraw এর পর balance কত হবে
         var newBalance = customer.Account.Balance - amount;
+
+        // minimum balance rule enforce
         if (newBalance < _rules.MinimumBalance)
             return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
 
+        // apply new balance
         customer.Account.Balance = newBalance;
 
+        // transaction record
         _db.Transactions.Add(new Transaction
         {
             AccountId = customer.Account.Id,
@@ -340,6 +521,7 @@ public sealed class BankingService : IBankingService
         await _db.SaveChangesAsync();
         await tx.CommitAsync();
 
+        // audit write
         await _audit.WriteAsync("WITHDRAW", customer.AccountNumber, customer.AccountNumber, ip, userAgent, $"Withdraw {amount:0.00}");
 
         return Result.Ok("Withdraw successful.");
@@ -347,24 +529,34 @@ public sealed class BankingService : IBankingService
 
     public async Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent)
     {
+        // basic validation
         if (amount <= 0) return Result.Fail("Amount must be greater than 0.");
+
+        // normalize receiver account number
         toAccountNumber = toAccountNumber.Trim();
 
+        // DB transaction start (2 accounts update + 2 tx rows atomic)
         await using var tx = await _db.Database.BeginTransactionAsync();
 
+        // sender customer + account
         var fromCustomer = await _db.Customers.Include(c => c.Account)
             .FirstAsync(c => c.Id == customerId);
 
+        // receiver customer + account
         var toCustomer = await _db.Customers.Include(c => c.Account)
             .FirstOrDefaultAsync(c => c.AccountNumber == toAccountNumber);
 
+        // receiver না থাকলে fail
         if (toCustomer is null) return Result.Fail("Receiver account not found.");
+
+        // নিজের account এ transfer করা যাবে না
         if (toCustomer.Id == fromCustomer.Id) return Result.Fail("Cannot transfer to same account.");
 
         // daily transfer limit check (sum of TransferOut today UTC date)
-        var todayUtc = DateTimeOffset.UtcNow.Date;
+        var todayUtc = DateTimeOffset.UtcNow.Date; // আজকের UTC day start
         var fromAccountId = fromCustomer.Account.Id;
 
+        // আজকের total transfer out কত হয়েছে
         var todayTransferOut = await _db.Transactions.AsNoTracking()
             .Where(t => t.AccountId == fromAccountId
                         && t.Type == TransactionType.TransferOut
@@ -372,19 +564,25 @@ public sealed class BankingService : IBankingService
                         && t.CreatedAtUtc < todayUtc.AddDays(1))
             .SumAsync(t => (decimal?)t.Amount) ?? 0m;
 
+        // limit exceed করলে fail
         if (todayTransferOut + amount > _rules.DailyTransferLimit)
             return Result.Fail($"Daily transfer limit exceeded. Limit: {_rules.DailyTransferLimit:0.00}");
 
+        // sender এর balance পর্যাপ্ত কিনা
         if (fromCustomer.Account.Balance < amount) return Result.Fail("Insufficient balance.");
 
+        // sender এর নতুন balance
         var newBalance = fromCustomer.Account.Balance - amount;
+
+        // minimum balance rule
         if (newBalance < _rules.MinimumBalance)
             return Result.Fail($"Minimum balance rule: balance cannot go below {_rules.MinimumBalance:0.00}");
 
-        // apply
-        fromCustomer.Account.Balance = newBalance;
-        toCustomer.Account.Balance += amount;
+        // apply balances
+        fromCustomer.Account.Balance = newBalance; // sender কমে
+        toCustomer.Account.Balance += amount;      // receiver বাড়ে
 
+        // sender side transaction (TransferOut)
         _db.Transactions.Add(new Transaction
         {
             AccountId = fromCustomer.Account.Id,
@@ -394,6 +592,7 @@ public sealed class BankingService : IBankingService
             Reference = $"Transfer to {toCustomer.AccountNumber}"
         });
 
+        // receiver side transaction (TransferIn)
         _db.Transactions.Add(new Transaction
         {
             AccountId = toCustomer.Account.Id,
@@ -403,9 +602,13 @@ public sealed class BankingService : IBankingService
             Reference = $"Transfer from {fromCustomer.AccountNumber}"
         });
 
+        // persist
         await _db.SaveChangesAsync();
+
+        // commit
         await tx.CommitAsync();
 
+        // audit log
         await _audit.WriteAsync("TRANSFER", fromCustomer.AccountNumber, toCustomer.AccountNumber, ip, userAgent, $"Transfer {amount:0.00} to {toCustomer.AccountNumber}");
 
         return Result.Ok("Transfer successful.");
@@ -413,11 +616,13 @@ public sealed class BankingService : IBankingService
 
     public async Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10)
     {
+        // প্রথমে customerId থেকে accountId বের করি
         var accountId = await _db.Accounts
             .Where(a => a.CustomerId == customerId)
             .Select(a => a.Id)
             .FirstAsync();
 
+        // তারপর transaction টেবিল থেকে latest take সংখ্যক record
         return await _db.Transactions.AsNoTracking()
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.CreatedAtUtc)
@@ -446,42 +651,64 @@ public sealed class StatementPdfService : IStatementPdfService
 {
     public byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10)
     {
+        // QuestPDF community license use
         QuestPDF.Settings.License = LicenseType.Community;
 
+        // timezone resolve (e.g., Asia/Dhaka)
         var tz = TimeZoneInfo.FindSystemTimeZoneById(tzId);
 
+        // UTC time কে local time (Dhaka) তে convert করে string বানায়
         string ToLocal(DateTimeOffset utc)
         {
             var local = TimeZoneInfo.ConvertTime(utc, tz);
             return local.ToString("yyyy-MM-dd HH:mm:ss");
         }
 
+        // PDF document build
         var doc = Document.Create(container =>
         {
             container.Page(page =>
             {
+                // page margin
                 page.Margin(30);
+
+                // A4 size
                 page.Size(PageSizes.A4);
 
+                // Header section (statement info)
                 page.Header().Column(col =>
                 {
+                    // title
                     col.Item().Text("Mini Statement (Last 10 Transactions)").FontSize(18).SemiBold();
+
+                    // account info
                     col.Item().Text($"Account: {accountNumber}").FontSize(12);
+
+                    // customer name
                     col.Item().Text($"Customer: {customerName}").FontSize(12);
+
+                    // current balance with currency
                     col.Item().Text($"Current Balance: {currency}{currentBalance:0.00}").FontSize(12);
+
+                    // time zone info
                     col.Item().Text($"Time Zone: {tzId}").FontSize(10).FontColor(Colors.Grey.Darken2);
+
+                    // separator line
                     col.Item().LineHorizontal(1);
                 });
 
+                // Content: transactions table
                 page.Content().Table(table =>
                 {
+                    // 3 columns: DateTime | Type | Amount
                     table.ColumnsDefinition(columns =>
                     {
-                        columns.RelativeColumn(3);
-                        columns.RelativeColumn(2);
-                        columns.RelativeColumn(2);
+                        columns.RelativeColumn(3); // datetime column wide
+                        columns.RelativeColumn(2); // type
+                        columns.RelativeColumn(2); // amount
                     });
 
+                    // table header
                     table.Header(header =>
                     {
                         header.Cell().Element(CellStyle).Text($"Date & Time ({tzId})").SemiBold();
@@ -489,21 +716,30 @@ public sealed class StatementPdfService : IStatementPdfService
                         header.Cell().Element(CellStyle).Text("Amount").SemiBold();
                     });
 
+                    // rows: last10 tx ordered latest first
                     foreach (var t in last10.OrderByDescending(x => x.CreatedAtUtc))
                     {
+                        // local time show
                         table.Cell().Element(CellStyle).Text(ToLocal(t.CreatedAtUtc));
+
+                        // enum as string
                         table.Cell().Element(CellStyle).Text(t.Type.ToString());
+
+                        // amount with currency
                         table.Cell().Element(CellStyle).Text($"{currency}{t.Amount:0.00}");
                     }
 
+                    // cell styling helper
                     static IContainer CellStyle(IContainer container) =>
                         container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(6);
                 });
 
+                // Footer: generated time (UTC)
                 page.Footer().AlignRight().Text($"Generated (UTC): {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss}");
             });
         });
 
+        // PDF byte array generate করে return
         return doc.GeneratePdf();
     }
 }
@@ -525,7 +761,10 @@ namespace OnlineBanking.Infrastructure.Services;
 
 public sealed class AdminService : IAdminService
 {
+    // DB access
     private readonly AppDbContext _db;
+
+    // audit writer
     private readonly AuditWriter _audit;
 
     public AdminService(AppDbContext db, AuditWriter audit)
@@ -536,6 +775,8 @@ public sealed class AdminService : IAdminService
 
     public async Task<IReadOnlyList<Customer>> GetCustomersAsync()
     {
+        // read-only list, tracking off
+        // order by accountNumber -> admin list clean
         return await _db.Customers.AsNoTracking()
             .OrderBy(c => c.AccountNumber)
             .ToListAsync();
@@ -543,18 +784,27 @@ public sealed class AdminService : IAdminService
 
     public async Task<Customer?> GetCustomerByAccountAsync(string accountNumber)
     {
+        // normalize
         accountNumber = accountNumber.Trim();
+
+        // customer find by account number
         return await _db.Customers.FirstOrDefaultAsync(c => c.AccountNumber == accountNumber);
     }
 
     public async Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua)
     {
+        // target customer find
         var c = await GetCustomerByAccountAsync(accountNumber);
         if (c is null) return Result.Fail("Customer not found.");
+
+        // role update
         c.IsAdmin = isAdmin;
+
         await _db.SaveChangesAsync();
 
+        // audit write
         await _audit.WriteAsync("ADMIN_SET_ROLE", actorAcc, c.AccountNumber, ip, ua, $"Set IsAdmin={isAdmin}");
+
         return Result.Ok("Role updated.");
     }
 
@@ -562,11 +812,18 @@ public sealed class AdminService : IAdminService
     {
         var c = await GetCustomerByAccountAsync(accountNumber);
         if (c is null) return Result.Fail("Customer not found.");
+
+        // lock until now+minutes
         c.LockedUntilUtc = DateTimeOffset.UtcNow.AddMinutes(minutes);
+
+        // reset fail count
         c.FailedLoginCount = 0;
+
         await _db.SaveChangesAsync();
 
+        // audit write
         await _audit.WriteAsync("ADMIN_LOCK", actorAcc, c.AccountNumber, ip, ua, $"Locked for {minutes} minutes");
+
         return Result.Ok("Locked.");
     }
 
@@ -574,11 +831,18 @@ public sealed class AdminService : IAdminService
     {
         var c = await GetCustomerByAccountAsync(accountNumber);
         if (c is null) return Result.Fail("Customer not found.");
+
+        // unlock
         c.LockedUntilUtc = null;
+
+        // reset fail count
         c.FailedLoginCount = 0;
+
         await _db.SaveChangesAsync();
 
+        // audit write
         await _audit.WriteAsync("ADMIN_UNLOCK", actorAcc, c.AccountNumber, ip, ua, "Unlocked");
+
         return Result.Ok("Unlocked.");
     }
 
@@ -587,23 +851,38 @@ public sealed class AdminService : IAdminService
         var c = await GetCustomerByAccountAsync(accountNumber);
         if (c is null) return Result.Fail("Customer not found.");
 
+        // new password hash set
         c.PasswordHash = PasswordHasher.Hash(newPassword);
+
+        // reset security lock state
         c.FailedLoginCount = 0;
         c.LockedUntilUtc = null;
 
         await _db.SaveChangesAsync();
+
+        // audit write
         await _audit.WriteAsync("ADMIN_RESET_PASSWORD", actorAcc, c.AccountNumber, ip, ua, "Password reset");
+
         return Result.Ok("Password reset done.");
     }
 
     public async Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100)
     {
+        // latest audit logs return
         return await _db.AuditLogs.AsNoTracking()
             .OrderByDescending(a => a.CreatedAtUtc)
             .Take(take)
             .ToListAsync();
     }
 }
-```
 
----
+
+
+
+
+
+
+
+
+--
+
