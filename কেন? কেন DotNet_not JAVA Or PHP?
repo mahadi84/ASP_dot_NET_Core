@@ -184,11 +184,10 @@ Mid-level feature বানায়, Senior system impact, scalability ও future 
 #############################################################################################
 
 
-
-
 ## কেন .NET Core ব্যবহার করব (Java / PHP এর তুলনায়) — টেবিল আকারে
 
-| বাস্তব উদাহরণ                              | বিষয়                       | .NET Core                       | Java                       | PHP                       
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| বাস্তব উদাহরণ                               | বিষয়                       | .NET Core                       | Java                       | PHP                       
 | ------------------------------------------ | -------------------------- | ------------------------------- | -------------------------- | -------------------------
 | E-commerce site এ একসাথে 10k user request |     Performance            | খুব দ্রুত (Kestrel + async)       | দ্রুত কিন্তু heavy              | তুলনামূলক ধীর                
 | Bank Loan system, HR system                |     Scalability            | সহজে scale করা যায়             | scale করা যায়, config জটিল | বড় scale কঠিন              
@@ -199,7 +198,17 @@ Mid-level feature বানায়, Senior system impact, scalability ও future 
 | 3–5 বছর চলা software                       |     Maintainability        | Long-term maintain সহজ         | maintainable               | long-term কঠিন             
 | Microservices / SaaS                       |     Cloud Ready            | Cloud-first (Azure/AWS)         | Cloud-ready                | Limited                  
 | Production bug কমানো                      |     Error Detection        | Compile-time error বেশি         | Compile-time               | Runtime error বেশি           
-| Enterprise / remote job                    |     Career Growth          | High demand + high pay          | Stable demand              | Lower ceiling            
+| Enterprise / remote job                    |     Career Growth          | High demand + high pay          | Stable demand              | Lower ceiling    
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Python: 
+-বর্তমানে সবচেয়ে জনপ্রিয়। ডাটা অ্যানালাইসিস, মেশিন লার্নিং বা হ্যাকিং স্ক্রিপ্ট লেখার জন্য এর বিকল্প নেই।
+-AI, ডেটা সায়েন্স, অটোমেশন	খুব সহজ (Easy)বিশাল লাইব্রেরি এবং সহজ সিনট্যাক্স	আর্টিফিশিয়াল ইন্টেলিজেন্স বা দ্রুত কোনো প্রোটোটাইপ বানাতে।
+
+C:	
+অপারেটিং সিস্টেম, এমবেডেড সিস্টেম	কঠিন (High)	সব আধুনিক ভাষার ভিত্তি (Mother Language)	হার্ডওয়্যার লেভেলের কাজ বা সিস্টেম সফটওয়্যার তৈরিতে।
+
 
 ---
 
