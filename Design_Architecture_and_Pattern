@@ -2,8 +2,10 @@
 
 01. Software Design Layer-এর objective (উদ্দেশ্য)?
 02. Software Architecture vs pattern?
-03. Type of Architecture, কখন কোন architecture / pattern ব্যবহার করবো?
-04. Clean Architecture –Diagram.
+03. -Type of Architecture, 
+    -কখন কোন architecture / pattern ব্যবহার করবো?
+    -বড় কোম্পানিগুলো কী ব্যবহার করছে?
+04. Clean Architecture –কী, Diagram, Code.
 05. N-Tier Architecture আর Clean Architecture এক জিনিস?
 06. সফটওয়্যার আর্কিটেকচার শেখা কেন জরুরি?
 
