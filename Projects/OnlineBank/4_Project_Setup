@@ -14,10 +14,10 @@ cd src
 
 
 # ৪টি আলাদা প্রজেক্ট (Layers)/Clean Architecture তৈরি 
-dotnet new classlib -n OnlineBanking.Domain        # এখানে ব্যাংকিংয়ের মূল নিয়ম (Entities/Models) থাকবে।
-dotnet new classlib -n OnlineBanking.Application   # এখানে ব্যবসার আসল লজিক (Use Cases) থাকবে।
-dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে ডাটাবেস এবং বাইরের সার্ভিসের কানেকশন থাকবে।
-dotnet new mvc -n OnlineBanking.Web                    # এটি আপনার ইউজার ইন্টারফেস বা ওয়েবসাইট।  
+dotnet new classlib -n OnlineBanking.Domain            # এখানে ব্যাংকিংয়ের মূল নিয়ম (Entities/Models/Business Rules) থাকবে।
+dotnet new classlib -n OnlineBanking.Application       # এখানে ব্যবসার আসল লজিক (Interfaces, Services, Rules, Use-Cases) থাকবে।
+dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে ডাটাবেস এবং বাইরের সার্ভিসের কানেকশন থাকবে ex: DB, EF Core, PDF, Auth ।
+dotnet new mvc -n OnlineBanking.Web                    # এখান Controllers / Views থাকবে। 
 
 
 
