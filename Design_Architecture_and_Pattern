@@ -363,8 +363,63 @@ MyMonolithApp/
 
 
 =========================================================================
-        04. Clean Architecture – Exam Drawing Style Diagram
+        04. Clean/Onion Architecture
 =========================================================================
+
+
+Clean Architecture বা Onion Architecture বর্তমান সময়ে এন্টারপ্রাইজ লেভেল সফটওয়্যার তৈরির জন্য সবচেয়ে জনপ্রিয় পদ্ধতি। 
+এটি মূলত আপনার কোডকে এমনভাবে লেয়ারে ভাগ করে যাতে কোনো একটি পার্ট পরিবর্তন করলে অন্য পার্ট ক্ষতিগ্রস্ত না হয়।
+
+সহজ ভাষায় এর ডায়াগ্রাম এবং কাজের ধাপগুলো নিচে দেওয়া হলো:
+
+### ১. ডোমেইন লেয়ার (Domain Layer) - একদম কেন্দ্র বা মজ্জা
+
+এটি সিস্টেমের সবচেয়ে ভেতরের অংশ। এখানে থাকে আপনার অ্যাপ্লিকেশনের মূল Entities এবং Business Rules।
+
+ বৈশিষ্ট্য: এটি সম্পূর্ণ স্বাধীন। এটি বাইরের কোনো লেয়ারের (যেমন ডাটাবেস বা ইউআই) ওপর নির্ভর করে না।
+ ব্যাংকিং উদাহরণ: আপনার `Customer` বা `Transaction` মডেলগুলো এবং সুদের হার হিসাব করার মূল ফর্মুলাগুলো এখানে থাকবে।
+
+### ২. অ্যাপ্লিকেশন লেয়ার (Application Layer) - সমন্বয়কারী
+
+কেন্দ্রের ঠিক পরের লেয়ারটি হলো অ্যাপ্লিকেশন লেয়ার। এখানে থাকে আপনার Use Cases বা ইন্টারফেসগুলো।
+
+ বৈশিষ্ট্য: এটি শুধু ডোমেইন লেয়ারকে চেনে। এটি জানে "কী" করতে হবে (যেমন: টাকা ট্রান্সফার করা), কিন্তু "কীভাবে" হবে তা ডাটাবেসের ওপর ছেড়ে দেয়।
+ ব্যাংকিং উদাহরণ: টাকা জমার প্রসেস বা উইথড্র করার লজিক এখানে থাকে।
+
+### ৩. ইনফ্রাস্ট্রাকচার লেয়ার (Infrastructure Layer) - বাইরের আবরণ
+
+এই লেয়ারটি বাইরের জগতের সাথে যোগাযোগ করে। যেমন: ডাটাবেস (SQL Server), ইমেইল সার্ভিস, বা ফাইল সিস্টেম।
+
+ বৈশিষ্ট্য: এটি অ্যাপ্লিকেশন লেয়ারে থাকা ইন্টারফেসগুলোকে ইমপ্লিমেন্ট করে। আপনি যদি আজ MySQL এর বদলে SQL Server ব্যবহার করতে চান, তবে শুধু এই লেয়ারটি পরিবর্তন করলেই হবে।
+ ব্যাংকিং উদাহরণ: আপনার ডাটাবেস কানেকশন স্ট্রিং এবং রিপোজিটরি ইমপ্লিমেন্টেশন এখানে থাকে।
+
+### ৪. প্রেজেন্টেশন লেয়ার (Presentation Layer) - ব্যবহারকারীর ইন্টারফেস
+
+এটি হলো আপনার MVC কন্ট্রোলার বা Web API। ইউজার যা সরাসরি দেখতে পায়।
+
+ ব্যাংকিং উদাহরণ: আপনার ব্যাংকিং ড্যাশবোর্ড, লগইন পেজ এবং বাটনগুলো।
+
+---
+
+### কেন এটি গুরুত্বপূর্ণ? (The Dependency Rule)
+
+Clean Architecture-এর প্রধান নিয়ম হলো: নির্ভরশীলতা বা Dependencies সবসময় ভেতরের দিকে থাকবে। অর্থাৎ, ভেতরের লেয়ারগুলো বাইরের লেয়ার সম্পর্কে কিছুই জানবে না।
+
+এর সুবিধাগুলো কী কী?
+১. টেস্টেবল (Testable): আপনি ডাটাবেস ছাড়াই আপনার ব্যাংকিং লজিক টেস্ট করতে পারবেন।
+২. ফ্রেমওয়ার্ক স্বাধীন: যদি ভবিষ্যতে .NET থেকে অন্য কিছুতে যেতে হয়, আপনার বিজনেস লজিক আগের মতোই থাকবে।
+৩. মেইনটেনেবল: কোডের এক জায়গায় ভুল হলে অন্য জায়গায় বড় ধরণের প্রভাব ফেলে না।
+
+### আপনার জন্য পরামর্শ:
+
+আপনি যখন আপনার ডক্টর অ্যাপয়েন্টমেন্ট বা নতুন ব্যাংকিং প্রজেক্ট শুরু করবেন, 
+তখন সব কোড এক প্রজেক্টে না রেখে এই ৪টি আলাদা Class Library Project হিসেবে ভাগ করে নিন।
+এটিই হবে আপনার সফটওয়্যার আর্কিটেক্ট হওয়ার প্রথম প্র্যাকটিক্যাল ধাপ।
+
+
+================================  Diagram and Code Example ================================
+
+
 
 আপনি exam বা viva-তে এই diagram এঁকে explanation দিতে পারেন:
         ┌──────────────────────────┐
@@ -386,9 +441,103 @@ MyMonolithApp/
         └────────────▲─────────────┘
                      │
         ┌────────────┴─────────────┐
-        │   Infrastructure Layer  │
-        │ DB, EF Core, PDF, Auth  │
+        │   Infrastructure Layer   │
+        │ DB, EF Core, PDF, Auth   │
         └──────────────────────────┘
+
+
+===================== CODE FOLDERs: ==========================
+
+
+OnlineBanking
+│
+├── OnlineBanking.sln
+│
+└── src
+    │
+    ├── OnlineBanking.Domain
+    │   │
+    │   ├── OnlineBanking.Domain.csproj
+    │   │
+    │   └── Entities
+    │       ├── Account.cs
+    │       ├── AuditLog.cs
+    │       ├── Customer.cs
+    │       └── Transaction.cs
+    │
+    ├── OnlineBanking.Application
+    │   │
+    │   ├── OnlineBanking.Application.csproj
+    │   │
+    │   ├── Common
+    │   │   └── Result.cs
+    │   │
+    │   ├── Contracts
+    │   │   ├── IAdminService.cs
+    │   │   ├── IAuthService.cs
+    │   │   ├── IBankingService.cs
+    │   │   └── IStatementPdfService.cs
+    │   │
+    │   └── Options
+    │       └── BankingRulesOptions.cs
+    │
+    ├── OnlineBanking.Infrastructure
+    │   │
+    │   ├── OnlineBanking.Infrastructure.csproj
+    │   │
+    │   ├── Persistence
+    │   │   └── AppDbContext.cs
+    │   │
+    │   ├── Security
+    │   │   └── PasswordHasher.cs
+    │   │
+    │   └── Services
+    │       ├── AdminService.cs
+    │       ├── AuditWriter.cs
+    │       ├── AuthService.cs
+    │       ├── BankingService.cs
+    │       └── StatementPdfService.cs
+    │
+    └── OnlineBanking.Web
+        │
+        ├── OnlineBanking.Web.csproj
+        ├── Program.cs
+        ├── appsettings.json
+        │
+        ├── Controllers
+        │   ├── AccountController.cs
+        │   ├── AdminController.cs
+        │   └── BankingController.cs
+        │
+        ├── Models
+        │   ├── AdminResetPasswordVm.cs
+        │   ├── AmountVm.cs
+        │   ├── LoginVm.cs
+        │   ├── RegisterVm.cs
+        │   └── TransferVm.cs
+        │
+        ├── Views
+        │   │
+        │   ├── Account
+        │   │   ├── Login.cshtml
+        │   │   ├── Register.cshtml
+        │   │   └── RegisterSuccess.cshtml
+        │   │
+        │   ├── Admin
+        │   │   ├── Audit.cshtml
+        │   │   ├── Customers.cshtml
+        │   │   └── ResetPassword.cshtml
+        │   │
+        │   ├── Banking
+        │   │   └── Dashboard.cshtml
+        │   │
+        │   └── Shared
+        │       └── _Layout.cshtml
+        │
+        └── wwwroot
+            └── (empty – future css/js/images)
+
+
 
 
 
@@ -502,9 +651,6 @@ Entities (Core Business Rules)
 ৬. ক্যারিয়ার গঠনে: সিনিয়র ডেভেলপার, টেক লিড বা আর্কিটেক্ট হতে চাইলে এই জ্ঞান আবশ্যক। বড় কোম্পানিগুলো এই স্কিল মূল্যায়ন করে।
 
 ৭. প্রযুক্তির সঠিক ব্যবহার: কোন প্রজেক্টে কোন আর্কিটেকচার প্যাটার্ন (যেমন: Microservices, Monolith, Event-Driven) উপযুক্ত, তা বোঝার ক্ষমতা তৈরি হয়।
-
-
-
 
 
 
