@@ -7,135 +7,183 @@
 
 `src/OnlineBanking.Domain/Entities/Customer.cs`
 
-```csharp
 namespace OnlineBanking.Domain.Entities;
 
 public sealed class Customer
 {
+    // প্রতিটি Customer-এর জন্য ইউনিক আইডি
+    // Guid ব্যবহার করায় এটি অনুমান করা যায় না এবং collision হয় না
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    // গ্রাহকের পূর্ণ নাম
     public string Name { get; set; } = "";
+
+    // গ্রাহকের ইমেইল (future: notification / reset password কাজে লাগবে)
     public string Email { get; set; } = "";
+
+    // গ্রাহক কোন শহরের বাসিন্দা
     public string City { get; set; } = "";
 
-    // 5-digit account number used for login
+    // ৫-ডিজিট অ্যাকাউন্ট নাম্বার
+    // এটি দিয়েই গ্রাহক login করবে (username এর মতো)
     public string AccountNumber { get; set; } = "";
 
+    // পাসওয়ার্ড সরাসরি রাখা হয় না
+    // hashed password রাখা হয় security এর জন্য
     public string PasswordHash { get; set; } = "";
 
-    // admin panel support
+    // এই গ্রাহক admin কিনা তা নির্দেশ করে
+    // true হলে admin panel / privileged action করতে পারবে
     public bool IsAdmin { get; set; } = false;
 
-    // security: lock account after too many failed logins
+    // ভুল password দিয়ে কয়বার login চেষ্টা করেছে তার কাউন্ট
     public int FailedLoginCount { get; set; } = 0;
+
+    // নির্দিষ্ট সময় পর্যন্ত account lock থাকবে
+    // null হলে account unlocked
     public DateTimeOffset? LockedUntilUtc { get; set; }
 
+    // এই Customer-এর সাথে যুক্ত ব্যাংক Account
+    // 1 customer → 1 account (এই design এ)
     public Account Account { get; set; } = new();
 }
-```
 
-## 3.2 Account
+------------------------------------- 
+       ## 3.2 Account 
+-------------------------------------
 
 `RowVersion` দিয়ে concurrency control (একই সময়ে ২টা transfer হলে issue কমবে)
 
 `src/OnlineBanking.Domain/Entities/Account.cs`
 
-```csharp
 namespace OnlineBanking.Domain.Entities;
 
 public sealed class Account
 {
+    // এটি অ্যাকাউন্টের Primary Key বা ইউনিক আইডি
+    // Guid হওয়ায় নিরাপদ এবং collision-free
+    public Guid Id { get; set; } = Guid.NewGuid();
 
-//এটি অ্যাকাউন্টের Primary Key বা ইউনিক আইডি।
-//এটি প্রেডিক্ট করা অসম্ভব এবং মাল্টিপল ডেটাবেস বা মাইক্রোসার্ভিসে ডেটা মার্জ করার সময় আইডির সংঘর্ষ (Collision) হয় না।
-public Guid Id { get; set; } = Guid.NewGuid();
+    // Foreign Key
+    // কোন Customer-এর এই Account তা বোঝায়
+    public Guid CustomerId { get; set; }
 
-//এটি একটি Foreign Key।
-//উদ্দেশ্য: এই অ্যাকাউন্টটি কোন গ্রাহকের(Customer) তা এই আইডির মাধ্যমে নিশ্চিত করা হয়। এটি ডেটাবেসে রিলেশনশিপ তৈরি করে।
-public Guid CustomerId { get; set; }
+    // Navigation Property
+    // account.Customer.Name লিখে সরাসরি customer info পাওয়া যায়
+    public Customer Customer { get; set; } = default!;
 
-//একে বলা হয় Navigation Property।
-//উদ্দেশ্য: কোড করার সময় আপনি যেন account.Customer.Name লিখে সরাসরি গ্রাহকের নাম পেতে পারেন, সেজন্য এটি রাখা হয়। = default!;
-//মানে হলো শুরুতে এটি নাল(null) থাকলেও পরে যখন ডেটাবেস থেকে ডেটা আসবে তখন এটি পূর্ণ হবে।
-public Customer Customer { get; set; } = default!;
+    // বর্তমান ব্যালেন্স
+    // decimal ব্যবহার করা হয়েছে কারণ এটি financial accurate
+    public decimal Balance { get; set; } = 0m;
 
-//কেন decimal: ব্যাংকিং এবং ফিন্যান্সিয়াল প্রজেক্টে সব সময় decimal ব্যবহার করতে হয়। float বা double ব্যবহার করলে রাউন্ডিং এরর(যেমন ০.০১ পয়সা হারিয়ে যাওয়া) হওয়ার ঝুঁকি থাকে।
-//0m এর 'm' নির্দেশ করে এটি একটি ডেসিমেল ভ্যালু।
-public decimal Balance { get; set; } = 0m;
+    // Concurrency control এর জন্য
+    // একই সময়ে দুইটা transaction হলে conflict ধরতে সাহায্য করে
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
-//এটি ডাটাবেস লেভেলে Concurrency Conflict ঠেকায়। এটি ব্যাংকিং অ্যাপের জন্য সবচেয়ে গুরুত্বপূর্ণ ফিল্ড।
-//RowVersion নিশ্চিত করে যে, একই সময়ে দুজন ব্যালেন্স আপডেট করতে পারবে না। যদি ডাটাবেসের ডাটা আপনার অগোচরে কেউ পরিবর্তন করে দেয়, তবে এটি এরর থ্রো করবে।
-public byte[] RowVersion { get; set; } = Array.Empty<byte>(); 
-
-//এটি একটি One-to-Many Relationship।
-//উদ্দেশ্য: একটি অ্যাকাউন্টের অধীনে অনেকগুলো ট্রানজ্যাকশন(জমা, খরচ) থাকতে পারে।
-//এটি সেই ট্রানজ্যাকশনগুলোর একটি লিস্ট ধরে রাখে। new ();
-//দিয়ে একে শুরুতেই খালি লিস্ট হিসেবে ইনিশিয়ালাইজ করা হয়েছে যাতে কোডে null reference এরর না আসে।
-public List<Transaction> Transactions { get; set; } = new();
-
-
+    // এই অ্যাকাউন্টের সব transaction এর তালিকা
+    // Deposit, Withdraw, Transfer সব এখানেই থাকবে
+    public List<Transaction> Transactions { get; set; } = new();
 }
-```
 
-## 3.3 Transaction
+
+-------------------------------------
+   ## 3.3 Transaction
+-------------------------------------
 
 Transfer-এ দুইটা entry হবে: out + in
 `Reference` এ “to 12345” লেখা থাকবে।
 
 `src/OnlineBanking.Domain/Entities/Transaction.cs`
 
-```csharp
 namespace OnlineBanking.Domain.Entities;
 
+// Transaction এর ধরন নির্ধারণ করে
 public enum TransactionType
 {
-    Deposit = 1,
-    Withdraw = 2,
-    TransferOut = 3,
-    TransferIn = 4
+    Deposit = 1,      // টাকা জমা
+    Withdraw = 2,     // টাকা তোলা
+    TransferOut = 3,  // টাকা পাঠানো
+    TransferIn = 4    // টাকা পাওয়া
 }
 
 public sealed class Transaction
 {
+    // প্রতিটি transaction এর ইউনিক আইডি
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    // কোন Account এর সাথে এই transaction সম্পর্কিত
     public Guid AccountId { get; set; }
+
+    // Navigation Property
+    // transaction.Account.Balance এর মতো access পাওয়া যায়
     public Account Account { get; set; } = default!;
 
+    // transaction কখন হয়েছে (UTC time)
+    // auditing এবং history এর জন্য দরকার
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
+    // Deposit / Withdraw / TransferIn / TransferOut
     public TransactionType Type { get; set; }
 
+    // কত টাকা লেনদেন হয়েছে
     public decimal Amount { get; set; }
+
+    // এই transaction এর পর account এ কত balance ছিল
+    // statement generate করতে কাজে লাগে
     public decimal BalanceAfter { get; set; }
 
+    // অতিরিক্ত তথ্য
+    // যেমন: "Transfer to 12345"
     public string? Reference { get; set; }
 }
-```
 
-## 3.4 AuditLog (Real-world trace)
+
+
+
+----------------------------------------------------------
+              ## 3.4 AuditLog (Real-world trace)
+----------------------------------------------------------
 
 এটা real banking এ খুব দরকার: কে কখন কী করেছে।
 
 `src/OnlineBanking.Domain/Entities/AuditLog.cs`
 
-```csharp
 namespace OnlineBanking.Domain.Entities;
 
 public sealed class AuditLog
 {
+    // প্রতিটি audit log এর ইউনিক আইডি
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    // কখন এই action টি ঘটেছে
     public DateTimeOffset CreatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
 
-    public string Action { get; set; } = "";          // e.g. LOGIN_SUCCESS, TRANSFER, ADMIN_RESET_PASSWORD
-    public string ActorAccountNumber { get; set; } = ""; // who did it (accountNumber) or "SYSTEM"
-    public string? TargetAccountNumber { get; set; }     // optional
+    // কী action হয়েছে
+    // যেমন: LOGIN_SUCCESS, TRANSFER, ADMIN_RESET_PASSWORD
+    public string Action { get; set; } = "";
+
+    // কে এই action করেছে
+    // accountNumber অথবা "SYSTEM"
+    public string ActorAccountNumber { get; set; } = "";
+
+    // যাকে নিয়ে action হয়েছে (optional)
+    // যেমন transfer এর ক্ষেত্রে receiver account
+    public string? TargetAccountNumber { get; set; }
+
+    // request কোন IP address থেকে এসেছে
     public string? Ip { get; set; }
+
+    // কোন browser / device থেকে request এসেছে
     public string? UserAgent { get; set; }
 
+    // human readable message
+    // যেমন: "Transferred 5000 to account 12345"
     public string Message { get; set; } = "";
 }
-```
+
+
+
+
+
 
 ---
