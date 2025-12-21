@@ -1,147 +1,203 @@
-
-
-## 8.1 AccountController (Register/Login/Logout)
-
-ব্যাখ্যা (Bangla):
-
-* `Register` POST → IAuthService.RegisterAsync কল করে
-* Success হলে account number দেখায়
-* `Login` POST → ValidateLoginAsync → Cookie sign-in with claims
-* Admin হলে claim `IsAdmin=true` বসায় → Admin policy কাজ করবে
-
-`src/OnlineBanking.Web/Controllers/AccountController.cs`
-
 ```csharp
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Mvc;
-using OnlineBanking.Application.Contracts;
-using OnlineBanking.Web.Models;
+# =====================================================
+# 8) WEB Layer Controllers (MVC Controllers)
+# =====================================================
+
+/*
+এই অংশে কী implement করা হয়েছে?
+- AccountController: Register/Login/Logout + Cookie Sign-in (Claims)
+- BankingController: Dashboard + Deposit/Withdraw/Transfer + PDF download
+- AdminController: AdminOnly policy enforced admin panel
+*/
+
+
+// =====================================================
+// 8.1 AccountController (Register/Login/Logout)
+// =====================================================
+
+/*
+ব্যাখ্যা (Bangla):
+- Register POST → IAuthService.RegisterAsync কল করে
+- Success হলে account number দেখায়
+- Login POST → ValidateLoginAsync → Cookie sign-in with claims
+- Admin হলে claim IsAdmin=true বসায় → Admin policy কাজ করবে
+
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Controllers/AccountController.cs
+*/
+
+using System.Security.Claims;                         // Cookie auth এ claim তৈরি/ব্যবহার করার জন্য
+using Microsoft.AspNetCore.Authentication;            // SignInAsync/SignOutAsync extension methods
+using Microsoft.AspNetCore.Authentication.Cookies;    // Cookie authentication scheme name/constants
+using Microsoft.AspNetCore.Mvc;                       // Controller, IActionResult, attributes
+using OnlineBanking.Application.Contracts;            // IAuthService interface (Application layer)
+using OnlineBanking.Web.Models;                       // ViewModels (RegisterVm, LoginVm)
 
 namespace OnlineBanking.Web.Controllers;
 
 public sealed class AccountController : Controller
 {
-    private readonly IAuthService _auth;
+    private readonly IAuthService _auth;              // Auth operations (register/login validation) করার abstraction
+
+    // DI দিয়ে IAuthService inject করা হচ্ছে
     public AccountController(IAuthService auth) => _auth = auth;
 
+    // Client IP + UserAgent collect করে
+    // audit log এ trace রাখতে কাজে লাগে
     private (string ip, string ua) ClientInfo()
     {
-        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var ua = Request.Headers.UserAgent.ToString();
-        return (ip, ua);
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"; // client IP না পেলে "unknown"
+        var ua = Request.Headers.UserAgent.ToString();                            // browser/device info
+        return (ip, ua);                                                          // tuple return
     }
 
+    // Register page দেখায়
     [HttpGet]
-    public IActionResult Register() => View(new RegisterVm());
+    public IActionResult Register() => View(new RegisterVm()); // empty model দিয়ে view render
 
+    // Register form submit handle করে
     [HttpPost]
     public async Task<IActionResult> Register(RegisterVm vm)
     {
+        // ViewModel validation fail হলে একই view এ error সহ ফেরত
         if (!ModelState.IsValid) return View(vm);
 
+        // IP/UA নেওয়া হচ্ছে (audit এর জন্য)
         var (ip, ua) = ClientInfo();
+
+        // Application layer auth service call → customer register + account number generate
         var res = await _auth.RegisterAsync(vm.Name, vm.Email, vm.Password, vm.City, ip, ua);
 
+        // যদি register fail হয় → message ModelState এ বসিয়ে view দেখায়
         if (!res.Success)
         {
-            ModelState.AddModelError("", res.Message);
+            ModelState.AddModelError("", res.Message); // global error message
             return View(vm);
         }
 
+        // success: generated account number TempData তে রাখা
+        // TempData = next request পর্যন্ত থাকে (Redirect এর পরে read করা যায়)
         TempData["AccountNumber"] = res.Data;
+
+        // success page এ redirect
         return RedirectToAction(nameof(RegisterSuccess));
     }
 
+    // Register success page
     [HttpGet]
     public IActionResult RegisterSuccess()
     {
+        // TempData থেকে account number বের করে ViewBag এ রাখা (View এ show করার জন্য)
         ViewBag.AccountNumber = TempData["AccountNumber"]?.ToString();
         return View();
     }
 
+    // Login page show
     [HttpGet]
-    public IActionResult Login() => View(new LoginVm());
+    public IActionResult Login() => View(new LoginVm()); // empty login model
 
+    // Login submit handle
     [HttpPost]
     public async Task<IActionResult> Login(LoginVm vm)
     {
+        // validation fail হলে same page show
         if (!ModelState.IsValid) return View(vm);
 
+        // IP/UA collect
         var (ip, ua) = ClientInfo();
+
+        // auth validation: password verify + lockout rule + audit
         var res = await _auth.ValidateLoginAsync(vm.AccountNumber, vm.Password, ip, ua);
 
+        // login fail হলে error message দেখায়
         if (!res.Success)
         {
             ModelState.AddModelError("", res.Message);
             return View(vm);
         }
 
+        // success হলে returned tuple থেকে customerId + isAdmin নেওয়া
         var (customerId, isAdmin) = res.Data!.Value;
 
+        // Cookie claims তৈরি
+        // এগুলো cookie তে store হবে এবং পরের request এ User.Claims এ পাওয়া যাবে
         var claims = new List<Claim>
         {
-            new Claim("CustomerId", customerId.ToString()),
-            new Claim("AccountNumber", vm.AccountNumber),
-            new Claim(ClaimTypes.Name, vm.AccountNumber),
-            new Claim("IsAdmin", isAdmin ? "true" : "false")
+            new Claim("CustomerId", customerId.ToString()),                // app internal user identification
+            new Claim("AccountNumber", vm.AccountNumber),                  // logged-in account number
+            new Claim(ClaimTypes.Name, vm.AccountNumber),                  // framework-friendly name (optional)
+            new Claim("IsAdmin", isAdmin ? "true" : "false")               // AdminOnly policy check করবে এই claim দিয়ে
         };
 
+        // ClaimsIdentity তৈরি (cookie scheme দিয়ে)
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+        // ClaimsPrincipal তৈরি (User object এর core)
         var principal = new ClaimsPrincipal(identity);
 
+        // Cookie issue করে user কে signed-in করা
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+
+        // login success হলে dashboard এ redirect
         return RedirectToAction("Dashboard", "Banking");
     }
 
+    // Logout handle (POST রাখা ভালো practice; CSRF protection লাগে)
     [HttpPost]
     public async Task<IActionResult> Logout()
     {
+        // cookie invalidate/sign-out
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        // login page এ redirect
         return RedirectToAction(nameof(Login));
     }
 }
-```
 
----
 
-## 8.2 BankingController (Dashboard + actions + PDF)
+// =====================================================
+// 8.2 BankingController (Dashboard + actions + PDF)
+// =====================================================
 
+/*
 ব্যাখ্যা:
+- Dashboard → profile + rules + last10 দেখায়
+- Deposit/Withdraw/Transfer → IBankingService call করে
+- MiniStatementPdf → profile + last10 → PDF bytes generate → File download
 
-* `Dashboard` → balance + last10 দেখায়
-* Deposit/Withdraw/Transfer → IBankingService কল করে
-* PDF → profile (name+acc+balance) + last10 → pdf bytes generate
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Controllers/BankingController.cs
+*/
 
-`src/OnlineBanking.Web/Controllers/BankingController.cs`
-
-```csharp
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using OnlineBanking.Application.Contracts;
-using OnlineBanking.Application.Options;
-using OnlineBanking.Web.Models;
+using Microsoft.AspNetCore.Authorization;     // [Authorize] attribute
+using Microsoft.AspNetCore.Mvc;               // Controller base
+using Microsoft.Extensions.Options;           // IOptions<T>
+using OnlineBanking.Application.Contracts;    // IBankingService, IStatementPdfService
+using OnlineBanking.Application.Options;      // BankingRulesOptions
+using OnlineBanking.Web.Models;               // AmountVm, TransferVm etc.
 
 namespace OnlineBanking.Web.Controllers;
 
-[Authorize]
+[Authorize] // authenticated user ছাড়া controller access করা যাবে না
 public sealed class BankingController : Controller
 {
-    private readonly IBankingService _banking;
-    private readonly IStatementPdfService _pdf;
-    private readonly BankingRulesOptions _rules;
+    private readonly IBankingService _banking;    // deposit/withdraw/transfer/business logic
+    private readonly IStatementPdfService _pdf;   // PDF generate service
+    private readonly BankingRulesOptions _rules;  // config rules snapshot
 
+    // DI: services + options inject
     public BankingController(IBankingService banking, IStatementPdfService pdf, IOptions<BankingRulesOptions> rules)
     {
         _banking = banking;
         _pdf = pdf;
-        _rules = rules.Value;
+        _rules = rules.Value; // options থেকে actual rules object নেওয়া
     }
 
+    // Cookie claims থেকে CustomerId বের করা
+    // login সময় claim সেট করা হয়েছিল
     private Guid CustomerId => Guid.Parse(User.Claims.First(x => x.Type == "CustomerId").Value);
 
+    // client info collect (audit log এ যাবে)
     private (string ip, string ua) ClientInfo()
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -149,94 +205,147 @@ public sealed class BankingController : Controller
         return (ip, ua);
     }
 
+    // Dashboard page (GET)
     [HttpGet]
     public async Task<IActionResult> Dashboard()
     {
+        // rules view এ পাঠানো (minimum balance, daily limit দেখাতে)
         ViewBag.Rules = _rules;
+
+        // profile info view এ পাঠানো (name, acc, balance)
         ViewBag.Profile = await _banking.GetProfileAsync(CustomerId);
+
+        // last 10 transactions view এ পাঠানো
         ViewBag.Last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
-        return View();
+
+        return View(); // Dashboard.cshtml render
     }
 
+    // Deposit action (POST)
     [HttpPost]
     public async Task<IActionResult> Deposit(AmountVm vm)
     {
-        var (ip, ua) = ClientInfo();
-        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+        var (ip, ua) = ClientInfo(); // audit info
+
+        // input invalid হলে message set করে dashboard এ redirect
+        if (!ModelState.IsValid)
+        {
+            TempData["Msg"] = "Invalid amount.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // deposit service call
         var res = await _banking.DepositAsync(CustomerId, vm.Amount, ip, ua);
+
+        // feedback message store (one request)
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Dashboard));
     }
 
+    // Withdraw action (POST)
     [HttpPost]
     public async Task<IActionResult> Withdraw(AmountVm vm)
     {
         var (ip, ua) = ClientInfo();
-        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid amount."; return RedirectToAction(nameof(Dashboard)); }
+
+        if (!ModelState.IsValid)
+        {
+            TempData["Msg"] = "Invalid amount.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // withdraw service call (min balance rule check হয় Infrastructure/Service এ)
         var res = await _banking.WithdrawAsync(CustomerId, vm.Amount, ip, ua);
+
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Dashboard));
     }
 
+    // Transfer action (POST)
     [HttpPost]
     public async Task<IActionResult> Transfer(TransferVm vm)
     {
         var (ip, ua) = ClientInfo();
-        if (!ModelState.IsValid) { TempData["Msg"] = "Invalid transfer input."; return RedirectToAction(nameof(Dashboard)); }
+
+        // input invalid হলে
+        if (!ModelState.IsValid)
+        {
+            TempData["Msg"] = "Invalid transfer input.";
+            return RedirectToAction(nameof(Dashboard));
+        }
+
+        // transfer service call (daily limit + min balance + audit etc.)
         var res = await _banking.TransferAsync(CustomerId, vm.ToAccountNumber, vm.Amount, ip, ua);
+
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Dashboard));
     }
 
+    // Mini statement PDF download (GET)
     [HttpGet]
     public async Task<IActionResult> MiniStatementPdf()
     {
+        // profile fetch
         var profile = await _banking.GetProfileAsync(CustomerId);
+
+        // last10 fetch
         var last10 = await _banking.GetLastTransactionsAsync(CustomerId, 10);
 
+        // PDF bytes generate
         var pdfBytes = _pdf.BuildMiniStatementPdf(
-            currency: _rules.CurrencySymbol,
-            tzId: _rules.TimeZoneId,
-            accountNumber: profile.AccountNumber,
-            customerName: profile.CustomerName,
-            currentBalance: profile.Balance,
-            last10: last10);
+            currency: _rules.CurrencySymbol,      // ৳
+            tzId: _rules.TimeZoneId,              // Asia/Dhaka
+            accountNumber: profile.AccountNumber, // logged-in account
+            customerName: profile.CustomerName,   // name
+            currentBalance: profile.Balance,      // current balance
+            last10: last10                        // transactions
+        );
 
+        // HTTP file response: content-type application/pdf
+        // filename dynamic based on account number
         return File(pdfBytes, "application/pdf", $"mini-statement-{profile.AccountNumber}.pdf");
     }
 }
-```
 
----
 
-## 8.3 AdminController (Admin panel)
+// =====================================================
+// 8.3 AdminController (Admin panel)
+// =====================================================
 
+/*
 ব্যাখ্যা:
+- [Authorize(Policy="AdminOnly")] → কেবল IsAdmin=true claim থাকলেই access
+- Customers list
+- set admin / lock / unlock / reset password
+- audit logs show
 
-* `[Authorize(Policy="AdminOnly")]` → শুধু admin ঢুকতে পারবে
-* Customers list
-* lock/unlock/set admin/reset password
-* audit logs view
+ফাইল লোকেশন:
+src/OnlineBanking.Web/Controllers/AdminController.cs
+*/
 
-`src/OnlineBanking.Web/Controllers/AdminController.cs`
-
-```csharp
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using OnlineBanking.Application.Contracts;
-using OnlineBanking.Web.Models;
+using Microsoft.AspNetCore.Authorization; // policy based authorization
+using Microsoft.AspNetCore.Mvc;           // MVC base
+using OnlineBanking.Application.Contracts; // IAdminService
+using OnlineBanking.Web.Models;            // AdminResetPasswordVm etc.
 
 namespace OnlineBanking.Web.Controllers;
 
-[Authorize(Policy = "AdminOnly")]
+[Authorize(Policy = "AdminOnly")] // Admin policy enforce: IsAdmin=true claim required
 public sealed class AdminController : Controller
 {
-    private readonly IAdminService _admin;
+    private readonly IAdminService _admin; // admin operations service
 
+    // DI injection
     public AdminController(IAdminService admin) => _admin = admin;
 
+    // logged-in admin এর account number claim থেকে বের করা
+    // audit log এ "actor" হিসেবে যাবে
     private string ActorAcc => User.Claims.First(x => x.Type == "AccountNumber").Value;
 
+    // client info collect (audit)
     private (string ip, string ua) ClientInfo()
     {
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -244,60 +353,93 @@ public sealed class AdminController : Controller
         return (ip, ua);
     }
 
+    // Customers list page
     [HttpGet]
     public async Task<IActionResult> Customers()
     {
+        // সব customer list fetch
         var list = await _admin.GetCustomersAsync();
+
+        // view এ list পাঠানো
         return View(list);
     }
 
+    // Admin role set/unset (POST)
     [HttpPost]
     public async Task<IActionResult> SetAdmin(string accountNumber, bool isAdmin)
     {
         var (ip, ua) = ClientInfo();
+
+        // service call: role change + audit
         var res = await _admin.SetAdminAsync(accountNumber, isAdmin, ActorAcc, ip, ua);
+
+        // feedback
         TempData["Msg"] = res.Message;
+
+        // list page refresh
         return RedirectToAction(nameof(Customers));
     }
 
+    // Lock user (POST)
     [HttpPost]
     public async Task<IActionResult> Lock(string accountNumber, int minutes = 30)
     {
         var (ip, ua) = ClientInfo();
+
+        // service call: lock for N minutes + audit
         var res = await _admin.LockAsync(accountNumber, minutes, ActorAcc, ip, ua);
+
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Customers));
     }
 
+    // Unlock user (POST)
     [HttpPost]
     public async Task<IActionResult> Unlock(string accountNumber)
     {
         var (ip, ua) = ClientInfo();
+
+        // service call: unlock + audit
         var res = await _admin.UnlockAsync(accountNumber, ActorAcc, ip, ua);
+
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Customers));
     }
 
+    // Reset password page show
     [HttpGet]
     public IActionResult ResetPassword() => View(new AdminResetPasswordVm());
 
+    // Reset password submit (POST)
     [HttpPost]
     public async Task<IActionResult> ResetPassword(AdminResetPasswordVm vm)
     {
         var (ip, ua) = ClientInfo();
+
+        // validation
         if (!ModelState.IsValid) return View(vm);
+
+        // service call: reset + audit
         var res = await _admin.ResetPasswordAsync(vm.AccountNumber, vm.NewPassword, ActorAcc, ip, ua);
+
         TempData["Msg"] = res.Message;
+
         return RedirectToAction(nameof(Customers));
     }
 
+    // Latest audit logs page
     [HttpGet]
     public async Task<IActionResult> Audit()
     {
+        // last 150 audit logs load
         var logs = await _admin.GetLatestAuditAsync(150);
+
+        // view এ পাঠানো
         return View(logs);
     }
 }
 ```
 
----
+
