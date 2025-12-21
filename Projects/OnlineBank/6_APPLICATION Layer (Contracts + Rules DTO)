@@ -1,113 +1,261 @@
-
-
+# =====================================================
 # 4) APPLICATION Layer (Contracts + Rules DTO)
+# =====================================================
 
-## 4.1 Rules config model
+/*
+এই লেয়ার কী কাজ করে?
+- Business rules (configuration)
+- Result pattern (success / fail)
+- Service contracts (interface)
+👉 এখানে কোনো database, EF Core বা implementation থাকে না
+*/
 
-`src/OnlineBanking.Application/Options/BankingRulesOptions.cs`
 
-```csharp
+// =====================================================
+// 4.1 Rules config model
+// =====================================================
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Options/BankingRulesOptions.cs
+*/
+
 namespace OnlineBanking.Application.Options;
 
 public sealed class BankingRulesOptions
 {
+    // কোন currency symbol ব্যবহার হবে
+    // UI এবং PDF statement এ দেখানোর জন্য (৳, $, €)
     public string CurrencySymbol { get; set; } = "৳";
+
+    // সিস্টেম কোন timezone follow করবে
+    // transaction time ও statement time দেখাতে কাজে লাগে
     public string TimeZoneId { get; set; } = "Asia/Dhaka";
+
+    // অ্যাকাউন্টে ন্যূনতম কত টাকা থাকতে হবে
+    // এর নিচে নামলে withdraw / transfer ব্লক হবে
     public decimal MinimumBalance { get; set; } = 0m;
+
+    // দৈনিক সর্বোচ্চ transfer limit
+    // fraud ও risk control এর জন্য
     public decimal DailyTransferLimit { get; set; } = 0m;
 }
-```
 
-## 4.2 Result wrapper (success/fail)
 
-`src/OnlineBanking.Application/Common/Result.cs`
+// =====================================================
+// 4.2 Result wrapper (success/fail)
+// =====================================================
 
-```csharp
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Common/Result.cs
+*/
+
 namespace OnlineBanking.Application.Common;
 
+// সাধারণ success / failure result
 public sealed record Result(bool Success, string Message)
 {
-    public static Result Ok(string msg = "OK") => new(true, msg);
-    public static Result Fail(string msg) => new(false, msg);
+    // অপারেশন সফল হলে ব্যবহার করা হয়
+    public static Result Ok(string msg = "OK")
+        => new(true, msg);
+
+    // অপারেশন ব্যর্থ হলে ব্যবহার করা হয়
+    public static Result Fail(string msg)
+        => new(false, msg);
 }
 
+// data সহ result (generic version)
 public sealed record Result<T>(bool Success, string Message, T? Data)
 {
-    public static Result<T> Ok(T data, string msg = "OK") => new(true, msg, data);
-    public static Result<T> Fail(string msg) => new(false, msg, default);
+    // সফল হলে data সহ result ফেরত দেয়
+    public static Result<T> Ok(T data, string msg = "OK")
+        => new(true, msg, data);
+
+    // ব্যর্থ হলে data = null থাকবে
+    public static Result<T> Fail(string msg)
+        => new(false, msg, default);
 }
-```
 
-## 4.3 Contracts
 
-`src/OnlineBanking.Application/Contracts/IAuthService.cs`
+// =====================================================
+// 4.3 Contracts
+// =====================================================
 
-```csharp
 using OnlineBanking.Application.Common;
+using OnlineBanking.Domain.Entities;
 
 namespace OnlineBanking.Application.Contracts;
+
+
+// -----------------------------------------------------
+// IAuthService
+// -----------------------------------------------------
+
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Contracts/IAuthService.cs
+*/
 
 public interface IAuthService
 {
-    Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent);
-    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(string accountNumber, string password, string ip, string userAgent);
+    // নতুন customer register করে
+    // name, email, password, city থেকে account তৈরি হয়
+    // ip ও userAgent audit log এর জন্য ব্যবহার হয়
+    Task<Result<string>> RegisterAsync(
+        string name,
+        string email,
+        string password,
+        string city,
+        string ip,
+        string userAgent
+    );
+
+    // login validate করে
+    // accountNumber ও password মিললে customerId ফেরত দেয়
+    // isAdmin দিয়ে role নির্ধারণ করা যায়
+    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(
+        string accountNumber,
+        string password,
+        string ip,
+        string userAgent
+    );
 }
-```
 
-`src/OnlineBanking.Application/Contracts/IBankingService.cs`
 
-```csharp
-using OnlineBanking.Application.Common;
-using OnlineBanking.Domain.Entities;
+// -----------------------------------------------------
+// IBankingService
+// -----------------------------------------------------
 
-namespace OnlineBanking.Application.Contracts;
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Contracts/IBankingService.cs
+*/
 
 public interface IBankingService
 {
+    // নির্দিষ্ট customer এর বর্তমান balance দেখায়
     Task<decimal> GetBalanceAsync(Guid customerId);
-    Task<Result> DepositAsync(Guid customerId, decimal amount, string ip, string userAgent);
-    Task<Result> WithdrawAsync(Guid customerId, decimal amount, string ip, string userAgent);
-    Task<Result> TransferAsync(Guid customerId, string toAccountNumber, decimal amount, string ip, string userAgent);
 
-    Task<(string CustomerName, string AccountNumber, decimal Balance)> GetProfileAsync(Guid customerId);
+    // টাকা জমা (Deposit)
+    Task<Result> DepositAsync(
+        Guid customerId,
+        decimal amount,
+        string ip,
+        string userAgent
+    );
 
-    Task<IReadOnlyList<Transaction>> GetLastTransactionsAsync(Guid customerId, int take = 10);
+    // টাকা তোলা (Withdraw)
+    // minimum balance rule এখানে প্রয়োগ হবে
+    Task<Result> WithdrawAsync(
+        Guid customerId,
+        decimal amount,
+        string ip,
+        string userAgent
+    );
+
+    // টাকা transfer করা
+    // daily transfer limit + balance check হবে
+    Task<Result> TransferAsync(
+        Guid customerId,
+        string toAccountNumber,
+        decimal amount,
+        string ip,
+        string userAgent
+    );
+
+    // Dashboard profile info
+    Task<(string CustomerName, string AccountNumber, decimal Balance)>
+        GetProfileAsync(Guid customerId);
+
+    // সর্বশেষ কিছু transaction
+    // default = last 10
+    Task<IReadOnlyList<Transaction>>
+        GetLastTransactionsAsync(Guid customerId, int take = 10);
 }
-```
 
-`src/OnlineBanking.Application/Contracts/IStatementPdfService.cs`
 
-```csharp
-using OnlineBanking.Domain.Entities;
+// -----------------------------------------------------
+// IStatementPdfService
+// -----------------------------------------------------
 
-namespace OnlineBanking.Application.Contracts;
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Contracts/IStatementPdfService.cs
+*/
 
 public interface IStatementPdfService
 {
-    byte[] BuildMiniStatementPdf(string currency, string tzId, string accountNumber, string customerName, decimal currentBalance, IReadOnlyList<Transaction> last10);
+    // Mini statement PDF তৈরি করে
+    // byte[] ফেরত দেয় যাতে API থেকে download করা যায়
+    byte[] BuildMiniStatementPdf(
+        string currency,
+        string tzId,
+        string accountNumber,
+        string customerName,
+        decimal currentBalance,
+        IReadOnlyList<Transaction> last10
+    );
 }
-```
 
-`src/OnlineBanking.Application/Contracts/IAdminService.cs`
 
-```csharp
-using OnlineBanking.Application.Common;
-using OnlineBanking.Domain.Entities;
+// -----------------------------------------------------
+// IAdminService
+// -----------------------------------------------------
 
-namespace OnlineBanking.Application.Contracts;
+/*
+ফাইল লোকেশন:
+src/OnlineBanking.Application/Contracts/IAdminService.cs
+*/
 
 public interface IAdminService
 {
+    // সব customer এর তালিকা
     Task<IReadOnlyList<Customer>> GetCustomersAsync();
+
+    // account number দিয়ে নির্দিষ্ট customer খোঁজা
     Task<Customer?> GetCustomerByAccountAsync(string accountNumber);
 
-    Task<Result> SetAdminAsync(string accountNumber, bool isAdmin, string actorAcc, string ip, string ua);
-    Task<Result> LockAsync(string accountNumber, int minutes, string actorAcc, string ip, string ua);
-    Task<Result> UnlockAsync(string accountNumber, string actorAcc, string ip, string ua);
-    Task<Result> ResetPasswordAsync(string accountNumber, string newPassword, string actorAcc, string ip, string ua);
+    // কাউকে admin বানানো বা admin সরানো
+    Task<Result> SetAdminAsync(
+        string accountNumber,
+        bool isAdmin,
+        string actorAcc,
+        string ip,
+        string ua
+    );
 
+    // নির্দিষ্ট সময়ের জন্য account lock করা
+    Task<Result> LockAsync(
+        string accountNumber,
+        int minutes,
+        string actorAcc,
+        string ip,
+        string ua
+    );
+
+    // account unlock করা
+    Task<Result> UnlockAsync(
+        string accountNumber,
+        string actorAcc,
+        string ip,
+        string ua
+    );
+
+    // admin দ্বারা password reset
+    Task<Result> ResetPasswordAsync(
+        string accountNumber,
+        string newPassword,
+        string actorAcc,
+        string ip,
+        string ua
+    );
+
+    // সাম্প্রতিক audit log দেখা
     Task<IReadOnlyList<AuditLog>> GetLatestAuditAsync(int take = 100);
 }
-```
 
----
+
+
+
+-
