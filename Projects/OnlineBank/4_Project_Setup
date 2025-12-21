@@ -8,16 +8,24 @@
 mkdir OnlineBanking
 cd OnlineBanking
 
-dotnet new sln -n OnlineBanking
-mkdir src
-cd src
+dotnet new sln -n OnlineBanking   # একটি .sln ফাইল তৈরি করছে যা সব প্রজেক্টকে একসাথে ধরে রাখবে।
+mkdir src       # সোর্স কোড রাখার জন্য 'src' ফোল্ডার তৈরি করছে।
+cd src            
 
-dotnet new classlib -n OnlineBanking.Domain
-dotnet new classlib -n OnlineBanking.Application
-dotnet new classlib -n OnlineBanking.Infrastructure
-dotnet new mvc -n OnlineBanking.Web
 
-cd ..
+# ৪টি আলাদা প্রজেক্ট (Layers)/Clean Architecture তৈরি 
+dotnet new classlib -n OnlineBanking.Domain        # এখানে ব্যাংকিংয়ের মূল নিয়ম (Entities/Models) থাকবে।
+dotnet new classlib -n OnlineBanking.Application   # এখানে ব্যবসার আসল লজিক (Use Cases) থাকবে।
+dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে ডাটাবেস এবং বাইরের সার্ভিসের কানেকশন থাকবে।
+dotnet new mvc -n OnlineBanking.Web                    # এটি আপনার ইউজার ইন্টারফেস বা ওয়েবসাইট।  
+
+
+
+# সলিউশনে প্রজেক্টগুলো যুক্ত করা
+# dotnet sln add ... কমান্ডগুলো প্রতিটি আলাদা প্রজেক্টকে আপনার মূল সলিউশন ফাইলের (OnlineBanking.sln) সাথে লিংক করে দিচ্ছে 
+# যাতে আপনি Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
+
+cd ..       #cd .. কমান্ডটির মানে হলো বর্তমান ফোল্ডার থেকে এক ধাপ পেছনে বা এক স্তর ওপরে (OnlineBanking)যাওয়া।
 dotnet sln add src/OnlineBanking.Domain/OnlineBanking.Domain.csproj
 dotnet sln add src/OnlineBanking.Application/OnlineBanking.Application.csproj
 dotnet sln add src/OnlineBanking.Infrastructure/OnlineBanking.Infrastructure.csproj
