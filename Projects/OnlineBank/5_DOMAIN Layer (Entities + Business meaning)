@@ -55,7 +55,7 @@ public sealed class Customer
        ## 3.2 Account 
 -------------------------------------
 
-`RowVersion` দিয়ে concurrency control (একই সময়ে ২টা transfer হলে issue কমবে)
+`RowVersion` দিয়ে concurrency control(Race Condition and Double Spending) (একই সময়ে ২টা transfer হলে issue কমবে)
 
 `src/OnlineBanking.Domain/Entities/Account.cs`
 
