@@ -13,11 +13,27 @@
 4.1 Rules config model  = CurrencySymbol,timezone, transfer limit
 4.2 Result wrapper (success/fail)
 4.3 Contracts
-    -IAuthService   //RegisterAsync & ValidateLoginAsync
-    -IBankingService  // // নির্দিষ্ট customer এর বর্তমান balance/deposit/transfer দেখায়
-    -IStatementPdfService
-    -IAdminService
-
+    > IAuthService:
+        -RegisterAsync()
+        -ValidateLoginAsync()
+    
+     > IBankingService
+        -GetBalanceAsync()
+        -WithdrawAsync()
+        -TransferAsync()
+        -GetProfileAsync()
+        -GetLastTransactionsAsync()
+    
+     > IStatementPdfService
+        -BuildMiniStatementPdf()
+    
+    > IAdminService
+            -GetCustomersAsync()
+            -GetCustomerByAccountAsync()
+            -LockAsync()
+            -UnlockAsync()
+            -ResetPasswordAsync()
+            -GetLatestAuditAsync()
 
 // =====================================================
 // 4.1 Rules config model
