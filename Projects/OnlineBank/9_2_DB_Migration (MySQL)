@@ -5,25 +5,31 @@
 
 ## 9.1 Create database
 
-```sql
 CREATE DATABASE onlinebanking_db;
-```
+
 
 ## 9.2 EF migration + update
+এই কমান্ডগুলো রান করার আগে  পিসিতে dotnet-ef টুলটি ইন্সটল থাকতে হবে। 
+যদি না থাকে, তবে আগে এটি রান কর: dotnet tool install --global dotnet-ef
 
-```bash
 cd OnlineBanking
-dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
+dotnet ef migrations add InitialCreate -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web  
 dotnet ef database update -p src/OnlineBanking.Infrastructure -s src/OnlineBanking.Web
-```
 
----
+// -p	(Project)	যেখানে DB Class (DbContext) থাকে। 
+// -s (Startup) যেখানে ডাটাবেস কানেকশন স্ট্রিং (appsettings.json) থাকে।
 
 # 10) Run
 
-```bash
 dotnet run --project src/OnlineBanking.Web
-```
+
 
 ✅ প্রথম রানেই DB migrate হবে এবং AdminSeed অনুযায়ী admin user create হবে।
 Console এ admin এর AccountNumber print হবে—ওটা দিয়ে login করুন।
+
+
+
+
+
+
+.
