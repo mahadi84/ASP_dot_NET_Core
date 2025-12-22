@@ -32,7 +32,7 @@ Domain Layer: এখানে থাকে চিরন্তন বিজনে
 
 ### STRUCTURE(Layers):
 dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Business Rules থাকবে। 
-dotnet new classlib -n OnlineBanking.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে।
+dotnet new classlib -n OnlineBanking.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে। লজিকগুলো যা পরিস্থিতির ওপর নির্ভর করে বদলাতে পারে (Configuration)
 dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে Database connection এবং বাইরের সার্ভিসের কানেকশন(EF Core, PDF, Auth) থাকবে।
 dotnet new mvc -n OnlineBanking.Web                    # এখান Controllers / Views থাকবে। 
 
@@ -52,6 +52,11 @@ dotnet new mvc -n OnlineBanking.Web                    # এখান Controller
 
 #### ২. অ্যাপ্লিকেশন লেয়ার (Application Layer)
 এখানে থাকে Use Cases। অর্থাৎ ইউজার ঠিক কী করতে চায়। যেমন: `TransferMoneyService` বা `GenerateStatement`।
+Application Layer: এখানে থাকে সেই লজিকগুলো যা পরিস্থিতির ওপর নির্ভর করে বদলাতে পারে (Configuration)।
+    -আজ ব্যাংকের নিয়ম হলো MinimumBalance = 500 টাকা।
+    -কাল ব্যাংক অফার দিয়ে বলতে পারে MinimumBalance = 0 টাকা। যেহেতু এই ভ্যালুগুলো appsettings.json ফাইল থেকে আসে এবং ঘন ঘন পরিবর্তন হতে পারে, তাই এগুলোকে ডোমেইনের ভেতরে হার্ডকোড করা হয় না।
+    -CurrencySymbol: এটি ডোমেইনের হিসাবের জন্য লাগে না, এটি লাগে PDF Statement তৈরির সময় (Application/UI Task)।
+    -TimeZoneId: এটি ডাটাবেসে সেভ করার জন্য লাগে না, এটি লাগে ইউজারকে তার লোকাল টাইমে ট্রানজ্যাকশন দেখানোর জন্য।
  কাজ: এটি ডোমেইন অবজেক্টগুলোকে ব্যবহার করে নির্দিষ্ট কাজ সম্পন্ন করে।
  নির্ভরশীলতা: এটি শুধু Domain Layer কে চেনে।
 
