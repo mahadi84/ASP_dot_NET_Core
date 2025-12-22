@@ -14,7 +14,7 @@ cd src
 
 
 # ৪টি আলাদা প্রজেক্ট (Layers)/Clean Architecture তৈরি 
-dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Models/Business Rules থাকবে।
+dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Business Rules থাকবে।
 dotnet new classlib -n OnlineBanking.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে।
 dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে Database connection এবং বাইরের সার্ভিসের কানেকশন(EF Core, PDF, Auth) থাকবে।
 dotnet new mvc -n OnlineBanking.Web                    # এখান Controllers / Views থাকবে। 
