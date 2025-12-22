@@ -10,6 +10,14 @@
 👉 এখানে কোনো database, EF Core বা implementation থাকে না
 */
 
+4.1 Rules config model  = CurrencySymbol,timezone, transfer limit
+4.2 Result wrapper (success/fail)
+4.3 Contracts
+    -IAuthService   //RegisterAsync & ValidateLoginAsync
+    -IBankingService  // // নির্দিষ্ট customer এর বর্তমান balance/deposit/transfer দেখায়
+    -IStatementPdfService
+    -IAdminService
+
 
 // =====================================================
 // 4.1 Rules config model
