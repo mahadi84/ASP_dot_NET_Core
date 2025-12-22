@@ -3,6 +3,13 @@
 
 # 5) INFRASTRUCTURE Layer (EF Core + Services)
 
+## 5.1 DbContext
+## 5.2 Password hashing
+## 5.3 Audit writer helper
+## 5.4 AuthService (Register/Login + lockout + audit)
+## 5.5 BankingService (min balance + daily limit + audit)
+## 5.6 PDF Statement Service (DB name + Dhaka time + currency)
+## 5.7 AdminService (User management + audit read)
 
 
 
