@@ -6,6 +6,8 @@
 
 কেন এই আর্কিটেকচার ব্যবহার করছি?
 
+Domain Layer: এখানে থাকে চিরন্তন বিজনেস লজিক (Core Logic)। যেমন: "টাকা ট্রান্সফার করলে ব্যালেন্স কমবে"। এটি কখনো বদলায় না।
+
 নিশ্চিত করে যে- আপনার "বিজনেস লজিক" যেন ডাটাবেজ বা ফ্রেমওয়ার্কের ওপর নির্ভরশীল না হয় (Dependency Inversion)।
 ভবিষ্যতে যদি আপনার ব্যাংক বলে, 
 "আমরা SQL Server বদলে Oracle ব্যবহার করব", তাহলে আপনাকে শুধু Infrastructure লেয়ারটি বদলাতে হবে। 
@@ -29,7 +31,7 @@
 * Core financial apps
 
 ### STRUCTURE(Layers):
-dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Business Rules থাকবে।
+dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Business Rules থাকবে। 
 dotnet new classlib -n OnlineBanking.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে।
 dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে Database connection এবং বাইরের সার্ভিসের কানেকশন(EF Core, PDF, Auth) থাকবে।
 dotnet new mvc -n OnlineBanking.Web                    # এখান Controllers / Views থাকবে। 
