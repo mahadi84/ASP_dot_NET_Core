@@ -1,6 +1,12 @@
 
 # 3) DOMAIN Layer (Entities + Business meaning)
 
+         ## 3.1 Customer       - (User) entity
+         ## 3.2 Account        - (concurrency control(Race Condition and Double Spending)
+         ## 3.3 Transaction    -(deposit/withdraw/transferIn/transferOut)
+         ## 3.4 AuditLog       - who,what,when(tracing)
+
+
 
 -----------------------------------------------
         ## 3.1 Customer (User) entity
