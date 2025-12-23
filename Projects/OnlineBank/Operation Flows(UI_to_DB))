@@ -7,27 +7,32 @@
 নিচের ছবিটি লক্ষ্য করলে দেখবেন ডাটা কীভাবে বাহিরের লেয়ার (Web) থেকে একদম ভেতরের লেয়ার (Domain) পর্যন্ত প্রবাহিত হয়:
 
 ১. Web Layer (The Entry Point)
-User Action: ইউজার ব্রাউজারে নাম, ইমেল, শহর এবং পাসওয়ার্ড লিখে 'Register' বাটনে ক্লিক করেন।
-ViewModel Mapping: ব্রাউজার থেকে আসা ডাটা RegisterVm ক্লাসে বাইন্ড হয় এবং Data Annotations (যেমন [Required], [EmailAddress]) দিয়ে প্রাথমিক ভ্যালিডেশন চেক করা হয়।
-Controller Action: AccountController.cs এর Register(vm) মেথডটি কল হয়। এটি ইউজারের IP Address এবং User Agent সংগ্রহ করে।
-Service Call: কন্ট্রোলার সরাসরি ডাটাবেসে যায় না; এটি IAuthService.RegisterAsync(...) মেথডটি কল করে ডাটা পাঠিয়ে দেয়।
-
-ইউজার যখন রেজিস্ট্রেশন ফর্মে ডাটা সাবমিট করেন, তখন সেটি OnlineBanking.Web লেয়ারে আসে।
-    Controller: AccountController ডাটা গ্রহণ করে।
-    ViewModel: ডাটাগুলো RegisterVm অবজেক্টে জমা হয় (এখানেই চেক করা হয় সব ঘর পূরণ হয়েছে কিনা)।
+      User Action: ইউজার ব্রাউজারে নাম, ইমেল, শহর এবং পাসওয়ার্ড লিখে 'Register' বাটনে ক্লিক করেন।
+      Controller Action: AccountController.cs এর Register(vm) মেথডটি কল হয়। এটি ইউজারের IP Address এবং User Agent সংগ্রহ করে।
+      ViewModel Mapping: ব্রাউজার থেকে আসা ডাটা RegisterVm ক্লাসে বাইন্ড হয় এবং Data Annotations (যেমন [Required], [EmailAddress]) দিয়ে প্রাথমিক ভ্যালিডেশন চেক করা হয়।
+      Service Call: কন্ট্রোলার জানে না এই সার্ভিসটি(IAuthService.RegisterAsync(...) মেথডটি) কীভাবে কাজ করে (Abstraction)। 
+      Dependency Injection:  সে শুধু IAuthService ইন্টারফেসকে চেনে।
 
 ২. Application Layer (The Orchestrator)
-কন্ট্রোলার তখন IAuthService কল করে। এই লেয়ারটি মূলত একটি "কন্ট্রাক্ট" বা চুক্তির মতো কাজ করে। এটি বলে দেয় "কী করতে হবে", কিন্তু "কীভাবে করতে হবে" তা এটি জানে না।
+    কন্ট্রোলার তখন IAuthService কল করে। 
+    এই লেয়ারটি মূলত একটি "কন্ট্রাক্ট" বা চুক্তির মতো কাজ করে। 
+    এটি বলে দেয় "কী করতে হবে", কিন্তু "কীভাবে করতে হবে" তা এটি জানে না।
+    Request Handling: কন্ট্রোলারের কলটি ইন্টারফেস হয়ে Infrastructure লেয়ারের AuthService ইমপ্লিমেন্টেশনে পৌঁছায়।
 
 ৩. Infrastructure Layer (The Doer)
 এখানেই আসল কাজ বা লজিকগুলো ঘটে:
-    Password Hashing: পাসওয়ার্ডটি BCrypt দিয়ে হ্যাশ করা হয়।
-    Account Logic: র্যান্ডমলি একটি ৫ ডিজিটের অ্যাকাউন্ট নম্বর জেনারেট করা হয়।
+    Duplicate Check: প্রথমে চেক করে এই ইমেল দিয়ে অন্য কেউ রেজিস্টার করেছে কি না।
+    Account Number Generation: একটি ইউনিক ৫-ডিজিটের অ্যাকাউন্ট নম্বর জেনারেট করে।
+    Security: PasswordHasher ব্যবহার করে ইউজারের প্লেইন পাসওয়ার্ডকে এনক্রিপ্টেড (Hash) করে।    
+    Domain Entity Creation: এখন ইনফ্রাস্ট্রাকচার লেয়ার Domain Layer-এর Customer এবং Account এনটিটির নতুন অবজেক্ট তৈরি করে।
+
     Persistence: AppDbContext এর মাধ্যমে ডাটাবেসে সেভ করার নির্দেশ দেওয়া হয়।
 
 ৪. Domain Layer (The Core)
-
 সবশেষে ডাটাগুলো Customer এবং Account এনটিটি হিসেবে তৈরি হয়। এটি সিস্টেমের সবচেয়ে সুরক্ষিত এবং ভেতরের লেয়ার।
     এখানে কোনো ডাটাবেস বা এইচটিটিপি (HTTP) জ্ঞান থাকে না।
     এটি শুধু ইউজারের তথ্য (Name, Email, Balance) ধারণ করে।
 
+
+
+.
