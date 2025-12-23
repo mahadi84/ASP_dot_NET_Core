@@ -33,7 +33,7 @@ Domain Layer: এখানে থাকে চিরন্তন বিজনে
 ### STRUCTURE(Layers):
 dotnet new classlib -n OnlineBanking.Domain            # এখানে Entities/Business Rules থাকবে। 
 dotnet new classlib -n OnlineBanking.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে। লজিকগুলো যা পরিস্থিতির ওপর নির্ভর করে বদলাতে পারে (Configuration)
-dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে Database connection এবং বাইরের সার্ভিসের কানেকশন(EF Core, PDF, Auth) থাকবে।
+dotnet new classlib -n OnlineBanking.Infrastructure    # এখানে বাইরের সার্ভিসের কানেকশন(Database connection, EF Core, PDF, Auth) থাকবে।
 dotnet new mvc -n OnlineBanking.Web                    # এখান Controllers / Views থাকবে। 
 
 
