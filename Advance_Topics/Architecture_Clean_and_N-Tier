@@ -44,7 +44,12 @@ dotnet new mvc -n OnlineBanking.Web                    # এখান Controller
 ### ১. Domain Layer (The Core/Heart)
  
  বৈশিষ্ট্য:  এটি আপনার অ্যাপ্লিকেশনের হার্ট। এটি সম্পূর্ণ স্বাধীন। এটি অন্য কোনো লেয়ার সম্পর্কে কিছুই জানে না।
- কী থাকে: এখানে থাকে আপনার Entities (যেমন: `Account`, `Customer` 'Concurrency' ক্লাস) এবং মূল বিজনেস রুলস।
+ কী থাকে: এখানে থাকে আপনার Entities  
+      1.1 Customer       - (User) entity
+      1.2 Account        - (concurrency control(Race Condition and Double Spending)
+      1.3 Transaction    -(money deposit/withdraw/transferIn/transferOut)
+      1.4 AuditLog       - who,what,when(tracing)
+      এবং মূল বিজনেস রুলস।
  যেমন: "ব্যালেন্স শূন্যের নিচে যেতে পারবে না"। এটি আপনার অ্যাপের সবচেয়ে গুরুত্বপূর্ণ অংশ।
 
 
