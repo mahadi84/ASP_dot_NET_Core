@@ -2,36 +2,6 @@ Date: 19 December 2025
 Yesterday-Died: Sharif Usman Hadi
 
 
-Create a web application with .NET core mvc version 9
-for banking system 
-that must be
-secure, advance, user-friendly, scalable and Clean Architecture 
-for real-world-use.
-
--What things need to consider before start the project, explain it in details. -in Bangla
-
-Create Models with Relations, Services, Controllers, eye-catchy-bootstrap-5 Viewes 
-with Authentication and Authorization 
-use Reposity pattern
-
-with the following logic:
-
-" create a .NET core mvc web app  for a banking system with the following information:
-Customers can:
--Register with name, email, password and city, after registration customer will get 5 digit account number by which he/she can login
--Deposit and withdraw money
--Get a downloadable pdf mini-statement (last 10 transaction details like: transaction date and time, amount)
-The customer can see his information only,.
-
-01. Create database, tables with join and  model 
-02. Create all Model, Controller, View, Services with DTO and Repository pattern it needs, with form validation, and login authentication and authorization
-03. Create all eye-catching  UI with Bootstrap 5" give me complete codes step by step so that I can copy and paste to run this Also explain the code in Bangla
-
-.
-
-=============================================================================================================================================================
-
-
 
 This project is a secure online banking web application built with ASP.NET Core MVC following Clean Architecture, supporting 
 -customer registration, 
