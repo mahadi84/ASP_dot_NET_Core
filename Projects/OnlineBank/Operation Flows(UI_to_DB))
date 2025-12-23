@@ -8,8 +8,8 @@
 
 ১. Web Layer (The Entry Point)
       User Action: ইউজার ব্রাউজারে নাম, ইমেল, শহর এবং পাসওয়ার্ড লিখে 'Register' বাটনে ক্লিক করেন।
-      Controller Action: AccountController.cs এর Register(vm) মেথডটি কল হয়। এটি ইউজারের IP Address এবং User Agent সংগ্রহ করে।
       ViewModel Mapping: ব্রাউজার থেকে আসা ডাটা RegisterVm ক্লাসে বাইন্ড হয় এবং Data Annotations (যেমন [Required], [EmailAddress]) দিয়ে প্রাথমিক ভ্যালিডেশন চেক করা হয়।
+      Controller Action: AccountController.cs এর Register(vm) মেথডটি কল হয়। এটি ইউজারের IP Address এবং User Agent সংগ্রহ করে।
       Service Call: কন্ট্রোলার জানে না এই সার্ভিসটি(IAuthService.RegisterAsync(...) মেথডটি) কীভাবে কাজ করে (Abstraction)। 
       Dependency Injection:  সে শুধু IAuthService ইন্টারফেসকে চেনে।
 
@@ -44,4 +44,142 @@ Domain         | মূল কাস্টমার এবং অ্যাকা
 ---------------------------------------------------------------------
 
 
-.
+========================================== CODES ==============================================================
+
+Clean Architecture-এর ইনওয়ার্ড (Inward) ডাটা ফ্লো অনুযায়ী প্রতিটি লেয়ারের কোডগুলো সাজিয়ে দেওয়া হলো:
+
+---
+
+### ১. Web Layer (The Entry Point)
+
+এখানে ইউজার ইন্টারফেস থেকে ডাটা রিসিভ করা হয় এবং প্রাথমিক ভ্যালিডেশন শেষে সার্ভিস কল করা হয়।
+
+ViewModel: `RegisterVm.cs`
+
+public sealed class RegisterVm
+{
+    [Required, StringLength(100)]
+    public string Name { get; set; } = "";
+
+    [Required, EmailAddress]
+    public string Email { get; set; } = "";
+
+    [Required]
+    public string Password { get; set; } = "";
+    
+    public string City { get; set; } = "";
+}
+
+
+
+Controller: `AccountController.cs`
+
+public class AccountController : Controller
+{
+    private readonly IAuthService _auth; // Dependency Injection (Abstraction)
+
+    public AccountController(IAuthService auth) => _auth = auth;
+
+    [HttpPost]
+    public async Task<IActionResult> Register(RegisterVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+
+        // Service Call: কন্ট্রোলার জানে না এটি কীভাবে কাজ করে
+        var res = await _auth.RegisterAsync(vm.Name, vm.Email, vm.Password, vm.City, ip, ua);
+
+        if (!res.Success) return View(vm);
+        return RedirectToAction("RegisterSuccess");
+    }
+}
+
+```
+
+---
+
+### ২. Application Layer (The Orchestrator)
+
+এটি শুধু একটি কন্ট্রাক্ট বা ইন্টারফেস প্রদান করে, যা বলে দেয় "কী করতে হবে"।
+
+Interface: `IAuthService.cs`
+
+```csharp
+public interface IAuthService
+{
+    // এটি একটি চুক্তি (Contract)
+    Task<Result<string>> RegisterAsync(string name, string email, string password, string city, string ip, string userAgent);
+}
+
+
+---
+
+### ৩. Infrastructure Layer (The Doer)
+
+এখানেই আসল লজিক, সিকিউরিটি এবং ডাটাবেস সেভ করার কাজগুলো সম্পন্ন হয়।
+
+Service Implementation: `AuthService.cs`
+
+```csharp
+public class AuthService : IAuthService
+{
+    private readonly AppDbContext _db;
+
+    public async Task<Result<string>> RegisterAsync(...)
+    {
+        // 1. Duplicate Check
+        if (await _db.Customers.AnyAsync(x => x.Email == email)) 
+            return Result<string>.Fail("Email already exists.");
+
+        // 2. Account Number Generation
+        string acc = Random.Shared.Next(10000, 100000).ToString();
+
+        // 3. Security (Password Hashing)
+        var hash = PasswordHasher.Hash(password);
+
+        // 4. Domain Entity Creation: ইনফ্রাস্ট্রাকচার লেয়ার ডোমেইন অবজেক্ট তৈরি করছে
+        var customer = new Customer 
+        { 
+            Name = name, 
+            Email = email, 
+            AccountNumber = acc, 
+            PasswordHash = hash,
+            Account = new Account { Balance = 0m } 
+        };
+
+        // 5. Persistence: ডাটাবেসে সেভ করা
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+
+        return Result<string>.Ok(acc);
+    }
+}
+
+
+---
+
+### ৪. Domain Layer (The Core)
+
+এটি সিস্টেমের সবচেয়ে ভেতরের অংশ, যেখানে শুধু ডাটার গঠন এবং মূল বিজনেস এনটিটি থাকে।
+
+Entity: `Customer.cs`
+
+```csharp
+namespace OnlineBanking.Domain.Entities;
+
+public sealed class Customer
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string AccountNumber { get; set; } = ""; // ৫-ডিজিটের নম্বর
+    public string PasswordHash { get; set; } = "";
+    
+    // Domain knows nothing about DB or HTTP
+    public Account Account { get; set; } = new(); 
+}
+
+```
+
