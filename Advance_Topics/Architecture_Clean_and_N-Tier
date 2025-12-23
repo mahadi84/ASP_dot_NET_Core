@@ -42,35 +42,66 @@ dotnet new mvc -n OnlineBanking.Web                    # এখান Controller
 
 
 ### ১. Domain Layer (The Core)
- এটি আপনার অ্যাপ্লিকেশনের হার্ট। 
+ 
+ বৈশিষ্ট্য:  এটি আপনার অ্যাপ্লিকেশনের হার্ট। এটি সম্পূর্ণ স্বাধীন। এটি অন্য কোনো লেয়ার সম্পর্কে কিছুই জানে না।
  কী থাকে: এখানে থাকে আপনার Entities (যেমন: `Account`, `Customer` 'Concurrency' ক্লাস) এবং মূল বিজনেস রুলস।
- বৈশিষ্ট্য: এটি সম্পূর্ণ স্বাধীন। এটি অন্য কোনো লেয়ার সম্পর্কে কিছুই জানে না।
+ যেমন: "ব্যালেন্স শূন্যের নিচে যেতে পারবে না"। এটি আপনার অ্যাপের সবচেয়ে গুরুত্বপূর্ণ অংশ।
 
-কেন: এখানে আপনার ব্যাংকিংয়ের মূল নিয়মগুলো থাকবে। 
-যেমন: "ব্যালেন্স শূন্যের নিচে যেতে পারবে না"। এটি আপনার অ্যাপের সবচেয়ে গুরুত্বপূর্ণ অংশ।
 
 ### ২. Application Layer (The Brain)
-এই লেয়ারটি আপনার অ্যাপের বিভিন্ন কাজ পরিচালনা করে। এটি ডোমেইন লেয়ারের সাথে কথা বলে।
 
-কী থাকে: `TransferMoneyService`, `WithdrawService`, `RegisterCustomerCommand`।
-Application Layer: এখানে থাকে সেই লজিকগুলো যা পরিস্থিতির ওপর নির্ভর করে বদলাতে পারে (Configuration)।
-    -আজ ব্যাংকের নিয়ম হলো MinimumBalance = 500 টাকা।
-    -কাল ব্যাংক অফার দিয়ে বলতে পারে MinimumBalance = 0 টাকা। যেহেতু এই ভ্যালুগুলো appsettings.json ফাইল থেকে আসে এবং ঘন ঘন পরিবর্তন হতে পারে, তাই এগুলোকে ডোমেইনের ভেতরে হার্ডকোড করা হয় না।
-    -CurrencySymbol: এটি ডোমেইনের হিসাবের জন্য লাগে না, এটি লাগে PDF Statement তৈরির সময় (Application/UI Task)।
-    -TimeZoneId: এটি ডাটাবেসে সেভ করার জন্য লাগে না, এটি লাগে ইউজারকে তার লোকাল টাইমে ট্রানজ্যাকশন দেখানোর জন্য।
-    — "যদি ৩ বার ভুল পাসওয়ার্ড দেয় তবে লক করো" অথবা "টাকা ট্রান্সফার করার আগে ব্যালেন্স চেক করো"—এই সব লজিক এখানে থাকবে। এটি ইন্টারফেস (Interfaces) ব্যবহার করে বাইরের লেয়ারের সাথে যোগাযোগ করে।
+নির্ভরশীলতা: এই লেয়ারটি অ্যাপের বিভিন্ন কাজ পরিচালনা করে। এটি ডোমেইন লেয়ারের সাথে কথা বলে।  এটি শুধু Domain Layer কে চেনে।
+কাজ: এটি ডোমেইন অবজেক্টগুলোকে ব্যবহার করে নির্দিষ্ট কাজ সম্পন্ন করে। ইন্টারফেস (Interfaces) ব্যবহার করে বাইরের লেয়ারের সাথে যোগাযোগ করে।
 
-কাজ: এটি ডোমেইন অবজেক্টগুলোকে ব্যবহার করে নির্দিষ্ট কাজ সম্পন্ন করে।
-নির্ভরশীলতা: এটি শুধু Domain Layer কে চেনে।
+কী থাকে: 
+      এখানে থাকে সেই লজিকগুলো যা পরিস্থিতির ওপর নির্ভর করে বদলাতে পারে (Configuration)। 
+      যেমন: CurrencySymbol, Timezone, Transfer limit, MinimumBalance  
+            যদি ৩ বার ভুল পাসওয়ার্ড দেয় তবে লক করো
+            অথবা "টাকা ট্রান্সফার করার আগে ব্যালেন্স চেক করো"—এই সব লজিক এখানে থাকবে। 
+      2.1 Rules config model  = 
+      CurrencySymbol,timezone, transfer limit, MinimumBalance // যেহেতু এই ভ্যালুগুলো appsettings.json ফাইল থেকে আসে এবং ঘন ঘন পরিবর্তন হতে পারে, তাই এগুলোকে ডোমেইনের ভেতরে হার্ডকোড করা হয় না।
+      2.2 Result wrapper (success/fail)
+      2.3 Contracts
+          > IAuthService: -RegisterAsync()  -ValidateLoginAsync()    
+           > IBankingService  -GetBalanceAsync() -WithdrawAsync() -TransferAsync() -GetProfileAsync() -GetLastTransactionsAsync()    
+           > IStatementPdfService  -BuildMiniStatementPdf()    
+          > IAdminService -GetCustomersAsync() -GetCustomerByAccountAsync() -LockAsync() -UnlockAsync() -ResetPasswordAsync()  -GetLatestAuditAsync()
+      
+
 
 ### ৩. Infrastructure Layer (The External Tools)
-এখানে অ্যাপ্লিকেশনের বাইরের সব প্রযুক্তি থাকে।
- কী থাকে:  ডাটাবেস কানেকশন (EF Core), Auth, ইমেইল পাঠানোর সার্ভিস, SMS গেটওয়ে।
+
+ কী থাকে: এখানে অ্যাপ্লিকেশনের বাইরের সব প্রযুক্তি থাকে। যেমন: ডাটাবেস কানেকশন (EF Core), Auth, ইমেইল পাঠানোর সার্ভিস, SMS গেটওয়ে।
+             3.1 DbContext
+             3.2 Password hashing
+             3.3 Audit writer helper
+             3.4 AuthService (Register/Login + lockout + audit)
+             3.5 BankingService (min balance + daily limit + audit)
+             3.6 PDF Statement Service (DB name + Dhaka time + currency)
+             3.7 AdminService (User management + audit read)
+
  কেন: ব্যাংকিং অ্যাপে ডাটাবেস পরিবর্তন হতে পারে (যেমন SQL থেকে Oracle)। এই লেয়ারটি এমনভাবে তৈরি যাতে আপনি আপনার মেইন কোড পরিবর্তন না করেই ডাটাবেস বা সার্ভিস বদলে ফেলতে পারেন।
+
 
 ### ৪. Presentation / UI Layer (The Face)
 এটি ব্যবহারকারীর সাথে যোগাযোগ করার মাধ্যম।
- কী থাকে: ASP.NET Core Web API, Controllers, বা Blazor Pages।
+ কী থাকে: ASP.NET Core Web API, Models, Controllers, বা Blazor Pages।
+            
+            MODELs: 
+                  ViewModel কী?
+                  - User থেকে আসা input ধরে
+                  - DataAnnotations দিয়ে validation করে
+                  - Controller এ ModelState.IsValid এর মাধ্যমে check হয়
+                4.1: RegisterVm, 
+                4.2: LoginVm, 
+                4.3: AmountVm, 
+                4.4: TransferVm, 
+                4.5: AdminResetPasswordVm
+           CONTROLLERs:
+               - AccountController: Register/Login/Logout + Cookie Sign-in (Claims)
+               - BankingController: Dashboard + Deposit/Withdraw/Transfer + PDF download
+               - AdminController: AdminOnly policy enforced admin panel
+
  কেন: ইউজার যখন "Withdraw" বাটনে ক্লিক করে, এই লেয়ারটি সেই রিকোয়েস্ট গ্রহণ করে Application Layer-এ পাঠিয়ে দেয়।
 
 
