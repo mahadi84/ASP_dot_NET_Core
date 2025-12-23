@@ -7,6 +7,11 @@
 নিচের ছবিটি লক্ষ্য করলে দেখবেন ডাটা কীভাবে বাহিরের লেয়ার (Web) থেকে একদম ভেতরের লেয়ার (Domain) পর্যন্ত প্রবাহিত হয়:
 
 ১. Web Layer (The Entry Point)
+User Action: ইউজার ব্রাউজারে নাম, ইমেল, শহর এবং পাসওয়ার্ড লিখে 'Register' বাটনে ক্লিক করেন।
+ViewModel Mapping: ব্রাউজার থেকে আসা ডাটা RegisterVm ক্লাসে বাইন্ড হয় এবং Data Annotations (যেমন [Required], [EmailAddress]) দিয়ে প্রাথমিক ভ্যালিডেশন চেক করা হয়।
+Controller Action: AccountController.cs এর Register(vm) মেথডটি কল হয়। এটি ইউজারের IP Address এবং User Agent সংগ্রহ করে।
+Service Call: কন্ট্রোলার সরাসরি ডাটাবেসে যায় না; এটি IAuthService.RegisterAsync(...) মেথডটি কল করে ডাটা পাঠিয়ে দেয়।
+
 ইউজার যখন রেজিস্ট্রেশন ফর্মে ডাটা সাবমিট করেন, তখন সেটি OnlineBanking.Web লেয়ারে আসে।
     Controller: AccountController ডাটা গ্রহণ করে।
     ViewModel: ডাটাগুলো RegisterVm অবজেক্টে জমা হয় (এখানেই চেক করা হয় সব ঘর পূরণ হয়েছে কিনা)।
