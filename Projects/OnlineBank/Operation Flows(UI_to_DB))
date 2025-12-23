@@ -16,7 +16,7 @@
 ২. Application Layer (The Orchestrator)
     কন্ট্রোলার তখন IAuthService কল করে। 
     এই লেয়ারটি মূলত একটি "কন্ট্রাক্ট" বা চুক্তির মতো কাজ করে। 
-    এটি বলে দেয় "কী করতে হবে", কিন্তু "কীভাবে করতে হবে" তা এটি জানে না।
+    এটি বলে দেয় "কী করতে হবে", কিন্তু "কীভাবে করতে হবে(Infrastructure Layer)" তা এটি জানে না।
     Request Handling: কন্ট্রোলারের কলটি ইন্টারফেস হয়ে Infrastructure লেয়ারের AuthService ইমপ্লিমেন্টেশনে পৌঁছায়।
 
 ৩. Infrastructure Layer (The Doer)
