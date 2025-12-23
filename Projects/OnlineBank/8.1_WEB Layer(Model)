@@ -10,6 +10,7 @@ ViewModel কী?
 👉 Domain / Entity না, purely UI concern
 */
 
+Models: RegisterVm, LoginVm, AmountVm, TransferVm, AdminResetPasswordVm
 
 // =====================================================
 // 7.1 RegisterVm
