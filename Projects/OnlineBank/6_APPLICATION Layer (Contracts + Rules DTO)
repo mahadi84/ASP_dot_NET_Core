@@ -71,9 +71,9 @@ public sealed class BankingRulesOptions
 }
 
 
-// =====================================================
-// 4.2 Result wrapper (success/fail)
-// =====================================================
+// ===========================================================================================
+      // 4.2 Result wrapper (success/fail result after method called/processed)
+// ===========================================================================================
 
 /*
 ফাইল লোকেশন:
@@ -82,8 +82,8 @@ src/OnlineBanking.Application/Common/Result.cs
 
 namespace OnlineBanking.Application.Common;
 
-// সাধারণ success / failure result
-public sealed record Result(bool Success, string Message)  // (Non-generic): এটি শুধু তখনই ব্যবহৃত হয় যখন আপনার কোনো ডাটা ফেরত দেওয়ার প্রয়োজন নেই (যেমন: ডিলিট অপারেশন বা পাসওয়ার্ড চেঞ্জ)।
+// সাধারণ success / failure result //এটি শুধু তখনই ব্যবহৃত হয় যখন আপনার কোনো ডাটা ফেরত দেওয়ার প্রয়োজন নেই (যেমন: ডিলিট অপারেশন বা পাসওয়ার্ড চেঞ্জ)।
+public sealed record Result(bool Success, string Message)  
 {
     // অপারেশন সফল হলে ব্যবহার করা হয়
     public static Result Ok(string msg = "OK")
@@ -94,8 +94,8 @@ public sealed record Result(bool Success, string Message)  // (Non-generic): এ
         => new(false, msg);
 }
 
-// data সহ result (generic version)
-public sealed record Result<T>(bool Success, string Message, T? Data)  // Result<T> (Generic): এটি তখনই ব্যবহার করা হয় যখন কাজ শেষে কোনো ডাটা (যেমন: User Object, List, বা Amount) ফেরত দিতে হয়।
+// data সহ result (generic version) এটি তখনই ব্যবহার করা হয় যখন কাজ শেষে কোনো ডাটা (যেমন: User Object, List, বা Amount) ফেরত দিতে হয়।
+public sealed record Result<T>(bool Success, string Message, T? Data) 
 { 
     // সফল হলে data সহ result ফেরত দেয়
     public static Result<T> Ok(T data, string msg = "OK")
