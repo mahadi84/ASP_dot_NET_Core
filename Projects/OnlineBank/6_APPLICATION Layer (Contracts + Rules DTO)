@@ -45,6 +45,18 @@
 // =====================================================
 
 /*
+এটি মূলত একটি Options Pattern বা Configuration Class। ASP.NET Core-এ 
+যখন আমরা appsettings.json ফাইল থেকে কিছু কনফিগারেশন ভ্যালু সরাসরি সি-শার্প কোডে (Object-oriented উপায়ে) ব্যবহার করতে চাই, 
+তখন এই ধরনের ক্লাস তৈরি করা হয়।
+আপনি যদি কোডের ভেতর বারবার "MinimumBalance" বা "CurrencySymbol" স্ট্রিং লিখে ডেটা কল করেন, তবে বানানে ভুল হওয়ার সম্ভাবনা থাকে। 
+কিন্তু এই ক্লাসটি থাকলে আপনি options.MinimumBalance লিখে সহজেই কাজ করতে পারবেন, যেখানে ভিজ্যুয়াল স্টুডিও আপনাকে অটো-সাজেশন দেবে।
+Dependency Injection (DI) সাপোর্ট
+ASP.NET Core-এ IOptions<BankingRulesOptions> ব্যবহার করে এই ক্লাসটিকে যেকোনো কন্ট্রোলার বা সার্ভিসে ইনজেক্ট করা যায়। 
+এতে কোড অনেক ক্লিন এবং প্রফেশনাল হয়।
+*/
+
+
+/*
 ফাইল লোকেশন:
 src/OnlineBanking.Application/Options/BankingRulesOptions.cs
 */
