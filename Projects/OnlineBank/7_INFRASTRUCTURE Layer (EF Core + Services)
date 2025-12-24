@@ -88,7 +88,7 @@ public sealed class AppDbContext : DbContext
             // PasswordHash required (plain password কখনো রাখা হবে না)
             e.Property(x => x.PasswordHash).IsRequired();
 
-            // Email unique index -> duplicate email ঢুকবে না
+            // Email unique index -> duplicate email ঢুকবে না | অ্যাপ্লিকেশনের কোডে (C#) কোনো কারণে চেক করতে ভুলে গেলেও, ডাটাবেস নিজে থেকেই ডুপ্লিকেট ডেটা সেভ হতে বাধা দেবে।
             e.HasIndex(x => x.Email).IsUnique();
 
             // AccountNumber unique index -> duplicate account number ঢুকবে না
