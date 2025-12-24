@@ -257,7 +257,11 @@ Error message auto দেখায়
 
 
 Q_03:
+[HttpGet]
+public IActionResult Login() => View(new LoginVm()); // empty login model
+new LoginVm() null model send, why important?
 
+new LoginVm() ব্যবহার করা হয় যাতে Login View সবসময় একটি valid model পায়। এতে null issue এড়ানো যায়, asp-for ঠিকভাবে কাজ করে এবং GET ও POST flow এর মধ্যে consistency থাকে।
 
 
 
