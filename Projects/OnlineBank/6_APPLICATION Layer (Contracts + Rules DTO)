@@ -128,9 +128,7 @@ src/OnlineBanking.Application/Contracts/IAuthService.cs
 
 public interface IAuthService
 {
-    // নতুন customer register করে
-    // name, email, password, city থেকে account তৈরি হয়
-    // ip ও userAgent audit log এর জন্য ব্যবহার হয়
+    //এটি বলে দিচ্ছে যে আপনার সিস্টেমে যদি কেউ রেজিস্ট্রেশন করতে চায়, তবে তাকে অবশ্যই এই নিয়মগুলো মানতে হবে। // ip ও userAgent audit log এর জন্য ব্যবহার হয়
     Task<Result<string>> RegisterAsync(
         string name,
         string email,
@@ -143,7 +141,8 @@ public interface IAuthService
     // login validate করে
     // accountNumber ও password মিললে customerId ফেরত দেয়
     // isAdmin দিয়ে role নির্ধারণ করা যায়
-    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync(
+    //লগইন ভ্যালিডেশনের একটি Asynchronous Method Signature। এটি চেক করে যে একজন ইউজারের অ্যাকাউন্ট নম্বর এবং পাসওয়ার্ড সঠিক কি না।
+    Task<Result<(Guid CustomerId, bool IsAdmin)>> ValidateLoginAsync( 
         string accountNumber,
         string password,
         string ip,
