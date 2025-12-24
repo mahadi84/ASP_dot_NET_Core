@@ -16,6 +16,24 @@
 
 ## 5.1 DbContext
 
+/*
+-AppDbContext হলো আপনার পুরো অ্যাপ্লিকেশনের "ডাটাবেস ম্যানেজার"।
+এটি Entity Framework Core (EF Core) এর একটি অংশ 
+যা আপনার সি-শার্প কোড এবং ডাটাবেসের মধ্যে একটি সেতু (Bridge) হিসেবে কাজ করে।
+
+ক) কোড দিয়ে ডাটাবেস কন্ট্রোল করা (ORM)
+আপনাকে কষ্ট করে SQL কুয়েরি (যেমন: SELECT * FROM Customers) লিখতে হবে না। 
+আপনি শুধু _context.Customers.ToList() লিখলেই EF Core নিজে থেকে SQL তৈরি করে ডাটাবেস থেকে ডেটা নিয়ে আসবে। 
+একে বলা হয় Object-Relational Mapping (ORM)।
+
+খ) ডাটাবেস টেবিল তৈরি করা (Migrations)
+
+গ) ট্রানজ্যাকশন ম্যানেজমেন্ট (Unit of Work)
+একসাথে অনেকগুলো কাজ (যেমন: একজনের অ্যাকাউন্ট থেকে টাকা কাটা এবং অন্যজনের অ্যাকাউন্টে যোগ করা) যদি আপনি ডাটাবেসে পাঠাতে চান, 
+তবে AppDbContext নিশ্চিত করে যে হয় সব কাজ সফল হবে, অথবা কিছুই হবে না (যাতে ডেটা ভুল না হয়)।
+
+*/
+
 `src/OnlineBanking.Infrastructure/Persistence/AppDbContext.cs`
 
 ```csharp
