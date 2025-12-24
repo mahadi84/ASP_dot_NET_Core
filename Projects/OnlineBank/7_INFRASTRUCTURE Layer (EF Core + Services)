@@ -213,7 +213,7 @@ public sealed class AuditWriter
     // DbContext dependency -> audit log DB তে write করবে
     private readonly AppDbContext _db;
 
-    // constructor injection
+    // constructor injection;  it is called Expression-Bodied Member looks simple when single injection
     public AuditWriter(AppDbContext db) => _db = db;
 
     // যে কোনো action ঘটলে audit log লিখে
