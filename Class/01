@@ -35,6 +35,15 @@ Business Logic-এর অংশ হয়:
 		-Domain Model → আসল business rules
 
 
+🧠 Analogy (সহজ উপমা)
+Customer class = ফাঁকা ফর্ম 📄
+new Customer = নতুন ফর্ম নেওয়া
+Name, Email fill করা = ফর্মে লেখা
+Database save = ফাইল ক্যাবিনেটে রেখে দেওয়া 📁
+
+
+
+
 
 5.Create a Controller(Why should I extends main controller?):[HttpGet] vs [HttpPost]
   Return type: 
