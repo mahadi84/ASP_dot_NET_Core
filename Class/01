@@ -33,6 +33,12 @@ using System.ComponentModel.DataAnnotations;
 CONTROLLER: 
 if (!ModelState.IsValid) { return View(model); }
 
+VIEW:
+ Name:<input type="type" asp-for="name" />
+
+
+
+
 Brower-Side-Validaition:
 Model exist but  [Required] না থাকলেও validation হয় কারণ সেটা browser/HTML validation, ASP.NET Core model validation নয়।
 
