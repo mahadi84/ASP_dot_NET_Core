@@ -65,7 +65,7 @@ VIEW:
 OR
  <div asp-validation-summary="All" class="text-danger"></div>
 OR
- <div asp-validation-for="City" class="text-danger"></div>
+<span asp-validation-for="Email" class="text-danger"></span>
 
 
 
