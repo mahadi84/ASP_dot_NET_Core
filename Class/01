@@ -62,6 +62,10 @@ if (!ModelState.IsValid) { return View(model); }
 
 VIEW:
  Name:<input type="type" asp-for="name" />
+OR
+ <div asp-validation-summary="All" class="text-danger"></div>
+OR
+ <div asp-validation-for="City" class="text-danger"></div>
 
 
 
