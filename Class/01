@@ -6,7 +6,34 @@ What, How & Why?!:
 2. IDE: Visual Studio 2012 or latest community edition-Intigrated Development Environment(Code-Run-Debug)
 
 3. Command to install project
-4. Folder Structures(MVC)
+
+
+4. Folder Structures(MVC) and Request process DIAGRAM
+
+		User
+		 ↓
+		View (Form)
+		 ↓
+		Controller
+		 ↓
+		Model
+		 ↓
+		Database
+
+
+Model কী?
+Model হলো অ্যাপ্লিকেশনের সেই অংশ যা
+👉 ডেটা ধারণ করে
+👉 ডেটার নিয়ম (validation) ধরে রাখে
+👉 Business logic-এর ভিত্তি হিসেবে কাজ করে
+
+সহজভাবে: Model = Data + Rules
+
+Business Logic-এর অংশ হয়:
+	Clean Architecture অনুযায়ী,
+		-ViewModel → input/output
+		-Domain Model → আসল business rules
+
 
 
 5.Create a Controller(Why should I extends main controller?):[HttpGet] vs [HttpPost]
