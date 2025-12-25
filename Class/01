@@ -1,0 +1,38 @@
+
+CLASS_01:
+
+What, How & Why: 
+1. SDK with version(LTS) 9/10 -Software Development Kit( ASP.NET Core Framwork,   .NET Command Line Interface (CLI))
+2. IDE: Visual Studio 2012 or latest community edition-Intigrated Development Environment(Code-Run-Debug)
+
+3. Command to install project
+4. Folder Structures(MVC)
+
+5.Create a Controller(Why should I extends main controller?):[HttpGet] vs [HttpPost]
+
+6.Create a Form and data submit and show data in the html page with TempData 
+without creating any model.
+
+<form asp-controller="test" asp-action="indexShow" method="post">
+ Name:<input type="type" name="name" />
+ Email:<input type="type" name="email" />
+    <input type="submit" value="Submit" />
+</form>
+
+  @if (TempData["name"] != null){ <p>Your Name is: @TempData["name"]</p>}
+
+
+
+7. Create a model and show some validation
+	
+For Server-Side-Validation:
+MODEL:
+using System.ComponentModel.DataAnnotations;
+[Required]
+
+CONTROLLER: 
+if (!ModelState.IsValid) { return View(model); }
+
+Brower-Side-Validaition:
+Model exist but  [Required] না থাকলেও validation হয় কারণ সেটা browser/HTML validation, ASP.NET Core model validation নয়।
+
