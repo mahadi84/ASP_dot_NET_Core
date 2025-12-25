@@ -8,7 +8,15 @@ What, How & Why?!:
 3. Command to install project
 4. Folder Structures(MVC)
 
+
 5.Create a Controller(Why should I extends main controller?):[HttpGet] vs [HttpPost]
+  Return type: 
+	IActionResult → কী দেখাবে তা return করবে
+					-View
+					-Redirect
+					-Json
+					-Status code
+
 
 6.Create a Form and data submit and show data in the html page with TempData 
 without creating any model.
@@ -29,6 +37,19 @@ Data Validation: তিনটিই একসাথে ব্যবহার ক
 Client-side → ভালো UX                        -সীমাবদ্ধতা ❌: -JS disable করলে bypass করা যায়   -Security নয়
 Server-side → Security + business rules      -সীমাবদ্ধতা ❌: -Database-level concurrency সমস্যা ধরতে পারে না  -Unique constraint ১০০% গ্যারান্টি দেয় না
 Database → Data integrity (final protection) -সীমাবদ্ধতা ❌: -User-friendly error message দেয় না 
+
+DATA FLOW in DETAILS:
+--
+User form submit করে
+   ↓
+ASP.NET Core data bind করে RegisterVm vm-এ    :Data binding মানে হলো HTML form থেকে আসা ডেটাকে স্বয়ংক্রিয়ভাবে check করে ([Required], [EmailAddress],[StringLength]) C# model-এর property-তে বসিয়ে দেওয়া।
+   ↓                                            Ex: name="Email" → vm.Email = "raju@gmail.com"
+Validation (ModelState)                        : যখন data bind করে, AND নাম না মিলে ❌ তখন vm.fieldValue = null হবে, কারণ নাম মিলেনি → data bind হয়নি এর ফলাফল জমা থাকে: ModelState
+   ↓
+Database কাজ
+   ↓
+ActionResult return
+
 
 	
 For Server-Side-Validation:
