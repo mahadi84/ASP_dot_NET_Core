@@ -24,6 +24,12 @@ without creating any model.
 
 
 7. Create a model and show some validation
+
+Data Validation: তিনটিই একসাথে ব্যবহার করো-
+Client-side → ভালো UX
+Server-side → Security + business rules
+Database → Data integrity (final protection)
+
 	
 For Server-Side-Validation:
 MODEL:
