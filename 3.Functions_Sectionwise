@@ -40,7 +40,8 @@
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ModelState.AddModelError()  কী?
-ModelState.AddModelError() হলো ASP.NET Core-এর built-in method যা controller থেকে manual validation error যোগ করার জন্য ব্যবহার হয়।
+-ASP.NET Core-এর built-in method যা controller থেকে manual validation error যোগ করার জন্য ব্যবহার হয়।
+-Used to show "global error message"
 
 এটি কী করে? (সহজ ভাষায়)
 ModelState.AddModelError() ব্যবহার করে তুমি ম্যানুয়ালি validation error যোগ করতে পারো—যে error গুলো DataAnnotations দিয়ে ধরা যায় না।
