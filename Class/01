@@ -26,9 +26,9 @@ without creating any model.
 7. Create a model and show some validation
 
 Data Validation: তিনটিই একসাথে ব্যবহার করো-
-Client-side → ভালো UX
-Server-side → Security + business rules
-Database → Data integrity (final protection)
+Client-side → ভালো UX                        -সীমাবদ্ধতা ❌: -JS disable করলে bypass করা যায়   -Security নয়
+Server-side → Security + business rules      -সীমাবদ্ধতা ❌: -Database-level concurrency সমস্যা ধরতে পারে না  -Unique constraint ১০০% গ্যারান্টি দেয় না
+Database → Data integrity (final protection) -সীমাবদ্ধতা ❌: -User-friendly error message দেয় না 
 
 	
 For Server-Side-Validation:
