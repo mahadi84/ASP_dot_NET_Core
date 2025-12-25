@@ -3,22 +3,37 @@ Date: 17 Nov 2025
 
 💻 Prerequisites and Installation
 
+## .NET SDK ইনস্টল করা
+.NET Software Development Kit (SDK) হলো .NET ডেভেলপমেন্টের **সবচেয়ে গুরুত্বপূর্ণ অংশ**।
+এতে .NET অ্যাপ্লিকেশন তৈরি ও চালানোর জন্য প্রয়োজনীয় **সবকিছু** থাকে, যেমন:
+  * ASP.NET Core ফ্রেমওয়ার্ক
+  * .NET Command Line Interface (CLI)
 
-## Install the .NET SDK:
-The .NET Software Development Kit (SDK) is the core component. 
-It contains everything required to build and run .NET applications, including the ASP.NET Core framework and the .NET Command Line Interface (CLI).
+Microsoft-এর অফিসিয়াল **.NET ওয়েবসাইট** থেকে সর্বশেষ
+**Long Term Support (LTS)** অথবা **Standard Term Support (STS)** ভার্সনের .NET SDK ডাউনলোড করতে হবে।
 
-Download the latest Long Term Support (LTS) or Standard Term Support (STS) version of the .NET SDK from the official Microsoft .NET website. 
-Installing the SDK automatically installs the necessary runtimes and the ASP.NET Core components.
+SDK ইনস্টল করলে স্বয়ংক্রিয়ভাবে প্রয়োজনীয়:
+  - .NET Runtime
+  - ASP.NET Core কম্পোনেন্ট ইনস্টল হয়ে যায়।
 
-## Choose and Install an IDE(Visual Studio 2022 Community edition):
-IDE stands for Integrated Development Environment 💻.
-Visual Studio (Recommended for Windows): 
-Download and install the latest version of Visual Studio (e.g., Visual Studio 2022 Community edition is free for individuals). 
-During installation, ensure you select the "ASP.NET and web development" workload to get all the templates and tools for MVC development.
+---
 
+## একটি IDE নির্বাচন ও ইনস্টল করা (Visual Studio 2022 Community Edition)
 
+IDE বলতে বোঝায় Integrated Development Environment 💻।
+এটি এমন একটি সফটওয়্যার যেখানে কোড লেখা, রান করা ও ডিবাগ করা যায়।
 
+### Visual Studio (Windows-এর জন্য সবচেয়ে ভালো অপশন):
+   সর্বশেষ **Visual Studio** ডাউনলোড ও ইনস্টল করতে হবে
+   উদাহরণ: **Visual Studio 2022 Community Edition**, যা ব্যক্তিগত ব্যবহারকারীদের জন্য **ফ্রি**
+
+ইনস্টল করার সময় অবশ্যই
+**“ASP.NET and web development”** workload নির্বাচন করতে হবে।
+
+এতে তুমি পাবে:
+  - MVC প্রজেক্ট টেমপ্লেট
+  - প্রয়োজনীয় ডেভেলপমেন্ট টুল
+  - ASP.NET Core ওয়েব অ্যাপ তৈরির সম্পূর্ণ সাপোর্ট
 
 
 
