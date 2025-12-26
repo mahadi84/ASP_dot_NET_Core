@@ -8,6 +8,15 @@ public sealed record Result<T>(bool Success, string Message, T? Data){
     public static Result<T> Fail(string msg) => new(false, msg, default); // ব্যর্থ হলে data = null থাকব
 }
 
+📌এটা একটা Generic Result Wrapper Class:
+    -কোনো method কাজ সফল হলো কিনা
+    -একটা message
+    -আর চাইলে যেকোনো টাইপের data
+ এই ৩টা জিনিস একসাথে ফেরত দেয়
+
+
+
+
 ## sealed
 👉 এই class-টা inherit করা যাবে না 👉 কেউ ভুলভাবে override না করে
 
