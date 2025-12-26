@@ -8,13 +8,34 @@ public sealed record Result<T>(bool Success, string Message, T? Data){
     public static Result<T> Fail(string msg) => new(false, msg, default); // ব্যর্থ হলে data = null থাকব
 }
 
-📌এটা একটা Generic Result Wrapper Class:
-    -কোনো method কাজ সফল হলো কিনা
+📌এই Result<T> আসলে কী?
+👉 এটা একটা Result container / wrapper class, যা কোনো operation-এর outcome (success/failure + data) বহন করে।
+মানে:
+    -কোনো কাজ সফল হয়েছে কিনা
     -একটা message
-    -আর চাইলে যেকোনো টাইপের data
- এই ৩টা জিনিস একসাথে ফেরত দেয়
+    -আর চাইলে data
+এই ৩টা জিনিস একসাথে return করার জন্য বানানো
 
+(bool Success, string Message, T? Data)
+-------------------------------------------------------
+| Property  | কাজ                                     |
+| --------- | --------------------------------------- |
+| `Success` | কাজ সফল হয়েছে কিনা                      |
+| `Message` | user / system message                   |
+| `Data`    | আসল data (থাকতেও পারে, না-ও থাকতে পারে) |
+-------------------------------------------------------
 
+📌Ok() method কী করে?
+public static Result<T> Ok(T data, string msg = "OK") => new(true, msg, data);
+
+🔍 বুঝে নিই
+       -static → object বানাতে হয় না
+       -success case handle করে
+       -data সহ result ফেরত দেয়
+
+🧪 Example call: var res = Result<string>.Ok("Registration Successful");
+👉 ভিতরে যা হয়: new Result<string>(true, "OK", "Registration Successful");  এখানে T = string;  data = "Registered Successfully"
+📦 data constructor দিয়ে Result object-এর ভিতরে ঢুকে যায়
 
 
 ## sealed
@@ -25,12 +46,8 @@ public sealed record Result<T>(bool Success, string Message, T? Data){
 📌 Record সাধারণত DTO / Result / Response-এর জন্য ব্যবহার হয়
 
 
-Result<T> ❓
-Result<T> হলো একটি Generic, Immutable, Data-carrier class (record), যা কোনো operation-এর outcome (success/failure + data) বহন করে।
 
-
-## <T> (Generic)
-Result<T>: 👉 T মানে: যেকোনো data type - string, int, Customer, List<User>—সব হতে পারে উদাহরণ: Result<string>/Result<Customer>/Result<int>
+## <T> (Generic): Result<T>: 👉 T মানে: যেকোনো data type - string, int, Customer, List<User>—সব হতে পারে উদাহরণ: Result<string>/Result<Customer>/Result<int>
 
 
 ## (bool Success, string Message, T? Data)
