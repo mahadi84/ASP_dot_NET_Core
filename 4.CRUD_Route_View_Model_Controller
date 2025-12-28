@@ -306,6 +306,8 @@ app.MapControllerRoute(name:"Test",  pattern: "{controller=Test}/{action=ShowAll
 
 ## Menu:   
 
+<a> href="@Url.Action("Index", "Home")">Home</a>
+
 01. <a asp-route="Product1">Home</a> 
 Note: Using asp-route="AllProducts" is the best practice.
 
