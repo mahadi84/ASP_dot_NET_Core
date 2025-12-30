@@ -4,218 +4,234 @@
 Date: 30 Dec 2025
 
 
-I'm working for a bank, there are a CBS in our Bank, now I work for hardware engineer and gonna switch to software development division as developer 
-I will be assigned to develop islamic banking.
-What kind of development topics should I study and code? in Bangla
-
-
-হার্ডওয়্যার ইঞ্জিনিয়ারিং থেকে সফটওয়্যার ডেভেলপমেন্টে, বিশেষ করে Islamic Banking ডিভিশনে সুইচ করা আপনার ক্যারিয়ারের জন্য একটি চমৎকার এবং সময়োপযোগী সিদ্ধান্ত। 
-ইসলামিক ব্যাংকিং প্রথাগত (Conventional) ব্যাংকিং থেকে লজিক এবং প্রিন্সিপালের দিক থেকে বেশ আলাদা।
-
-আপনার প্রস্তুতির জন্য যে বিষয়গুলো নিয়ে পড়াশোনা এবং কোডিং প্র্যাকটিস করা উচিত, তা নিচে বিস্তারিত আলোচনা করা হলো:
-
-### ১. টেকনিক্যাল স্কিলস (Technical Skills)
-
-ব্যাংকিং সফটওয়্যার সাধারণত অনেক বেশি সিকিউর এবং স্কেলেবল হতে হয়।
-- Backend Development: বর্তমানে অধিকাংশ ব্যাংক .NET Core (C#) অথবা Java (Spring Boot) ব্যবহার করে। আপনার শেয়ার করা "WesternUnionPD" প্রজেক্টটি যেহেতু .NET-এ, তাই .NET-এর ওপর গভীর দখল তৈরি করুন।
-- Database Mastery: ব্যাংকিং মানেই ডাটা। SQL Server, MySQL বা Oracle-এর Stored Procedures, Transactions, এবং ACID properties সম্পর্কে স্বচ্ছ ধারণা থাকতে হবে।
-- API Security: ব্যাংকিং অ্যাপ্লিকেশনে API-এর মাধ্যমে ডাটা আদান-প্রদান হয়। তাই OAuth2, JWT, এবং Digital Signature সম্পর্কে জানুন।
-
-### ২. ইসলামিক ব্যাংকিং ডোমেইন নলেজ (Islamic Banking Principles)
-
-ইসলামিক ব্যাংকিংয়ে কোড করার সময় আপনাকে সুদের বদলে লাভের (Profit) লজিক নিয়ে কাজ করতে হবে। নিচের এই টার্মগুলো এবং তাদের হিসাবের গাণিতিক লজিক বুঝুন:
-- Mudarabah (Profit Sharing): ব্যাংক এবং গ্রাহকের মধ্যে লাভ-ক্ষতির অংশীদারিত্বের হিসাব কীভাবে কোডিংয়ে রিফ্লেক্ট করবে।
-- Murabaha (Cost-Plus Profit): এটি লোন নয়, বরং কেনা-বেচা। পণ্যের ক্রয়মূল্য + লাভ = বিক্রয়মূল্য—এই লজিকটি অটোমেট করা।
-- Musharakah (Partnership): যৌথ বিনিয়োগের ক্ষেত্রে শেয়ার অনুযায়ী লভ্যাংশের ক্যালকুলেশন।
-- Zakat & Shariah Compliance: বাৎসরিক যাকাত ক্যালকুলেশন এবং শরিয়াহ বোর্ড অনুমোদিত ট্রানজ্যাকশন ফিল্টারিং।
-
-### ৩. কোডিং টপিকস যা প্র্যাকটিস করবেন
-
-ইসলামিক ব্যাংকিংয়ের জন্য নিচের প্রজেক্টগুলো নিজে নিজে কোড করে শেখার চেষ্টা করুন:
-- Profit Distribution Engine: ব্যাংক মাস শেষে বা বছর শেষে কীভাবে আমানতকারীদের মধ্যে লাভ বণ্টন করবে তার একটি অ্যালগরিদম তৈরি করুন।
-- Repayment Schedule Generator: মুরাবাহা বা হাউজিং ফাইন্যান্সের জন্য মাসিক কিস্তির (EMI এর বদলে Profit/Markup ভিত্তিক) শিডিউল তৈরির কোড।
-- Double Entry Ledger System: ব্যাংকিংয়ে প্রতিটি ট্রানজ্যাকশনের দুটি দিক থাকে (Debit/Credit)। একটি নিখুঁত লেজার সিস্টেম ডিজাইন করুন যেখানে ব্যালেন্স কখনও মিলবে না এমন হবে না।
-
-### ৪. অ্যাডভান্সড ইঞ্জিনিয়ারিং কনসেপ্ট
-
-ব্যাংকিং সিস্টেমে ভুল মানেই বড় আর্থিক ক্ষতি। তাই এই বিষয়গুলো আয়ত্ত করুন:
-- Concurrency & Locking: আপনার আগের স্টক ম্যানেজমেন্টের ৯টি মালের উদাহরণের মতো—একই সময়ে দুজন ইউজার একই ব্যালেন্স থেকে টাকা তুললে যেন 'Race Condition' না হয়।
-- Event Sourcing & Audit Logs: ব্যাংকিংয়ে ডাটা ডিলিট হয় না, শুধু আপডেট হয়। কে, কখন, কোন আইপি থেকে ট্রানজ্যাকশন করেছে—তার পূর্ণাঙ্গ অডিট ট্রেইল রাখার সিস্টেম ডিজাইন করুন।
-- Integration with CBS: আপনার ব্যাংকের CBS (Core Banking System) থেকে ডাটা নিয়ে কীভাবে আপনার নতুন মডিউলে কাজ করবেন (API বা এসকিউএল এর মাধ্যমে), তা বুঝুন।
-
-### ৫. আপনার জন্য বিশেষ পরামর্শ (Hardware to Software Transition)
-
-যেহেতু আপনি হার্ডওয়্যার ব্যাকগ্রাউন্ড থেকে আসছেন:
-- Low-Level Understanding: হার্ডওয়্যারের ধারণা থাকায় আপনি মেমোরি ম্যানেজমেন্ট এবং প্রসেসিং স্পিড ভালো বুঝবেন। এটি ১ মিলিয়ন রো-এর মতো বড় ডাটা প্রসেসিং কোড লেখার সময় কাজে লাগান।
-- Architecture First: সরাসরি কোড না লিখে আগে ডায়াগ্রাম বা ফ্লো-চার্ট (Architecture) আঁকতে শিখুন।
+I'm working for a bank, there is already a CBS in our Bank, now I work for a computer hardware engineer and gonna switch to the software development division as a developer 
+I will be assigned to develop Islamic banking.
+What kind of development topics should I study and code and why? 
 
 
 
 
-........................................................
+# 1️⃣ Islamic Banking Domain Knowledge (সবচেয়ে জরুরি)
 
+### কেন শিখবেন?
 
+👉 আপনি কোড লিখবেন এমন সিস্টেমে যেখানে Interest (Riba) সম্পূর্ণ নিষিদ্ধ
+👉 ভুল লজিক মানেই Shariah non-compliance → ব্যাংকের জন্য বড় সমস্যা
 
+### কী শিখবেন?
 
-Islamic Banking মানে শুধু software না, Shariah-compliance + security + trust।
-ইন্টারভিউতে তারা দেখবে তুমি domain বুঝো কিনা, শুধু কোড না।
+- Murabaha – Cost + Profit ভিত্তিক sale
+- Ijara – Leasing (asset ownership + rent)
+- Mudaraba – Capital vs Management
+- Musharaka – Partnership
+- Wadiah / Qard – Deposit types
+- Profit vs Interest difference
+- Late payment penalty → income না, charity/other account
 
-নিচে আমি তোমাকে দিচ্ছি বাংলাদেশের Islamic Banking context অনুযায়ী ৩টা sample project idea, 
- বলব একটা কোনটা interview-এর জন্য best, এবং কী কী প্রস্তুত করলে তুমি আলাদা হয়ে দাঁড়াবে।
+### কী কোড করবেন?
+
+- Installment Schedule Generator (Murabaha / Ijara)
+- Profit calculation (interest ছাড়া)
+- Early settlement (rebate logic)
+- Late payment handling (non-income bucket)
+
+📌 WHY:
+CBS already আছে, কিন্তু Islamic module-এর business logic আপনাকেই লিখতে হবে
 
 ---
 
-# 🕌 Islamic Banking Interview-এর জন্য Best Sample Project (Secure & Practical)
+# 2️⃣ Accounting + Ledger (CBS-এর Heart)
 
-## 🥇 Project Recommendation (সবচেয়ে শক্তিশালী)
-### ✅ Islamic Banking Deposit & Investment Management System
-(Shariah-compliant Savings + Investment Platform)
-👉 এটা Bangladesh Islamic banks (IBBL, Al-Arafah, SIBL)–এর সাথে সবচেয়ে বেশি মিল।
+### কেন শিখবেন?
 
----
+👉 ব্যাংক মানেই Accounting system
+👉 একটা ভুল Debit/Credit → পুরো GL mismatch
 
-## 🔹 Project-1: Islamic Deposit & Investment Management System (BEST)
+### কী শিখবেন?
 
-### 🎯 কী সমস্যা Solve করে?
-* সুদ (Interest) নিষিদ্ধ
-* Profit–Loss Sharing ভিত্তিক হিসাব
-* Transparency + Audit
+- Double Entry Accounting
+- Debit / Credit rules
+- General Ledger (GL)
+- Sub-ledger vs GL
+- Chart of Accounts
+- Reversal entries
+- EOD (End of Day)
 
----
+### কী কোড করবেন?
 
-### 🧩 Core Modules
+- Ledger posting engine
+- Balanced check (Total Debit == Total Credit)
+- Reversal logic
+- Islamic product posting mapping
 
-#### 1️⃣ Customer Account Management
-* Mudaraba Savings Account
-* Mudaraba Term Deposit
-* Wakala Account
-
-👉 Interest শব্দ একদম নাই
-
----
-
-#### 2️⃣ Profit Distribution Engine (VERY IMPORTANT)
-* Monthly / Quarterly profit calculation
-* Bank : Customer ratio (e.g. 60:40)
-* Loss হলে profit = 0 (No guaranteed return)
-
-📌 *এই logic বুঝাতে পারলে interviewer impressed হবে*
+📌 WHY:
+Islamic Banking-এ profit, asset, receivable, charity—সব আলাদা ledger-এ যায়
 
 ---
 
-#### 3️⃣ Investment Module (Shariah-compliant)
-* Murabaha (Cost + Profit)
-* Musharaka (Joint investment)
-* Ijara (Lease-based)
+# 3️⃣ Database + Transaction Handling
 
-👉 প্রতিটা investment এর:
+### কেন শিখবেন?
 
-* Risk sharing
-* Asset-backed nature
+👉 CBS = High consistency system
+👉 টাকা কখনো half-update হতে পারে না
 
----
+### কী শিখবেন?
 
-#### 4️⃣ Transaction & Ledger System
-* Debit / Credit (Interest-free)
-* Immutable transaction record
-* Daily balance snapshot
+- RDBMS (Oracle / SQL Server / PostgreSQL)
+- ACID properties
+- Isolation levels
+- Locking & Deadlock
+- Indexing & performance tuning
 
----
+### কী কোড করবেন?
 
-#### 5️⃣ Audit & Shariah Compliance Log
-* কে profit approve করলো
-* কে ratio change করলো
-* Shariah board approval log
+- Atomic transaction API
+- Balance update with rollback
+- Concurrency-safe posting
+- Reconciliation queries
 
----
-
-### 🔐 Security (Interview Gold)
-* JWT Authentication
-* Role-based access
-  * Admin
-  * Banker
-  * Shariah Auditor
-* Transaction-level audit trail
-* No direct DB manipulation
+📌 WHY:
+একই সময়ে হাজার হাজার transaction হবে
 
 ---
 
-### 🧠 তুমি Interview-এ যেভাবে বলবে (Killer Line)
+# 4️⃣ API Development & Integration
 
-> “এই system-এ কোনো fixed return নেই। Profit real business performance এর উপর নির্ভর করে এবং loss হলে customer profit পায় না—এটাই Shariah compliance।”
+### কেন শিখবেন?
 
----
+👉 CBS একা থাকে না
+👉 ATM, Mobile App, Internet Banking, Switch—সব CBS-এ আসে
 
+### কী শিখবেন?
 
+- REST API design
+- Request validation
+- Idempotency (duplicate request handle)
+- Message Queue (Kafka / RabbitMQ – basic)
+- Event-driven architecture
 
+### কী কোড করবেন?
 
+- Fund transfer API
+- Posting service API
+- Idempotent transaction handler
+- Event publishing (posting completed)
 
-
-
-
-
-##################################################################
- 🥈 Project-2: Islamic Zakat & Charity Management Platform
-##################################################################
-
-### কী করে?
-* Zakat calculation
-* Eligible beneficiary verification
-* Transparent distribution
-
-### Features
-* Asset-based Zakat calculation
-* Nisab threshold
-* Distribution report
-
-👉 ভালো, কিন্তু banking role-এর জন্য ২য় পছন্দ
-
-
-
-
-
-
-
-
-
-
-##################################################
- 🥉 Project-3: Halal Financing Approval System
-##################################################
-
-### কী করে?
-* Loan না, Halal Financing
-* Asset-backed financing only
-* Interest-free repayment schedule
-
-👉 ভালো, কিন্তু একটু complex বুঝাতে হয়
+📌 WHY:
+একই transaction বারবার আসলেও ডাবল পোস্ট হওয়া যাবে না
 
 ---
 
-# 🏆 Interview-এর জন্য কোনটা নেবে?
+# 5️⃣ Security (Banking Mandatory)
 
-| Criteria             | Project-1 |
-| -------------------- | --------- |
-| Bangladesh relevance | ⭐⭐⭐⭐⭐     |
-| Islamic depth        | ⭐⭐⭐⭐⭐     |
-| Security discussion  | ⭐⭐⭐⭐⭐     |
-| System design        | ⭐⭐⭐⭐⭐     |
-| Interview impact     | ⭐⭐⭐⭐⭐     |
+### কেন শিখবেন?
 
-👉 Project-1 = Best Choice
+👉 ব্যাংক = sensitive financial data
+👉 Audit + regulator scrutiny
+
+### কী শিখবেন?
+
+- Authentication & Authorization
+- Role Based Access Control (RBAC)
+- Encryption (TLS, at rest)
+- Audit trail
+- OWASP Top 10
+
+### কী কোড করবেন?
+
+- Audit logging middleware
+- User role permission check
+- Sensitive data masking
+
+📌 WHY:
+Islamic Banking audit খুব strict (internal + Shariah board)
 
 ---
 
-# 🛠️ Tech Stack (বলতে পারো confidently)
+# 6️⃣ Batch Jobs & EOD Processing
 
-* ASP.NET Core Web API
-* EF Core + MySQL
-* JWT Authentication
-* Role-based Authorization
-* Transaction + Audit Logging
-* Async processing
+### কেন শিখবেন?
+
+👉 অনেক কাজ real-time না
+👉 Daily basis-এ auto process হয়
+
+### কী শিখবেন?
+
+- Background job processing
+- Scheduler (Quartz / Hangfire)
+- EOD / BOD concept
+
+### কী কোড করবেন?
+
+- Daily profit accrual
+- Installment due marking
+- Late payment detection
+- Reconciliation report
+
+📌 WHY:
+Islamic profit অনেক সময় daily accrue হয়
 
 ---
+
+# 7️⃣ Reporting & Compliance
+
+### কেন শিখবেন?
+
+👉 Central Bank + Shariah Board report লাগে
+
+### কী শিখবেন?
+
+- Regulatory reporting basics
+- AML/KYC overview
+- Data aggregation
+
+### কী কোড করবেন?
+
+- Daily Islamic portfolio report
+- Profit vs charity report
+- GL vs sub-ledger reconciliation
+
+---
+
+# 8️⃣ Testing & Reliability
+
+### কেন শিখবেন?
+
+👉 Banking software-এ “bug” মানেই real money loss
+
+### কী শিখবেন?
+
+- Unit testing
+- Integration testing
+- Edge case handling
+- Performance testing
+
+### কী কোড করবেন?
+
+- Posting engine test cases
+- Schedule generation tests
+- Failure & rollback tests
+
+---
+
+# 🔑 সবচেয়ে গুরুত্বপূর্ণ ৫টি স্কিল (Shortlist)
+
+1. Islamic Banking Business Logic
+2. Accounting & Ledger Posting
+3. Transaction-safe Database Code
+4. Secure API Development
+5. Audit & Compliance mindset
+
+---
+
+# 🧭 আপনি যেহেতু Hardware → Software আসছেন
+
+👉 আপনার System thinking আগে থেকেই strong
+👉 এখন দরকার Business logic + Data integrity mindset
+
+---
+
 
 
 
@@ -260,16 +276,6 @@ Islamic Banking মানে শুধু software না, Shariah-compliance + 
 👉 তুমি যদি শুধু এই একটা project ভালোভাবে বোঝাতে পারো,
 তুমি ১০ জনের মধ্যে আলাদা হয়ে যাবে।
 
----
-
-### 👉 পরের ধাপে চাইলে আমি:
-
-* এই project-এর full API design
-* Database schema
-* Mock interview (Islamic banking specific)
-* Whiteboard explanation script
-
-যেটা দরকার বলো—আমি তোমাকে interview-ready করে দেব।
 
 
 
