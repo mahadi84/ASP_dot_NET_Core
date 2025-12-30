@@ -11,6 +11,18 @@ Before start very advance stock management for 5 type of products with price, wh
 একটি অ্যাডভান্সড স্টক ম্যানেজমেন্ট সিস্টেম শুরু করার আগে, বিশেষ করে যেখানে ৫ ধরণের আলাদা প্রোডাক্ট এবং সেগুলোর ভিন্ন ভিন্ন প্রাইসিং নিয়ে কাজ করবেন,
 সেখানে কোডিং শুরু করার আগে নিচের বিষয়গুলো গভীরভাবে চিন্তা করা এবং ডিজাইন করা অত্যন্ত জরুরি। এটি আপনাকে ভবিষ্যতে ডাটাবেস এরর বা লজিক্যাল ভুল থেকে রক্ষা করবে।
 
+
+1. Product Categorization Attributes
+2. Pricing Mechanism/Logic
+3. Inventory Flow
+4. Database Design Strategy
+5. Stock Movement(Inventory Flow)
+6. Audit & Security (who did what)
+7. Return Policy, Currency
+
+
+
+
 নিচে প্রধান বিবেচ্য বিষয়গুলো দেওয়া হলো:
 
 ### ১. প্রোডাক্ট ক্যাটাগরাইজেশন ও অ্যাট্রিবিউটস (Product Attributes)
