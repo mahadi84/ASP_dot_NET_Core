@@ -68,12 +68,12 @@
 
 - বাস্তব উদাহরণ: আপনি যখন ব্যাংকে ৫,০০০ টাকা জমা দিলেন, ব্যাংক খুশি হওয়ার বদলে চিন্তিত হয়— কারণ তাকে এই ৫,০০০ টাকা আপনাকে ফেরত দিতে হবে। তার "দায়" বাড়লো।
 - ঘটনা: দায় বৃদ্ধি।
-- অ্যাকশন: Credit Customer Account. (এইজন্যই আপনার ফোনে SMS আসে: "Your account has been Credited")
+- অ্যাকশন:  Debit Bank Account but  Credit Customer Account. (এইজন্যই আপনার ফোনে SMS আসে: "Your account has been Credited")
 
 
 - হ্রাস পাওয়ার উদাহরণ: আপনি আপনার একাউন্ট থেকে ১,০০০ টাকা তুলে নিলেন। এখন ব্যাংকের দায় ১,০০০ টাকা কমে গেল।
 - ঘটনা: দায় হ্রাস।
-- অ্যাকশন: Debit Customer Account.
+- অ্যাকশন: Credit Bank Account but Debit Customer Account.
 
 
 
