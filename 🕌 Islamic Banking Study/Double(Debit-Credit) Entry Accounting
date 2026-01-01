@@ -1,0 +1,174 @@
+
+
+ব্যাংকিং সফটওয়্যার ডেভেলপার হিসেবে আপনার জন্য Double Entry Accounting এবং Debit/Credit এর কনসেপ্টটি পানির মতো পরিষ্কার হওয়া জরুরি। কারণ ব্যাংকিং ডাটাবেসের মূল ভিত্তিই হলো এটি।
+
+নিচে সহজ উদাহরণসহ ব্যাখ্যা করা হলো:
+
+---
+
+## ১. Double Entry Accounting (দু-তরফা দাখিলা পদ্ধতি)
+
+এই পদ্ধতির মূল কথা হলো— প্রতিটি লেনদেনের (Transaction) কমপক্ষে দুটি পক্ষ থাকবে। 
+এক পক্ষ থেকে টাকা বা সুবিধা বের হবে, অন্য পক্ষে সেটি জমা হবে।
+
+সফটওয়্যার ইঞ্জিনিয়ারিংয়ের ভাষায় বললে: 
+আপনার ডাটাবেসে একটি এন্ট্রি হবে না, বরং একসাথে দুটি এন্ট্রি হবে (একটি Debit এবং একটি Credit)। দিনশেষে সব Debit এবং সব Credit এর যোগফল সবসময় সমান (=) হতে হবে।
+
+### গাণিতিক সূত্র (Accounting Equation):
+
+---
+
+## ২. Debit / Credit এর গোল্ডেন রুলস (সহজভাবে)
+
+অনেকে মনে করেন Debit মানেই যোগ আর Credit মানেই বিয়োগ। কিন্তু ব্যাংকিংয়ে এটি নির্ভর করে আপনি কোন ধরণের অ্যাকাউন্টের সাথে কাজ করছেন তার ওপর।
+-------------------------------------------------------------------------------------------
+| অ্যাকাউন্টের ধরণ                          | বৃদ্ধি পেলে (Increase)   | হ্রাস পেলে (Decrease) |
+| --------------------------------------- | ----------------------| -------------------- |
+| Assets (সম্পদ): যেমন ক্যাশ, লোন         | Debit                 | Credit               |
+| Liabilities (দায়): যেমন গ্রাহকের আমানত  | Credit                | Debit                |
+| Income (আয়): যেমন চার্জ বা লাভ          | Credit                | Debit                |
+| Expense (ব্যয়): যেমন স্যালারি বা ইউটিলিটি   | Debit                 | Credit               |
+-------------------------------------------------------------------------------------------
+
+---
+
+## ৩. বাস্তব উদাহরণ (Banking Scenario)
+
+ধরা যাক, একজন গ্রাহক (Mr. Rahim) তার সঞ্চয়ী একাউন্টে ১০,০০০ টাকা ক্যাশ জমা দিলেন। ব্যাংক এই লেনদেনটি কীভাবে রেকর্ড করবে?
+
+এখানে দুটি পক্ষ প্রভাবিত হবে:
+১. Cash (Asset): ব্যাংকের কাছে নগদ টাকা বাড়ছে।
+২. Customer Deposit (Liability): ব্যাংকের কাছে গ্রাহকের পাওনা (দায়) বাড়ছে।
+
+### এন্ট্রিটি হবে:
+
+- Debit: Cash Account (১০,০০০ টাকা) — -কারণ সম্পদ বেড়েছে।-
+- Credit: Mr. Rahim's Account (১০,০০০ টাকা) — -কারণ ব্যাংকের দায় বেড়েছে।-
+
+> মজার তথ্য: আপনি যখন ব্যাংকে টাকা জমা দেন, তখন আপনার মোবাইলে মেসেজ আসে— -"Your account has been credited."- কারণ আপনার টাকা ব্যাংকের জন্য একটি Liability বা দায়। ব্যাংক আপনাকে টাকাটি ফেরত দিতে বাধ্য।
+
+---
+
+## ৪. ডেভেলপার হিসেবে আপনার কেন এটি জানা জরুরি?
+
+আপনি যখন Islamic Banking এর জন্য কোড লিখবেন, তখন আপনাকে ডাটাবেসে `Transactions` টেবিলটি এমনভাবে ডিজাইন করতে হবে যেন প্রতিটি `TransactionId` এর বিপরীতে দুটি রো (Row) থাকে।
+
+Database Table Example:
+----------------------------------------------------------
+| TransactionId | AccountName          | Type   | Amount |
+| ------------- | -------------------- | ------ | ------ |
+| TXN_001       | Cash_Vault           | Debit  | 10000  |
+| TXN_001       | Customer_Account_123 | Credit | 10000  |
+----------------------------------------------------------
+
+### আপনার সিস্টেমে "Zero Mistake" নিশ্চিত করতে:
+
+১. Atomicity: নিশ্চিত করতে হবে যেন `Cash_Vault` টেবিল আপডেট হওয়ার পর যদি বিদ্যুৎ চলে যায়, তবে যেন `Customer_Account` ফেইল না করে। অর্থাৎ হয় দুটিই আপডেট হবে, নয়তো একটিও না (SQL `TRANSACTION` ব্যবহার করে)।
+২. GL Check: প্রতিদিনের শেষে `SUM(Debit)` এবং `SUM(Credit)` বের করবেন। যদি পার্থক্য ০ না হয়, তবেই বুঝবেন GL Mismatch হয়েছে।
+
+
+
+############################################### CODE EXAMPLE  #########################################################################################
+
+
+একজন ব্যাংকিং সফটওয়্যার ডেভেলপার হিসেবে আপনি যখন কোড লিখবেন, 
+তখন আপনাকে নিশ্চিত করতে হবে যে একটি লেনদেন (Transaction) কখনোই অর্ধেক সম্পন্ন হবে না। 
+হয় ডেবিট এবং ক্রেডিট উভয়ই সফল হবে, নতুবা ডাটাবেসে কিছুই সেভ হবে না।
+
+নিচে C#-এ একটি Double Entry Transaction-এর প্রফেশনাল উদাহরণ দেওয়া হলো:
+
+### C# কোড উদাহরণ: Double Entry Logic
+
+```csharp
+public class TransactionService
+{
+    private readonly AppDbContext _context;
+
+    public TransactionService(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<bool> ExecuteTransaction(int fromAccountId, int toAccountId, decimal amount)
+    {
+        // ১. ডাটাবেস ট্রানজ্যাকশন শুরু করা (Atomicity নিশ্চিত করতে)
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            // ২. ডেবিট এন্ট্রি (যেখান থেকে টাকা বের হচ্ছে - Asset/Cash কমছে)
+            var debitEntry = new LedgerEntry
+            {
+                AccountId = fromAccountId,
+                DebitAmount = amount,
+                CreditAmount = 0,
+                Description = "Fund Transfer - Out",
+                CreatedAt = DateTime.Now
+            };
+
+            // ৩. ক্রেডিট এন্ট্রি (যেখানে টাকা ঢুকছে - Liability/Deposit বাড়ছে)
+            var creditEntry = new LedgerEntry
+            {
+                AccountId = toAccountId,
+                DebitAmount = 0,
+                CreditAmount = amount,
+                Description = "Fund Transfer - In",
+                CreatedAt = DateTime.Now
+            };
+
+            // ডাটাবেসে এন্ট্রিগুলো যোগ করা
+            _context.LedgerEntries.Add(debitEntry);
+            _context.LedgerEntries.Add(creditEntry);
+
+            // ৪. একসাথে সেভ করা
+            await _context.SaveChangesAsync();
+
+            // ৫. সব ঠিক থাকলে কমিট করা (সব ডাটা পারমানেন্টলি সেভ হবে)
+            await dbTransaction.CommitAsync();
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // ৬. যদি কোনো একটিতে এরর হয়, তবে পুরো লেনদেন বাতিল (Rollback) হবে
+            // এতে GL Mismatch হওয়ার সুযোগ থাকবে না
+            await dbTransaction.RollbackAsync();
+            Console.WriteLine($"Transaction Failed: {ex.Message}");
+            return false;
+        }
+    }
+}
+
+```
+
+---
+
+### এই কোডটি আপনার কেন শেখা উচিত? (Developer's Insights)
+
+#### ১. ট্রানজ্যাকশন কন্ট্রোল (The `using` block)
+
+ব্যাংকিং সফটওয়্যারে `BeginTransactionAsync()` ব্যবহার করা বাধ্যতামূলক। এটি নিশ্চিত করে যে, যদি ক্যাশ ভল্ট থেকে টাকা কাটার পর সার্ভার ক্রাশ করে, তবে গ্রাহকের একাউন্টে টাকা যোগ হওয়ার আগে পুরো প্রসেসটি 'Rollback' হয়ে যাবে। অর্থাৎ ডাটাবেস আগের অবস্থায় ফিরে যাবে।
+
+#### ২. জিরো মিস্টেক ভেরিফিকেশন (The Balance Check)
+
+আপনি যখন এই ডাটাবেস থেকে রিপোর্ট জেনারেট করবেন, তখন নিচের এই SQL কোয়েরিটি আপনার GL Mismatch চেক করবে:
+
+```sql
+SELECT SUM(DebitAmount) - SUM(CreditAmount) as BalanceCheck FROM LedgerEntries;
+
+```
+
+যদি এই `BalanceCheck`-এর ফলাফল ০ (Zero) হয়, তবে বুঝবেন আপনার সিস্টেম নির্ভুল আছে।
+
+#### ৩. ইসলামিক ব্যাংকিং অ্যাপ্লিকেশন
+
+ইসলামিক ব্যাংকিংয়ে যখন আপনি কোনো ইনভেস্টমেন্ট (যেমন মুরাবাহা) করবেন, তখন আপনাকে ৩টি এন্ট্রি দিতে হতে পারে:
+
+- Debit: গ্রাহকের অ্যাসেট একাউন্ট।
+- Credit: ব্যাংকের ক্যাশ একাউন্ট।
+- Credit: ব্যাংকের প্রফিট (Markup) ইনকাম একাউন্ট।
+এখানেও কিন্তু `Debit = Credit + Credit` অর্থাৎ উভয় পাশ সমান হতে হবে।
+
+### আপনার জন্য পরবর্তী পরামর্শ:
+
+আপনি কি ডাটাবেসের জন্য একটি প্রফেশনাল Ledger Table Schema (টেবিল ডিজাইন) দেখতে চান? যা দিয়ে আপনি ১ মিলিয়ন ডাটা প্রসেস করলেও হিসাব হারাবে না।
