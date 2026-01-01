@@ -45,7 +45,7 @@ CBS already আছে, কিন্তু Islamic module-এর business logic �
 ### কেন শিখবেন?
 
 👉 ব্যাংক মানেই Accounting system
-👉 একটা ভুল Debit/Credit → পুরো GL mismatch
+👉 একটা ভুল Debit/Credit → পুরো GL mismatch, what is it?
 
 ### কী শিখবেন?
 
@@ -56,6 +56,8 @@ CBS already আছে, কিন্তু Islamic module-এর business logic �
 - Chart of Accounts
 - Reversal entries
 - EOD (End of Day)
+- GL mismatch
+- Reconciliation (দ্রুত সংশোধন)
 
 ### কী কোড করবেন?
 
