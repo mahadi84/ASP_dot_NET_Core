@@ -52,12 +52,12 @@ CBS already আছে, কিন্তু Islamic module-এর business logic �
 - Double Entry Accounting
 - Debit / Credit rules
 - General Ledger (GL)
+- GL mismatch
 - Sub-ledger vs GL
+- Reconciliation (দ্রুত সংশোধন)
 - Chart of Accounts
 - Reversal entries
 - EOD (End of Day)
-- GL mismatch
-- Reconciliation (দ্রুত সংশোধন)
 
 ### কী কোড করবেন?
 
