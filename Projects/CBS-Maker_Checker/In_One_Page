@@ -1,0 +1,1699 @@
+
+Date 2-January-2026
+
+ঠিক আছে — আমি আগের সব কোড replace করে এখন আপনাকে “Bank-like Advanced CBS Mini (MVC + Cookie Login)” দিলাম, যেখানে আছে:
+
+✅ Maker–Checker (Pending → Approve/Reject)
+✅ Cash Drawer (teller cash position) + pending/posted movements
+✅ Hold system (Withdraw request দিলে Available কমে “hold” হয়)
+✅ Reversal (posted txn edit না; reversal voucher + balances undo)
+✅ Daily Reconciliation (EOD): GL Deposits vs Sum(Subledger balances) mismatch detect
+✅ PDF Statement (date-to-date) customer এর জন্য (QuestPDF দিয়ে)
+
+> ⚠️ “Real bank production এ 0% security hole” গ্যারান্টি দেওয়া যায় না। তবে এই ডিজাইনটা: role-based access, anti-forgery, DB transaction, idempotency, audit, no partial posting, no edit-after-post—এসব bank pattern follow করে। Production যাওয়ার আগে অবশ্যই pen-test + review + infra hardening লাগবে।
+
+
+
+# M) কোন Section কী করছে এবং কেন (Bangla)
+
+## 1) Cookie-based Identity (Program.cs + AccountController)
+
+- কি করছে: server-side cookie session দিয়ে login/logout
+- কেন: MVC UI system এ JWT ছাড়াই simplest & secure default (HttpOnly cookie + lockout + anti-forgery)
+
+## 2) TxnRequest (Pending workflow)
+
+- কি করছে: teller create করলে txn “PENDING” থাকে
+- কেন: maker-checker control; approve না হওয়া পর্যন্ত ledger এ পোস্ট হবে না
+
+## 3) Hold (Available vs Ledger)
+
+- কি করছে: Withdraw request create হওয়ামাত্র Available কমে “hold” হয়
+- কেন: একাউন্টের টাকা একই সময়ে ২টা withdraw request এ খরচ হয়ে যাওয়া (double spending) আটকায়
+- Reject হলে hold release হয়; approve হলে hold consumed হয়।
+
+## 4) Voucher (GL Only) + GL Balance
+
+- কি করছে: approve হলে double-entry voucher post হয়
+- কেন: audit strong; GL clean থাকে; এবং `GlBalance` এ running totals থাকায় report/recon fast
+
+## 5) SubledgerPosting (Statement rows)
+
+- কি করছে: statement generation এর জন্য per-account posting rows
+- কেন: customer statement দ্রুত, GL scan করতে হয় না
+
+## 6) Cash Drawer (teller cash position)
+
+- কি করছে: deposit/withdraw এ teller এর drawer cash +/- হয়; request stage এ pending, approve হলে posted
+- কেন: বাস্তবে teller cash accountability লাগে; drawer mismatch detection সহজ হয়
+
+## 7) Atomic DB Transaction (Serializable)
+
+- কি করছে: approve → voucher + balances + statement + drawer একসাথে commit
+- কেন: “no partial posting” (মাঝপথে crash হলে rollback)
+
+## 8) Reversal
+
+- কি করছে: posted txn edit না করে reversal voucher + balances undo
+- কেন: banking immutability + audit compliance
+
+## 9) Reconciliation (EOD)
+
+- কি করছে: GL deposits vs sum(customer ledger) mismatch detect
+- কেন: daily control/closing—ডাটা integrity নিশ্চিত করে
+
+## 10) PDF Statement (QuestPDF)
+
+- কি করছে: date-to-date statement PDF download
+- কেন: customer deliverable; bank statement requirement
+
+
+
+
+
+
+---
+
+# A) Project Setup (একবারই করবেন)
+
+## 1) Create MVC Project
+
+```bash
+dotnet new mvc -n BankCBS
+cd BankCBS
+```
+
+## 2) Packages
+
+```bash
+dotnet add package Pomelo.EntityFrameworkCore.MySql
+dotnet add package Microsoft.EntityFrameworkCore.Design
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore
+dotnet add package QuestPDF
+```
+
+---
+
+# B) Folder Structure (Replace / Create)
+
+```
+BankCBS/
+  Data/
+    AppDbContext.cs
+    SeedData.cs
+  Domain/
+    CustomerAccount.cs
+    GlAccount.cs
+    GlBalance.cs
+    TxnRequest.cs
+    Voucher.cs
+    SubledgerPosting.cs
+    AuditLog.cs
+    CashDrawer.cs
+    Hold.cs
+    ReconciliationLog.cs
+  Services/
+    AuditService.cs
+    TxnService.cs
+    ReconciliationService.cs
+    StatementPdfService.cs
+  Controllers/
+    AccountController.cs
+    AdminController.cs
+    MakerController.cs
+    CheckerController.cs
+    StatementController.cs
+    ReversalController.cs
+    ReconciliationController.cs
+    HomeController.cs
+  ViewModels/
+    LoginVm.cs
+    RegisterVm.cs
+    AssignRoleVm.cs
+    CreateTxnVm.cs
+    StatementVm.cs
+  Views/...
+```
+
+---
+
+# C) appsettings.json
+
+`appsettings.json`
+
+```json
+{
+  "ConnectionStrings": {
+    "MySql": "server=localhost;port=3306;database=bankcbs;user=root;password=;"
+  },
+  "CBS": {
+    "Currency": "BDT"
+  }
+}
+```
+
+---
+
+# D) Program.cs (Cookie Login + Identity + DI)
+
+`Program.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+var cs = builder.Configuration.GetConnectionString("MySql");
+builder.Services.AddDbContext<AppDbContext>(opt =>
+{
+    opt.UseMySql(cs, ServerVersion.AutoDetect(cs));
+});
+
+// ✅ Cookie-based Auth (JWT নয়) + Roles
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt =>
+{
+    opt.Password.RequiredLength = 8;
+    opt.Password.RequireDigit = true;
+    opt.Password.RequireUppercase = true;
+    opt.Password.RequireNonAlphanumeric = false;
+    opt.Lockout.MaxFailedAccessAttempts = 5; // ✅ brute force কমায়
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+builder.Services.ConfigureApplicationCookie(opt =>
+{
+    opt.LoginPath = "/Account/Login";
+    opt.AccessDeniedPath = "/Account/Denied";
+    opt.Cookie.HttpOnly = true;
+    opt.SlidingExpiration = true;
+    opt.ExpireTimeSpan = TimeSpan.FromHours(8);
+});
+
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<TxnService>();
+builder.Services.AddScoped<ReconciliationService>();
+builder.Services.AddScoped<StatementPdfService>();
+
+var app = builder.Build();
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.UseAuthentication(); // ✅ cookie session
+app.UseAuthorization();
+
+await SeedData.InitAsync(app);
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.Run();
+```
+
+---
+
+# E) DbContext (Replace)
+
+`Data/AppDbContext.cs`
+
+```csharp
+using BankCBS.Domain;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace BankCBS.Data;
+
+// ✅ IdentityDbContext = Users/Roles টেবিল auto create
+public class AppDbContext : IdentityDbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<CustomerAccount> CustomerAccounts => Set<CustomerAccount>();
+    public DbSet<GlAccount> GlAccounts => Set<GlAccount>();
+    public DbSet<GlBalance> GlBalances => Set<GlBalance>();
+
+    public DbSet<TxnRequest> TxnRequests => Set<TxnRequest>();
+    public DbSet<VoucherHeader> VoucherHeaders => Set<VoucherHeader>();
+    public DbSet<VoucherLine> VoucherLines => Set<VoucherLine>();
+    public DbSet<SubledgerPosting> SubledgerPostings => Set<SubledgerPosting>();
+
+    public DbSet<CashDrawer> CashDrawers => Set<CashDrawer>();
+    public DbSet<CashDrawerEntry> CashDrawerEntries => Set<CashDrawerEntry>();
+
+    public DbSet<Hold> Holds => Set<Hold>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    public DbSet<ReconciliationLog> ReconciliationLogs => Set<ReconciliationLog>();
+
+    protected override void OnModelCreating(ModelBuilder b)
+    {
+        base.OnModelCreating(b);
+
+        b.Entity<CustomerAccount>().HasKey(x => x.AccountId);
+        b.Entity<GlAccount>().HasKey(x => x.GlCode);
+        b.Entity<GlBalance>().HasKey(x => x.GlCode);
+
+        b.Entity<TxnRequest>().HasKey(x => x.TxnId);
+        b.Entity<TxnRequest>().HasIndex(x => x.IdempotencyKey).IsUnique(); // ✅ duplicate request stop
+
+        b.Entity<VoucherHeader>().HasKey(x => x.VoucherId);
+        b.Entity<VoucherLine>().HasKey(x => x.LineId);
+
+        b.Entity<SubledgerPosting>().HasKey(x => x.PostingId);
+        b.Entity<SubledgerPosting>().HasIndex(x => new { x.AccountId, x.TxnDate });
+
+        b.Entity<CashDrawer>().HasKey(x => x.DrawerId);
+        b.Entity<CashDrawer>().HasIndex(x => x.UserId).IsUnique();
+        b.Entity<CashDrawerEntry>().HasKey(x => x.EntryId);
+        b.Entity<CashDrawerEntry>().HasIndex(x => new { x.DrawerId, x.EntryDate });
+
+        b.Entity<Hold>().HasKey(x => x.HoldId);
+        b.Entity<Hold>().HasIndex(x => new { x.AccountId, x.Status });
+
+        b.Entity<AuditLog>().HasKey(x => x.AuditId);
+        b.Entity<ReconciliationLog>().HasKey(x => x.ReconId);
+    }
+}
+```
+
+---
+
+# F) Domain Models (Replace / Add)
+
+## 1) CustomerAccount
+
+`Domain/CustomerAccount.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class CustomerAccount
+{
+    public string AccountId { get; set; } = default!;
+    public string CustomerName { get; set; } = default!;
+    public string ProductType { get; set; } = "SAVINGS";
+    public string Currency { get; set; } = "BDT";
+    public string Status { get; set; } = "ACTIVE";
+
+    // ✅ Ledger = official, Available = spendable (Hold দিলে Available কমে)
+    public decimal LedgerBalance { get; set; } = 0;
+    public decimal AvailableBalance { get; set; } = 0;
+
+    public long RowVersion { get; set; } = 0; // ✅ concurrency
+}
+```
+
+## 2) GL + GL Balance
+
+`Domain/GlAccount.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class GlAccount
+{
+    public string GlCode { get; set; } = default!;
+    public string GlName { get; set; } = default!;
+    public string GlType { get; set; } = default!; // ASSET/LIABILITY...
+    public bool IsActive { get; set; } = true;
+}
+```
+
+`Domain/GlBalance.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+// ✅ performance: প্রতিবার voucher sum না করে running balance রাখি
+public class GlBalance
+{
+    public string GlCode { get; set; } = default!;
+    public decimal Balance { get; set; } = 0; // balance += Dr - Cr
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+```
+
+## 3) Txn Request + statuses
+
+`Domain/TxnRequest.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class TxnRequest
+{
+    public long TxnId { get; set; }
+    public string TxnType { get; set; } = default!; // CASH_DEPOSIT/CASH_WITHDRAW
+    public string CustomerAccountId { get; set; } = default!;
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "BDT";
+
+    public string MakerUserId { get; set; } = default!;
+    public string? CheckerUserId { get; set; }
+
+    // ✅ Lifecycle: PENDING -> POSTED/REJECTED/REVERSED
+    public string Status { get; set; } = "PENDING";
+
+    public string? MakerNote { get; set; }
+    public string? CheckerNote { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? PostedAt { get; set; }
+
+    public string IdempotencyKey { get; set; } = default!;
+
+    // ✅ reversal link
+    public long? ReversalOfTxnId { get; set; } // এই txn যদি reversal হয়
+    public long? ReversedByTxnId { get; set; } // original txn কে কোন txn reverse করল
+}
+```
+
+## 4) Voucher + lines
+
+`Domain/Voucher.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class VoucherHeader
+{
+    public long VoucherId { get; set; }
+    public long TxnId { get; set; }
+    public DateTime VoucherDate { get; set; }
+    public string ReferenceNo { get; set; } = default!;
+    public string Status { get; set; } = "POSTED"; // POSTED/REVERSED
+}
+
+public class VoucherLine
+{
+    public long LineId { get; set; }
+    public long VoucherId { get; set; }
+    public string GlCode { get; set; } = default!;
+    public decimal Dr { get; set; }
+    public decimal Cr { get; set; }
+    public string? Narrative { get; set; }
+}
+```
+
+## 5) Subledger statement rows
+
+`Domain/SubledgerPosting.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class SubledgerPosting
+{
+    public long PostingId { get; set; }
+    public long TxnId { get; set; }
+    public string AccountId { get; set; } = default!;
+    public DateTime TxnDate { get; set; }
+    public string TxnType { get; set; } = default!;
+    public decimal Amount { get; set; }
+    public string Direction { get; set; } = default!; // CR/DR (customer view)
+    public decimal RunningBalance { get; set; }
+    public string ReferenceNo { get; set; } = default!;
+}
+```
+
+## 6) Hold (withdraw pending হলে available কমিয়ে রাখে)
+
+`Domain/Hold.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+// ✅ Withdraw request create হলে HOLD তৈরি করে Available কমাই
+public class Hold
+{
+    public long HoldId { get; set; }
+    public long TxnId { get; set; }
+    public string AccountId { get; set; } = default!;
+    public decimal Amount { get; set; }
+    public string Status { get; set; } = "ACTIVE"; // ACTIVE/RELEASED/CONSUMED
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+```
+
+## 7) Cash Drawer (teller cash position)
+
+`Domain/CashDrawer.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+// ✅ Teller এর cash position: deposit হলে cash increases, withdraw হলে cash decreases
+public class CashDrawer
+{
+    public long DrawerId { get; set; }
+    public string UserId { get; set; } = default!;
+    public decimal CashBalance { get; set; } = 0;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class CashDrawerEntry
+{
+    public long EntryId { get; set; }
+    public long DrawerId { get; set; }
+    public long TxnId { get; set; }
+    public DateTime EntryDate { get; set; } = DateTime.UtcNow;
+
+    // +amount means cash received, -amount means cash paid
+    public decimal Amount { get; set; }
+    public string Status { get; set; } = "PENDING"; // PENDING/POSTED/REVERSED
+    public string Note { get; set; } = "";
+}
+```
+
+## 8) Audit log
+
+`Domain/AuditLog.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class AuditLog
+{
+    public long AuditId { get; set; }
+    public DateTime EventTime { get; set; } = DateTime.UtcNow;
+    public string UserId { get; set; } = default!;
+    public string Action { get; set; } = default!;
+    public string Entity { get; set; } = default!;
+    public string EntityId { get; set; } = default!;
+    public string Details { get; set; } = "";
+}
+```
+
+## 9) Reconciliation log (EOD)
+
+`Domain/ReconciliationLog.cs`
+
+```csharp
+namespace BankCBS.Domain;
+
+public class ReconciliationLog
+{
+    public long ReconId { get; set; }
+    public DateTime RunAt { get; set; } = DateTime.UtcNow;
+
+    public decimal GlDepositsBalance { get; set; }
+    public decimal SumCustomerLedgerBalance { get; set; }
+    public decimal Difference => GlDepositsBalance - SumCustomerLedgerBalance;
+
+    public string Status { get; set; } = "OK"; // OK/MISMATCH
+    public string Details { get; set; } = "";
+}
+```
+
+---
+
+# G) Services
+
+## 1) AuditService
+
+`Services/AuditService.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Domain;
+
+namespace BankCBS.Services;
+
+public class AuditService(AppDbContext db)
+{
+    // ✅ কে কী করল audit trail
+    public async Task LogAsync(string userId, string action, string entity, string entityId, string details)
+    {
+        db.AuditLogs.Add(new AuditLog
+        {
+            UserId = userId,
+            Action = action,
+            Entity = entity,
+            EntityId = entityId,
+            Details = details
+        });
+        await db.SaveChangesAsync();
+    }
+}
+```
+
+## 2) TxnService (সব advanced rules সহ)
+
+`Services/TxnService.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Domain;
+using Microsoft.EntityFrameworkCore;
+using System.Data;
+
+namespace BankCBS.Services;
+
+public class TxnService(AppDbContext db, AuditService audit)
+{
+    // ✅ আপনার COA অনুযায়ী
+    private const string GL_CASH_VAULT = "GL_CASH_VAULT";                  // Asset
+    private const string GL_CUSTOMER_DEPOSITS = "GL_CUSTOMER_DEPOSITS";    // Liability
+
+    // ---------- Helper: ensure drawer ----------
+    private async Task<CashDrawer> EnsureDrawerAsync(string userId)
+    {
+        var drawer = await db.CashDrawers.SingleOrDefaultAsync(x => x.UserId == userId);
+        if (drawer == null)
+        {
+            drawer = new CashDrawer { UserId = userId, CashBalance = 0 };
+            db.CashDrawers.Add(drawer);
+            await db.SaveChangesAsync();
+        }
+        return drawer;
+    }
+
+    // ---------- Maker: Create Pending Request ----------
+    public async Task<long> CreateRequestAsync(string makerUserId, string accId, decimal amount, string txnType, string idemKey, string? note)
+    {
+        if (amount <= 0) throw new Exception("Amount must be > 0");
+        if (txnType is not ("CASH_DEPOSIT" or "CASH_WITHDRAW")) throw new Exception("Invalid txn type");
+        if (string.IsNullOrWhiteSpace(idemKey)) throw new Exception("Idempotency key required");
+
+        // ✅ idempotency: একই request 2 বার create করলে duplicate হবে না
+        var exist = await db.TxnRequests.SingleOrDefaultAsync(x => x.IdempotencyKey == idemKey);
+        if (exist != null) return exist.TxnId;
+
+        using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        var acc = await db.CustomerAccounts.SingleOrDefaultAsync(x => x.AccountId == accId);
+        if (acc == null) throw new Exception("Account not found");
+        if (acc.Status != "ACTIVE") throw new Exception("Account not ACTIVE");
+        if (acc.Currency != "BDT") throw new Exception("Only BDT supported");
+
+        // ✅ Withdraw request হলে আগে “hold” তৈরি করে available কমাই (double spending ঠেকায়)
+        if (txnType == "CASH_WITHDRAW")
+        {
+            if (acc.AvailableBalance < amount) throw new Exception("Insufficient available balance");
+            acc.AvailableBalance -= amount; // hold reserve
+            acc.RowVersion += 1;
+        }
+
+        var req = new TxnRequest
+        {
+            TxnType = txnType,
+            CustomerAccountId = accId,
+            Amount = amount,
+            Currency = "BDT",
+            MakerUserId = makerUserId,
+            Status = "PENDING",
+            MakerNote = note,
+            IdempotencyKey = idemKey
+        };
+        db.TxnRequests.Add(req);
+        await db.SaveChangesAsync();
+
+        // ✅ hold record only for withdraw
+        if (txnType == "CASH_WITHDRAW")
+        {
+            db.Holds.Add(new Hold
+            {
+                TxnId = req.TxnId,
+                AccountId = acc.AccountId,
+                Amount = amount,
+                Status = "ACTIVE"
+            });
+        }
+
+        // ✅ cash drawer pending entry (deposit:+, withdraw:-)
+        var drawer = await EnsureDrawerAsync(makerUserId);
+        db.CashDrawerEntries.Add(new CashDrawerEntry
+        {
+            DrawerId = drawer.DrawerId,
+            TxnId = req.TxnId,
+            Amount = txnType == "CASH_DEPOSIT" ? amount : -amount,
+            Status = "PENDING",
+            Note = "Pending cash movement (maker created request)"
+        });
+
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await audit.LogAsync(makerUserId, "CREATE_TXN", "TxnRequest", req.TxnId.ToString(),
+            $"type={txnType}, amount={amount}, acc={accId}, idem={idemKey}");
+
+        return req.TxnId;
+    }
+
+    // ---------- Checker: Approve or Reject ----------
+    public async Task<(string Status, string RefNo)> DecideAsync(string checkerUserId, long txnId, string decision, string? note)
+    {
+        using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        var req = await db.TxnRequests.SingleOrDefaultAsync(x => x.TxnId == txnId);
+        if (req == null) throw new Exception("Txn not found");
+        if (req.Status != "PENDING") throw new Exception($"Txn already {req.Status}");
+        if (req.MakerUserId == checkerUserId) throw new Exception("Maker cannot approve own transaction");
+
+        var acc = await db.CustomerAccounts.SingleAsync(a => a.AccountId == req.CustomerAccountId);
+
+        // ---------- Reject ----------
+        if (decision == "REJECT")
+        {
+            // ✅ withdraw হলে hold release করে available ফিরিয়ে দেই
+            if (req.TxnType == "CASH_WITHDRAW")
+            {
+                var hold = await db.Holds.SingleOrDefaultAsync(h => h.TxnId == txnId && h.Status == "ACTIVE");
+                if (hold != null)
+                {
+                    acc.AvailableBalance += hold.Amount;
+                    acc.RowVersion += 1;
+                    hold.Status = "RELEASED";
+                }
+            }
+
+            req.Status = "REJECTED";
+            req.CheckerUserId = checkerUserId;
+            req.CheckerNote = note;
+
+            // ✅ drawer pending entry mark rejected-like (we keep REVERSED state)
+            var drawerEntry = await db.CashDrawerEntries.SingleOrDefaultAsync(e => e.TxnId == txnId && e.Status == "PENDING");
+            if (drawerEntry != null) drawerEntry.Status = "REVERSED";
+
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            await audit.LogAsync(checkerUserId, "REJECT_TXN", "TxnRequest", txnId.ToString(), note ?? "");
+            return ("REJECTED", "");
+        }
+
+        // ---------- Approve & Post ----------
+        if (decision != "APPROVE") throw new Exception("Decision must be APPROVE or REJECT");
+
+        if (acc.Status != "ACTIVE") throw new Exception("Account not ACTIVE");
+
+        // ✅ withdraw: ledger check (available already reserved, so usually ok)
+        if (req.TxnType == "CASH_WITHDRAW" && acc.LedgerBalance < req.Amount)
+            throw new Exception("Insufficient ledger balance");
+
+        // ✅ voucher header
+        var now = DateTime.UtcNow;
+        var refNo = $"VCH-{txnId:000000}";
+        var vh = new VoucherHeader
+        {
+            TxnId = txnId,
+            VoucherDate = now,
+            ReferenceNo = refNo,
+            Status = "POSTED"
+        };
+        db.VoucherHeaders.Add(vh);
+        await db.SaveChangesAsync();
+
+        // ✅ GL lines (double entry)
+        List<VoucherLine> lines;
+        if (req.TxnType == "CASH_DEPOSIT")
+        {
+            lines = new()
+            {
+                new VoucherLine{ VoucherId = vh.VoucherId, GlCode = GL_CASH_VAULT, Dr = req.Amount, Cr = 0, Narrative="Cash deposit received" },
+                new VoucherLine{ VoucherId = vh.VoucherId, GlCode = GL_CUSTOMER_DEPOSITS, Dr = 0, Cr = req.Amount, Narrative="Increase deposits liability" }
+            };
+
+            acc.LedgerBalance += req.Amount;
+            acc.AvailableBalance += req.Amount; // deposit => available increases
+        }
+        else
+        {
+            // withdraw: Deposits Dr, Cash Cr
+            lines = new()
+            {
+                new VoucherLine{ VoucherId = vh.VoucherId, GlCode = GL_CUSTOMER_DEPOSITS, Dr = req.Amount, Cr = 0, Narrative="Decrease deposits liability" },
+                new VoucherLine{ VoucherId = vh.VoucherId, GlCode = GL_CASH_VAULT, Dr = 0, Cr = req.Amount, Narrative="Cash paid out" }
+            };
+
+            // ✅ hold consume: available already reduced at create time, so here only ledger reduce
+            acc.LedgerBalance -= req.Amount;
+
+            var hold = await db.Holds.SingleOrDefaultAsync(h => h.TxnId == txnId && h.Status == "ACTIVE");
+            if (hold == null) throw new Exception("Hold missing for withdraw");
+            hold.Status = "CONSUMED";
+        }
+
+        // ✅ Balanced check
+        var totalDr = lines.Sum(x => x.Dr);
+        var totalCr = lines.Sum(x => x.Cr);
+        if (totalDr != totalCr) throw new Exception("Voucher not balanced!");
+
+        db.VoucherLines.AddRange(lines);
+
+        // ✅ Update GL running balances (performance)
+        foreach (var ln in lines)
+        {
+            var gb = await db.GlBalances.FindAsync(ln.GlCode);
+            if (gb == null)
+            {
+                gb = new GlBalance { GlCode = ln.GlCode, Balance = 0 };
+                db.GlBalances.Add(gb);
+            }
+            gb.Balance += (ln.Dr - ln.Cr);
+            gb.UpdatedAt = now;
+        }
+
+        // ✅ subledger posting for statement
+        var direction = req.TxnType == "CASH_DEPOSIT" ? "CR" : "DR";
+        db.SubledgerPostings.Add(new SubledgerPosting
+        {
+            TxnId = txnId,
+            AccountId = acc.AccountId,
+            TxnDate = now,
+            TxnType = req.TxnType,
+            Amount = req.Amount,
+            Direction = direction,
+            RunningBalance = acc.LedgerBalance,
+            ReferenceNo = refNo
+        });
+
+        // ✅ Cash drawer: pending entry -> posted and update teller drawer balance
+        // NOTE: Cash movement belongs to maker (teller), checker just approves.
+        var drawer = await EnsureDrawerAsync(req.MakerUserId);
+        var drawerEntry = await db.CashDrawerEntries.SingleOrDefaultAsync(e => e.TxnId == txnId && e.Status == "PENDING");
+        if (drawerEntry == null) throw new Exception("Drawer entry missing");
+        drawerEntry.Status = "POSTED";
+
+        drawer.CashBalance += drawerEntry.Amount; // deposit:+, withdraw:-
+        drawer.UpdatedAt = now;
+
+        // ✅ finalize request
+        req.Status = "POSTED";
+        req.CheckerUserId = checkerUserId;
+        req.CheckerNote = note;
+        req.PostedAt = now;
+
+        acc.RowVersion += 1;
+
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await audit.LogAsync(checkerUserId, "APPROVE_AND_POST", "TxnRequest", txnId.ToString(), $"ref={refNo}");
+        return ("POSTED", refNo);
+    }
+
+    // ---------- Reversal (Checker/Admin) ----------
+    public async Task<string> ReverseAsync(string userId, long originalTxnId, string reason)
+    {
+        using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        var orig = await db.TxnRequests.SingleOrDefaultAsync(x => x.TxnId == originalTxnId);
+        if (orig == null) throw new Exception("Original txn not found");
+        if (orig.Status != "POSTED") throw new Exception("Only POSTED txn can be reversed");
+        if (orig.ReversedByTxnId != null) throw new Exception("Already reversed");
+
+        var acc = await db.CustomerAccounts.SingleAsync(a => a.AccountId == orig.CustomerAccountId);
+
+        // ✅ create reversal txn request (system-generated)
+        var rev = new TxnRequest
+        {
+            TxnType = orig.TxnType == "CASH_DEPOSIT" ? "REVERSAL_DEPOSIT" : "REVERSAL_WITHDRAW",
+            CustomerAccountId = orig.CustomerAccountId,
+            Amount = orig.Amount,
+            Currency = "BDT",
+            MakerUserId = userId,
+            CheckerUserId = userId,
+            Status = "POSTED",
+            MakerNote = "System reversal",
+            CheckerNote = reason,
+            PostedAt = DateTime.UtcNow,
+            IdempotencyKey = $"REV-{originalTxnId}-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            ReversalOfTxnId = originalTxnId
+        };
+        db.TxnRequests.Add(rev);
+        await db.SaveChangesAsync();
+
+        // ✅ reversal voucher: original lines swap Dr<->Cr
+        var now = DateTime.UtcNow;
+        var refNo = $"RVH-{rev.TxnId:000000}";
+        var vh = new VoucherHeader
+        {
+            TxnId = rev.TxnId,
+            VoucherDate = now,
+            ReferenceNo = refNo,
+            Status = "POSTED"
+        };
+        db.VoucherHeaders.Add(vh);
+        await db.SaveChangesAsync();
+
+        // fetch original voucher lines via original txn -> voucher header
+        var origVh = await db.VoucherHeaders.SingleAsync(v => v.TxnId == originalTxnId);
+        var origLines = await db.VoucherLines.Where(l => l.VoucherId == origVh.VoucherId).ToListAsync();
+        if (origLines.Count == 0) throw new Exception("Original voucher lines missing");
+
+        var revLines = origLines.Select(l => new VoucherLine
+        {
+            VoucherId = vh.VoucherId,
+            GlCode = l.GlCode,
+            Dr = l.Cr,
+            Cr = l.Dr,
+            Narrative = "Reversal: " + reason
+        }).ToList();
+
+        // balance check
+        if (revLines.Sum(x => x.Dr) != revLines.Sum(x => x.Cr)) throw new Exception("Reversal voucher not balanced");
+
+        db.VoucherLines.AddRange(revLines);
+
+        // ✅ update GL balances
+        foreach (var ln in revLines)
+        {
+            var gb = await db.GlBalances.FindAsync(ln.GlCode);
+            if (gb == null)
+            {
+                gb = new GlBalance { GlCode = ln.GlCode, Balance = 0 };
+                db.GlBalances.Add(gb);
+            }
+            gb.Balance += (ln.Dr - ln.Cr);
+            gb.UpdatedAt = now;
+        }
+
+        // ✅ reverse customer balances + subledger
+        // If original was deposit: undo => -amount on ledger & available
+        // If original was withdraw: undo => +amount on ledger & available
+        if (orig.TxnType == "CASH_DEPOSIT")
+        {
+            acc.LedgerBalance -= orig.Amount;
+            acc.AvailableBalance -= orig.Amount;
+        }
+        else if (orig.TxnType == "CASH_WITHDRAW")
+        {
+            acc.LedgerBalance += orig.Amount;
+            acc.AvailableBalance += orig.Amount;
+        }
+        else
+        {
+            throw new Exception("Unknown original txn type");
+        }
+
+        db.SubledgerPostings.Add(new SubledgerPosting
+        {
+            TxnId = rev.TxnId,
+            AccountId = acc.AccountId,
+            TxnDate = now,
+            TxnType = "REVERSAL",
+            Amount = orig.Amount,
+            Direction = orig.TxnType == "CASH_DEPOSIT" ? "DR" : "CR", // undo direction
+            RunningBalance = acc.LedgerBalance,
+            ReferenceNo = refNo
+        });
+
+        // ✅ cash drawer reversal (maker drawer undo original cash movement)
+        var makerDrawer = await EnsureDrawerAsync(orig.MakerUserId);
+        // original drawer entry amount = +deposit or -withdraw, so reversal = -that
+        var originalDrawerEntry = await db.CashDrawerEntries.SingleAsync(e => e.TxnId == originalTxnId && e.Status == "POSTED");
+        db.CashDrawerEntries.Add(new CashDrawerEntry
+        {
+            DrawerId = makerDrawer.DrawerId,
+            TxnId = rev.TxnId,
+            Amount = -originalDrawerEntry.Amount,
+            Status = "POSTED",
+            Note = "Reversal cash adjustment"
+        });
+        makerDrawer.CashBalance += (-originalDrawerEntry.Amount);
+        makerDrawer.UpdatedAt = now;
+
+        // ✅ mark original as reversed
+        orig.Status = "REVERSED";
+        orig.ReversedByTxnId = rev.TxnId;
+
+        acc.RowVersion += 1;
+
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
+
+        await audit.LogAsync(userId, "REVERSE_TXN", "TxnRequest", originalTxnId.ToString(), $"revTxnId={rev.TxnId}, reason={reason}");
+        return refNo;
+    }
+
+    // ---------- Statement rows ----------
+    public async Task<List<SubledgerPosting>> GetStatementAsync(string accountId, DateTime from, DateTime to)
+    {
+        return await db.SubledgerPostings
+            .Where(x => x.AccountId == accountId && x.TxnDate >= from && x.TxnDate <= to)
+            .OrderBy(x => x.TxnDate).ThenBy(x => x.PostingId)
+            .ToListAsync();
+    }
+}
+```
+
+---
+
+## 3) ReconciliationService (EOD mismatch detect)
+
+`Services/ReconciliationService.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Domain;
+using Microsoft.EntityFrameworkCore;
+
+namespace BankCBS.Services;
+
+public class ReconciliationService(AppDbContext db)
+{
+    private const string GL_CUSTOMER_DEPOSITS = "GL_CUSTOMER_DEPOSITS";
+
+    public async Task<ReconciliationLog> RunAsync()
+    {
+        // ✅ GL deposits running balance
+        var gl = await db.GlBalances.SingleOrDefaultAsync(x => x.GlCode == GL_CUSTOMER_DEPOSITS);
+        var glBal = gl?.Balance ?? 0;
+
+        // ✅ sum of customer ledger balances (all active accounts)
+        var sumLedgers = await db.CustomerAccounts
+            .Where(a => a.Status == "ACTIVE")
+            .SumAsync(a => a.LedgerBalance);
+
+        var diff = glBal - sumLedgers;
+        var status = diff == 0 ? "OK" : "MISMATCH";
+
+        var log = new ReconciliationLog
+        {
+            RunAt = DateTime.UtcNow,
+            GlDepositsBalance = glBal,
+            SumCustomerLedgerBalance = sumLedgers,
+            Status = status,
+            Details = status == "OK" ? "Matched" : $"Mismatch={diff}"
+        };
+
+        db.ReconciliationLogs.Add(log);
+        await db.SaveChangesAsync();
+        return log;
+    }
+}
+```
+
+---
+
+## 4) PDF Statement Service (QuestPDF)
+
+`Services/StatementPdfService.cs`
+
+```csharp
+using BankCBS.Domain;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+
+namespace BankCBS.Services;
+
+public class StatementPdfService
+{
+    public byte[] BuildStatementPdf(string bankName, string accountId, string customerName, DateTime from, DateTime to, List<SubledgerPosting> rows)
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        var doc = Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Margin(30);
+                page.Size(PageSizes.A4);
+                page.DefaultTextStyle(x => x.FontSize(11));
+
+                page.Header().Column(col =>
+                {
+                    col.Item().Text(bankName).FontSize(18).SemiBold();
+                    col.Item().Text($"Customer Statement (BDT) - {accountId}");
+                    col.Item().Text($"Name: {customerName}");
+                    col.Item().Text($"From: {from:yyyy-MM-dd}   To: {to:yyyy-MM-dd}");
+                    col.Item().LineHorizontal(1);
+                });
+
+                page.Content().Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(2); // date
+                        columns.RelativeColumn(3); // type
+                        columns.RelativeColumn(1); // dir
+                        columns.RelativeColumn(2); // amount
+                        columns.RelativeColumn(2); // balance
+                        columns.RelativeColumn(2); // ref
+                    });
+
+                    table.Header(h =>
+                    {
+                        h.Cell().Element(CellStyle).Text("Date");
+                        h.Cell().Element(CellStyle).Text("Type");
+                        h.Cell().Element(CellStyle).Text("Dir");
+                        h.Cell().Element(CellStyle).Text("Amount");
+                        h.Cell().Element(CellStyle).Text("Balance");
+                        h.Cell().Element(CellStyle).Text("Ref");
+
+                        static IContainer CellStyle(IContainer c) =>
+                            c.Background(Colors.Grey.Lighten3).Padding(4).Border(1).BorderColor(Colors.Grey.Medium);
+                    });
+
+                    foreach (var r in rows)
+                    {
+                        table.Cell().Element(RowStyle).Text(r.TxnDate.ToString("yyyy-MM-dd HH:mm"));
+                        table.Cell().Element(RowStyle).Text(r.TxnType);
+                        table.Cell().Element(RowStyle).Text(r.Direction);
+                        table.Cell().Element(RowStyle).Text(r.Amount.ToString("0.00"));
+                        table.Cell().Element(RowStyle).Text(r.RunningBalance.ToString("0.00"));
+                        table.Cell().Element(RowStyle).Text(r.ReferenceNo);
+
+                        static IContainer RowStyle(IContainer c) =>
+                            c.Padding(4).BorderBottom(1).BorderColor(Colors.Grey.Lighten2);
+                    }
+                });
+
+                page.Footer().AlignCenter().Text(x =>
+                {
+                    x.Span("Generated at: ");
+                    x.Span(DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")).SemiBold();
+                });
+            });
+        });
+
+        return doc.GeneratePdf();
+    }
+}
+```
+
+---
+
+# H) Seed Data (Roles + Admin + GL + GL balances + sample account)
+
+`Data/SeedData.cs`
+
+```csharp
+using BankCBS.Domain;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace BankCBS.Data;
+
+public static class SeedData
+{
+    public static async Task InitAsync(WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var userMgr = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        await db.Database.MigrateAsync();
+
+        // ✅ Roles
+        var roles = new[] { "ADMIN", "MAKER", "CHECKER", "AUDITOR" };
+        foreach (var r in roles)
+            if (!await roleMgr.RoleExistsAsync(r))
+                await roleMgr.CreateAsync(new IdentityRole(r));
+
+        // ✅ Default Admin
+        var admin = await userMgr.FindByNameAsync("admin");
+        if (admin == null)
+        {
+            admin = new IdentityUser { UserName = "admin", Email = "admin@bank.local" };
+            await userMgr.CreateAsync(admin, "Admin@1234");
+            await userMgr.AddToRoleAsync(admin, "ADMIN");
+        }
+
+        // ✅ GL seed
+        if (!await db.GlAccounts.AnyAsync())
+        {
+            db.GlAccounts.AddRange(
+                new GlAccount { GlCode = "GL_CASH_VAULT", GlName = "Cash in Vault", GlType = "ASSET" },
+                new GlAccount { GlCode = "GL_CUSTOMER_DEPOSITS", GlName = "Customer Deposits", GlType = "LIABILITY" }
+            );
+        }
+
+        // ✅ GL Balance seed
+        if (!await db.GlBalances.AnyAsync())
+        {
+            db.GlBalances.AddRange(
+                new GlBalance { GlCode = "GL_CASH_VAULT", Balance = 0 },
+                new GlBalance { GlCode = "GL_CUSTOMER_DEPOSITS", Balance = 0 }
+            );
+        }
+
+        // ✅ sample customer
+        if (!await db.CustomerAccounts.AnyAsync())
+        {
+            db.CustomerAccounts.Add(new CustomerAccount
+            {
+                AccountId = "A-10001",
+                CustomerName = "Rahim",
+                Currency = "BDT",
+                Status = "ACTIVE",
+                LedgerBalance = 0,
+                AvailableBalance = 0
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+}
+```
+
+---
+
+# I) Controllers (UI routes)
+
+## 1) AccountController (Cookie Login/Register) — same as before
+
+(এটা আগেরটার মতই রাখুন; কাজ একই।)
+
+`Controllers/AccountController.cs`
+
+```csharp
+using BankCBS.ViewModels;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BankCBS.Controllers;
+
+public class AccountController(UserManager<IdentityUser> userMgr, SignInManager<IdentityUser> signInMgr) : Controller
+{
+    [HttpGet] public IActionResult Login() => View(new LoginVm());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Login(LoginVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var user = await userMgr.FindByNameAsync(vm.Username);
+        if (user == null) { ModelState.AddModelError("", "ভুল ইউজার/পাসওয়ার্ড"); return View(vm); }
+
+        var res = await signInMgr.PasswordSignInAsync(user, vm.Password, false, lockoutOnFailure: true);
+        if (!res.Succeeded) { ModelState.AddModelError("", "ভুল ইউজার/পাসওয়ার্ড"); return View(vm); }
+
+        return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet] public IActionResult Register() => View(new RegisterVm());
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(RegisterVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var user = new IdentityUser { UserName = vm.Username };
+        var create = await userMgr.CreateAsync(user, vm.Password);
+        if (!create.Succeeded)
+        {
+            foreach (var e in create.Errors) ModelState.AddModelError("", e.Description);
+            return View(vm);
+        }
+
+        // ✅ default role = MAKER
+        await userMgr.AddToRoleAsync(user, "MAKER");
+        return RedirectToAction("Login");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout()
+    {
+        await signInMgr.SignOutAsync();
+        return RedirectToAction("Login");
+    }
+
+    public IActionResult Denied() => Content("Access Denied");
+}
+```
+
+## 2) AdminController (Assign roles)
+
+`Controllers/AdminController.cs`
+
+```csharp
+using BankCBS.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BankCBS.Controllers;
+
+[Authorize(Roles = "ADMIN")]
+public class AdminController(UserManager<IdentityUser> userMgr) : Controller
+{
+    public IActionResult Users() => View();
+
+    [HttpGet]
+    public async Task<IActionResult> LoadUsers()
+    {
+        var users = userMgr.Users.ToList();
+        var list = new List<AssignRoleVm>();
+
+        foreach (var u in users)
+        {
+            var roles = await userMgr.GetRolesAsync(u);
+            list.Add(new AssignRoleVm { UserId = u.Id, Username = u.UserName ?? "", Role = roles.FirstOrDefault() ?? "" });
+        }
+        return PartialView("_UsersTable", list);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignRole(string userId, string role)
+    {
+        var allowed = new[] { "ADMIN", "MAKER", "CHECKER", "AUDITOR" };
+        if (!allowed.Contains(role)) return BadRequest("Invalid role");
+
+        var user = await userMgr.FindByIdAsync(userId);
+        if (user == null) return NotFound();
+
+        var current = await userMgr.GetRolesAsync(user);
+        await userMgr.RemoveFromRolesAsync(user, current);
+        await userMgr.AddToRoleAsync(user, role);
+
+        return RedirectToAction("Users");
+    }
+}
+```
+
+## 3) MakerController (Create Request)
+
+`Controllers/MakerController.cs`
+
+```csharp
+using BankCBS.Services;
+using BankCBS.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BankCBS.Controllers;
+
+[Authorize(Roles = "MAKER")]
+public class MakerController(TxnService txn, UserManager<IdentityUser> userMgr) : Controller
+{
+    [HttpGet]
+    public IActionResult Create() => View(new CreateTxnVm
+    {
+        IdempotencyKey = $"REQ-{DateTime.UtcNow:yyyyMMddHHmmss}"
+    });
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(CreateTxnVm vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var user = await userMgr.GetUserAsync(User);
+        var txnId = await txn.CreateRequestAsync(user!.Id, vm.CustomerAccountId, vm.Amount, vm.TxnType, vm.IdempotencyKey, vm.Note);
+
+        ViewBag.Msg = $"Request Created ✅ TxnId={txnId} (PENDING). Withdraw হলে Available এ Hold হয়েছে।";
+        return View(new CreateTxnVm { IdempotencyKey = $"REQ-{DateTime.UtcNow:yyyyMMddHHmmss}" });
+    }
+}
+```
+
+## 4) CheckerController (Approve/Reject)
+
+`Controllers/CheckerController.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace BankCBS.Controllers;
+
+[Authorize(Roles = "CHECKER")]
+public class CheckerController(AppDbContext db, TxnService txn, UserManager<IdentityUser> userMgr) : Controller
+{
+    public async Task<IActionResult> Pending()
+    {
+        var list = await db.TxnRequests
+            .Where(x => x.Status == "PENDING")
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync();
+        return View(list);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Decide(long txnId, string decision, string? note)
+    {
+        var user = await userMgr.GetUserAsync(User);
+        var res = await txn.DecideAsync(user!.Id, txnId, decision, note);
+
+        TempData["Msg"] = decision == "APPROVE"
+            ? $"POSTED ✅ Ref: {res.RefNo} (GL voucher + balances + statement + drawer all committed)"
+            : "REJECTED ❌ (Withdraw hold released)";
+
+        return RedirectToAction("Pending");
+    }
+}
+```
+
+## 5) StatementController (HTML + PDF)
+
+`Controllers/StatementController.cs`
+
+```csharp
+using BankCBS.Data;
+using BankCBS.Services;
+using BankCBS.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace BankCBS.Controllers;
+
+[Authorize]
+public class StatementController(AppDbContext db, TxnService txn, StatementPdfService pdf) : Controller
+{
+    [HttpGet]
+    public IActionResult Index() => View(new StatementVm
+    {
+        From = DateTime.UtcNow.AddDays(-30),
+        To = DateTime.UtcNow
+    });
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Index(StatementVm vm)
+    {
+        vm.Rows = await txn.GetStatementAsync(vm.AccountId, vm.From, vm.To);
+        return View(vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Pdf(string accountId, DateTime from, DateTime to)
+    {
+        var acc = await db.CustomerAccounts.SingleOrDefaultAsync(a => a.AccountId == accountId);
+        if (acc == null) return NotFound("Account not found");
+
+        var rows = await txn.GetStatementAsync(accountId, from, to);
+        var bytes = pdf.BuildStatementPdf("BankCBS Demo Bank", accountId, acc.CustomerName, from, to, rows);
+
+        return File(bytes, "application/pdf", $"Statement_{accountId}_{from:yyyyMMdd}_{to:yyyyMMdd}.pdf");
+    }
+}
+```
+
+## 6) ReversalController
+
+`Controllers/ReversalController.cs`
+
+```csharp
+using BankCBS.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BankCBS.Controllers;
+
+[Authorize(Roles = "CHECKER,ADMIN")]
+public class ReversalController(TxnService txn, UserManager<IdentityUser> userMgr) : Controller
+{
+    [HttpGet]
+    public IActionResult Index() => View();
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reverse(long txnId, string reason)
+    {
+        var user = await userMgr.GetUserAsync(User);
+        var refNo = await txn.ReverseAsync(user!.Id, txnId, reason);
+        ViewBag.Msg = $"Reversal Done ✅ Ref: {refNo}";
+        return View("Index");
+    }
+}
+```
+
+## 7) ReconciliationController (EOD)
+
+`Controllers/ReconciliationController.cs`
+
+```csharp
+using BankCBS.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace BankCBS.Controllers;
+
+[Authorize(Roles = "ADMIN,AUDITOR")]
+public class ReconciliationController(ReconciliationService recon) : Controller
+{
+    [HttpGet]
+    public IActionResult Index() => View();
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Run()
+    {
+        var log = await recon.RunAsync();
+        ViewBag.Msg = $"Recon: {log.Status} | GL={log.GlDepositsBalance} | SumLedgers={log.SumCustomerLedgerBalance} | Diff={log.Difference}";
+        return View("Index");
+    }
+}
+```
+
+---
+
+# J) ViewModels (Replace)
+
+`ViewModels/CreateTxnVm.cs`
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace BankCBS.ViewModels;
+
+public class CreateTxnVm
+{
+    [Required] public string CustomerAccountId { get; set; } = "";
+    [Required, Range(0.01, 999999999)] public decimal Amount { get; set; }
+    [Required] public string TxnType { get; set; } = "CASH_DEPOSIT";
+    [Required] public string IdempotencyKey { get; set; } = "";
+    public string? Note { get; set; }
+}
+```
+
+`ViewModels/StatementVm.cs`
+
+```csharp
+using BankCBS.Domain;
+
+namespace BankCBS.ViewModels;
+
+public class StatementVm
+{
+    public string AccountId { get; set; } = "";
+    public DateTime From { get; set; }
+    public DateTime To { get; set; }
+    public List<SubledgerPosting> Rows { get; set; } = new();
+}
+```
+
+(বাকি `LoginVm`, `RegisterVm`, `AssignRoleVm` আগের মতোই ব্যবহার করুন—সেগুলো unchanged)
+
+---
+
+# K) Views (UI) — Replace / Add
+
+## 1) Shared Layout (menu updated)
+
+`Views/Shared/_Layout.cshtml`
+
+```cshtml
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>BankCBS</title>
+    <meta name="viewport" content="width=device-width" />
+    <style>
+        body{font-family:Arial;margin:0}
+        nav{background:#111;color:#fff;padding:10px}
+        nav a{color:#fff;margin-right:12px;text-decoration:none}
+        .container{padding:18px}
+        .card{border:1px solid #ddd;border-radius:8px;padding:14px;margin:12px 0}
+        input,select,textarea{width:100%;padding:8px;margin-top:6px}
+        button{padding:10px 14px;margin-right:6px}
+        table{width:100%;border-collapse:collapse}
+        td,th{border:1px solid #ddd;padding:8px}
+        .msg{background:#e7ffe7;padding:10px;border:1px solid #b8ffb8}
+        .err{background:#ffe7e7;padding:10px;border:1px solid #ffb8b8}
+    </style>
+</head>
+<body>
+<nav>
+    <a href="/">Home</a>
+    <a href="/Statement">Statement</a>
+
+    @if (User.IsInRole("MAKER")) { <a href="/Maker/Create">Maker: Create Txn</a> }
+    @if (User.IsInRole("CHECKER")) { <a href="/Checker/Pending">Checker: Pending</a> <a href="/Reversal/Index">Reversal</a> }
+    @if (User.IsInRole("ADMIN")) { <a href="/Admin/Users">Admin: Users</a> }
+    @if (User.IsInRole("ADMIN") || User.IsInRole("AUDITOR")) { <a href="/Reconciliation/Index">EOD Reconciliation</a> }
+
+    <span style="float:right">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form method="post" action="/Account/Logout" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit">Logout (@User.Identity.Name)</button>
+            </form>
+        }
+        else
+        {
+            <a href="/Account/Login">Login</a>
+            <a href="/Account/Register">Register</a>
+        }
+    </span>
+</nav>
+
+<div class="container">
+    @RenderBody()
+</div>
+</body>
+</html>
+```
+
+## 2) Maker/Create.cshtml (unchanged except note)
+
+(আপনার আগের Maker view ঠিক আছে)
+
+## 3) Checker/Pending.cshtml (unchanged)
+
+## 4) Statement/Index.cshtml (PDF button added)
+
+`Views/Statement/Index.cshtml`
+
+```cshtml
+@model BankCBS.ViewModels.StatementVm
+@{
+    Layout = "_Layout";
+}
+<div class="card">
+    <h2>Customer Statement (HTML + PDF)</h2>
+
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <label>AccountId</label>
+        <input asp-for="AccountId" placeholder="A-10001" />
+
+        <label>From</label>
+        <input asp-for="From" type="date" />
+
+        <label>To</label>
+        <input asp-for="To" type="date" />
+
+        <button type="submit">Generate (HTML)</button>
+    </form>
+
+    <form method="post" action="/Statement/Pdf" style="margin-top:10px">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="accountId" value="@Model.AccountId" />
+        <input type="hidden" name="from" value="@Model.From.ToString("yyyy-MM-dd")" />
+        <input type="hidden" name="to" value="@Model.To.ToString("yyyy-MM-dd")" />
+        <button type="submit">Download PDF</button>
+    </form>
+
+    @if (Model.Rows?.Count > 0)
+    {
+        <h3>Rows</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th><th>Type</th><th>Dir</th><th>Amount</th><th>Running Balance</th><th>Ref</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td>@r.TxnDate</td>
+                    <td>@r.TxnType</td>
+                    <td>@r.Direction</td>
+                    <td>@r.Amount</td>
+                    <td>@r.RunningBalance</td>
+                    <td>@r.ReferenceNo</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+</div>
+```
+
+## 5) Reversal/Index.cshtml
+
+`Views/Reversal/Index.cshtml`
+
+```cshtml
+@{
+    Layout = "_Layout";
+}
+<div class="card">
+    <h2>Reversal (Posted Transaction Undo)</h2>
+    <p>✅ Posted txn edit করা হয় না; reversal voucher দিয়ে undo করা হয়।</p>
+
+    @if (ViewBag.Msg != null) { <div class="msg">@ViewBag.Msg</div> }
+
+    <form method="post" action="/Reversal/Reverse">
+        @Html.AntiForgeryToken()
+        <label>Original TxnId</label>
+        <input name="txnId" />
+        <label>Reason</label>
+        <input name="reason" />
+        <button type="submit">Reverse</button>
+    </form>
+</div>
+```
+
+## 6) Reconciliation/Index.cshtml
+
+`Views/Reconciliation/Index.cshtml`
+
+```cshtml
+@{
+    Layout = "_Layout";
+}
+<div class="card">
+    <h2>EOD Reconciliation</h2>
+    <p>✅ GL Customer Deposits balance == Sum(Customer Ledger Balances) কিনা চেক করে।</p>
+
+    @if (ViewBag.Msg != null) { <div class="msg">@ViewBag.Msg</div> }
+
+    <form method="post" action="/Reconciliation/Run">
+        @Html.AntiForgeryToken()
+        <button type="submit">Run Reconciliation</button>
+    </form>
+</div>
+```
+
+---
+
+# L) Migration + Run
+
+```bash
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+dotnet run
+```
+
+Default Admin: `admin / Admin@1234`
+
+---
+
+
+
+---
+
+## আপনি চাইলে আমি পরের ধাপে “Cash-in-Vault vs Drawer settlement (end-of-day cash transfer)” যোগ করে দেব
+
+মানে: teller drawer cash → vault transfer voucher + drawer reset, এবং checker approval flow সহ।
+
