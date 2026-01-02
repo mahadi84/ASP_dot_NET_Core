@@ -135,7 +135,9 @@
 
 ## 1) CBS-এ Double Entry মানে কী (Software View)
 
-CBS-এ প্রতিটা ট্রানজ্যাকশন “একটা রো” না—এটা আসলে একটা ভাউচার (Voucher / Journal), যার ভিতরে থাকে একাধিক লেজার লাইন (Dr/Cr lines)।
+CBS-এ প্রতিটা ট্রানজ্যাকশন “একটা রো” না—
+এটা আসলে একটা ভাউচার (Voucher / Journal), 
+যার ভিতরে থাকে একাধিক লেজার লাইন (Dr/Cr lines)।
 
 ✅ নিয়ম: Voucher-level এ Total Debit = Total Credit
 ✅ সবসময় “Balanced voucher” না হলে Post হবে না
