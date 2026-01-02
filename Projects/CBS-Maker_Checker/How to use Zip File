@@ -1,0 +1,41 @@
+
+
+✅ Done — আমি আপনার জন্য পুরো **BankCBS** প্রজেক্টটা **ZIP** করে দিয়েছি (MVC + Cookie Login + Maker–Checker + Voucher + Holds + Reversal + EOD Reconciliation + Date-to-date PDF Statement)।
+
+[Download the ZIP](sandbox:/mnt/data/BankCBS.zip)
+
+## ব্যবহার করার নিয়ম (Unzip → Migrate → Run)
+
+1. ZIP unzip করুন
+2. `appsettings.json` এ MySQL connection ঠিক করুন (user/password/db)
+3. Terminal/PowerShell এ প্রজেক্ট ফোল্ডারে যান:
+
+```bash
+cd BankCBS
+```
+
+4. EF tool না থাকলে (একবারই):
+
+```bash
+dotnet tool install --global dotnet-ef
+```
+
+5. Migration + DB update:
+
+```bash
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+```
+
+6. Run:
+
+```bash
+dotnet run
+```
+
+## Default credentials
+
+* **Admin:** `admin / Admin@1234`
+* **Sample Customer:** `A-10001` (Rahim)
+
+আপনি চাইলে পরের আপডেটে আমি **drawer-to-vault end-of-day settlement + cash denomination breakdown** (1000/500/200…) যোগ করে দিতে পারি।
