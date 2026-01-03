@@ -1,0 +1,165 @@
+
+
+নিচে Banking CBS (Core Banking System)-এ Voucher আর Posting কী—
+সহজ কিন্তু professional Bangla-তে, উদাহরণ + টেবিল + ফ্লো দিয়ে বোঝানো হলো।
+
+---
+
+## 🧾 Voucher কী? (Accounting Proof / Evidence)
+
+### 📌 সংজ্ঞা
+
+Voucher হলো কোনো ব্যাংকিং ট্রানজ্যাকশনের লিখিত ও সিস্টেম-generated প্রমাণ,
+যেটার ভিত্তিতে Debit–Credit এন্ট্রি করা হয়।
+
+👉 সহজ ভাষায়:
+
+> Voucher = “এই লেনদেনটা সত্যি ঘটেছে”—এর অফিসিয়াল প্রমাণ
+
+---
+
+### 🧠 কেন Voucher লাগে?
+
+* Audit trail রাখতে
+* Fraud/ভুল ধরতে
+* Regulatory compliance
+* কে, কখন, কেন ট্রানজ্যাকশন করেছে—সব প্রমাণ রাখতে
+
+---
+
+### 🧾 Voucher-এ সাধারণত কী থাকে?
+
+| ফিল্ড          | ব্যাখ্যা             |
+| -------------- | -------------------- |
+| Voucher No     | ইউনিক নম্বর          |
+| Date           | ট্রানজ্যাকশনের তারিখ |
+| Narration      | কী কারণে লেনদেন      |
+| Debit Account  | কোন একাউন্ট ডেবিট    |
+| Credit Account | কোন একাউন্ট ক্রেডিট  |
+| Amount         | টাকার পরিমাণ         |
+| Entered By     | কে এন্ট্রি করেছে     |
+| Approved By    | কে অনুমোদন দিয়েছে    |
+| Status         | Pending / Posted     |
+
+---
+
+### 🧾 উদাহরণ: Cash Deposit Voucher (৳5,000)
+
+| Field      | Value                        |
+| ---------- | ---------------------------- |
+| Voucher No | VCH-1001                     |
+| Date       | 01-01-2026                   |
+| Narration  | Cash deposit by customer     |
+| Debit      | Cash (Asset)                 |
+| Credit     | Customer Deposit (Liability) |
+| Amount     | 5,000                        |
+| Status     | Approved                     |
+
+📌 খেয়াল করুন:
+Voucher শুধু বলে কী করা হবে, এখনো বইতে বসেনি।
+
+---
+
+## 📘 Posting কী? (Actual Ledger Update)
+
+### 📌 সংজ্ঞা
+
+Posting মানে হলো—
+Approved voucher অনুযায়ী Sub-Ledger এবং General Ledger-এ আসল Debit–Credit বসানো।
+
+👉 সহজ ভাষায়:
+
+> Posting = Voucher অনুযায়ী হিসাবের খাতায় লেখা
+
+---
+
+### 🧠 Posting ছাড়া কী হয়?
+
+* Voucher থাকলেও
+* Balance change হয় না
+* Financial statement update হয় না
+
+👉 তাই CBS-এ rule:
+
+> “No posting = no transaction”
+
+---
+
+## 🔁 Voucher → Posting Flow (CBS)
+
+![Image](https://docs.oracle.com/cd/E26228_01/doc.93/e21488/img/image017.gif)
+
+![Image](https://cdn.prod.website-files.com/66531aed16b44cfbd83f8c42/68d7b1b83a9e95f0776d1771_35ce4286.png)
+
+```
+Transaction Occurs
+       ↓
+Voucher Created
+       ↓
+Authorization (Checker)
+       ↓
+Posting Engine
+       ↓
+Sub-Ledger Update
+       ↓
+General Ledger Update
+```
+
+---
+
+## 🧾 Posting Example (Same Voucher)
+
+### 🔹 Sub-Ledger (Customer Level)
+
+| Customer | Debit | Credit | Balance |
+| -------- | ----- | ------ | ------- |
+| Rahim    | —     | 5,000  | 5,000   |
+
+---
+
+### 🔹 General Ledger (Bank Level)
+
+| GL Account                   | Debit | Credit |
+| ---------------------------- | ----- | ------ |
+| Cash (Asset)                 | 5,000 | —      |
+| Customer Deposit (Liability) | —     | 5,000  |
+
+✔️ এখন ট্রানজ্যাকশন Complete
+
+---
+
+## 🧠 Voucher vs Posting (Clear Difference)
+
+| বিষয়           | Voucher          | Posting              |
+| -------------- | ---------------- | -------------------- |
+| কী             | নির্দেশ / প্রমাণ | বাস্তব এন্ট্রি       |
+| Ledger Update  | ❌ না             | ✅ হ্যাঁ              |
+| Balance Change | ❌ না             | ✅ হ্যাঁ              |
+| Approval দরকার | হ্যাঁ            | Voucher approved হলে |
+| Audit Role     | Evidence         | Accounting record    |
+
+---
+
+## 🎯 Banking Interview One-Liner
+
+> Voucher tells WHAT should be posted.
+> Posting actually posts it into the books.
+
+(বাংলা: Voucher বলে কী করা হবে, Posting করে সেটা।)
+
+---
+
+## 🧠 Final Mental Model
+
+> 🧾 Voucher = “চেক”
+> 📘 Posting = “ক্যাশ করা”
+
+---
+
+আপনি চাইলে আমি পরের ধাপে দেখাতে পারি 👇
+1️⃣ Maker–Checker–Poster flow (CBS control)
+2️⃣ Auto-posting SQL / Trigger design
+3️⃣ Voucher reversal & correction flow
+4️⃣ Islamic Banking voucher vs conventional
+
+👉 বলুন, কোনটা next দরকার?
