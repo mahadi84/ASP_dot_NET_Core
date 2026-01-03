@@ -1,0 +1,190 @@
+
+############################################### আমি ব্যাংকে গিয়ে Savings Account-এ ১০,০০০ টাকা জমা দিলাম—ভেতরে কী হলো?  ###############################################
+
+চলুন এবার একদম  দিয়ে দেখি—
+আপনি যখন নিজের Savings Account-এ ১০,০০০ টাকা জমা দেন, তখন ব্যাংকের CBS-এর ভিতরে মুহূর্তে মুহূর্তে কী ঘটে 👇
+(একেবারে counter → system → ledger → balance পর্যন্ত)
+
+## 🏦 Branch Deposit Flow (CBS End-to-End)
+
+🏦 Real Life Flow/  Scenario:
+“আমি ব্যাংকে গিয়ে Savings Account-এ ১০,০০০ টাকা জমা দিলাম—ভেতরে কী হলো?”
+👉 আপনি Savings Account-এ ১০,০০০ টাকা ব্যাংকের Branch Counter-এ জমা দিলেন।
+
+
+
+🔍 এক নজরে Full Flow (Mind Map)
+You deposit cash (10,000)
+        ↓
+Voucher created
+        ↓
+Customer Sub-Ledger (Credit)
+        ↓
+Cash Sub-Ledger (Debit)
+        ↓
+Mapping Rules
+        ↓
+General Ledger Posting
+        ↓
+Trial Balance OK
+        ↓
+Transaction Complete
+
+
+
+
+
+
+## 🧍‍♂️ Step-0: Customer & Teller (Physical World)
+
+1️⃣ আপনি Cash + Deposit Slip দিলেন
+2️⃣ Teller টাকা count + verify করলো
+3️⃣ Teller CBS-এ transaction input দিলো
+4️⃣ CBS এখন Voucher generate করবে
+
+📌 এখানেই System World শুরু
+
+---
+
+## 🧾 Step-1: Voucher Creation (Evidence Stage)
+
+CBS অটো একটি Voucher বানায়:
+
+* Voucher No: VCH-BD-10001
+* Narration: Cash deposit at branch
+* Amount: 10,000
+* Entered by: Teller
+* Status: Pending → Approved (Maker-Checker)
+
+👉 এখনো balance change হয়নি
+Voucher শুধু বলে: *“এই কাজটা করা হবে”*
+
+---
+
+## 🧑 Step-2: Customer Sub-Ledger Update (আপনার খাতা)
+
+Voucher approve হলে CBS Sub-Ledger আপডেট করে (Customer-wise)
+
+### 🧾 Savings Account Sub-Ledger
+
+| SL Txn ID | A/C No   | Txn Type            | Debit | Credit | Balance |
+| --------- | -------- | ------------------- | ----- | ------ | ------- |
+| SL-C-9001 | SB-12345 | Branch Cash Deposit | —     | 10,000 | +10,000 |
+
+### 🧠 Logic
+
+* আপনার একাউন্টে টাকা যোগ হয়েছে
+* Customer POV → Credit
+* Bank POV → Liability বেড়েছে
+
+📌 এই মুহূর্তে:
+
+* ✅ SMS/App balance আপডেট
+* ❌ Financial Statement এখনো নয়
+
+---
+
+## 🏦 Step-3: Cash Sub-Ledger (Branch Vault)
+
+একই সাথে CBS আপডেট করে Branch Vault / Teller Cash
+
+### 🧾 Cash Sub-Ledger
+
+| SL Txn ID | Location     | Debit  | Credit | Balance |
+| --------- | ------------ | ------ | ------ | ------- |
+| SL-V-9002 | Branch Vault | 10,000 | —      | +10,000 |
+
+### 🧠 Logic
+
+* ক্যাশ ঢুকেছে → Asset বেড়েছে → Debit
+
+---
+
+## 🔁 Step-4: Mapping Rules Apply (CBS Brain)
+
+CBS দেখে নেয় কোন Sub-Ledger কোন GL-এ যাবে:
+
+| Sub-Ledger      | GL Account                 |
+| --------------- | -------------------------- |
+| Savings Deposit | GL-201 (Deposit Liability) |
+| Branch Cash     | GL-101 (Cash Asset)        |
+
+📌 Mapping না থাকলে posting fail
+
+---
+
+## 📘 Step-5: General Ledger Posting (Official Book)
+
+CBS এখন ব্যাংকের General Ledger আপডেট করে:
+
+### 📘 GL Entry
+
+| GL Code | Account Name                | Debit  | Credit |
+| ------- | --------------------------- | ------ | ------ |
+| 101     | Cash (Asset)                | 10,000 | —      |
+| 201     | Savings Deposit (Liability) | —      | 10,000 |
+
+### 🧠 বোঝার কথা
+
+* GL customer-wise নয়
+* শুধু total cash ও total deposit liability
+
+---
+
+## 🧾 Step-6: Trial Balance Check (Mandatory)
+
+| Account         | Debit      | Credit     |
+| --------------- | ---------- | ---------- |
+| Cash            | 10,000     | —          |
+| Savings Deposit | —          | 10,000     |
+| Total       | 10,000 | 10,000 |
+
+✔️ Balanced → Transaction Commit
+
+📌 CBS Rule:
+
+> “GL balanced না হলে transaction complete না”
+
+---
+
+
+
+## 🔍 Outside vs Inside (এক নজরে)
+
+| আপনি দেখেন           | CBS-এর ভিতরে      |
+| -------------------- | ----------------- |
+| কাউন্টারে টাকা দিলাম | Voucher তৈরি      |
+| SMS পেলাম            | Sub-Ledger update |
+| Balance বাড়লো        | GL posting        |
+| কাজ শেষ              | Trial balance OK  |
+
+---
+
+
+
+🧠 আপনি বাইরে যা দেখেন vs ভিতরে যা হয়
+আপনি দেখেন	CBS-এর ভিতরে
+Cash দিলাম	Voucher তৈরি
+SMS পেলাম	Sub-Ledger update
+Balance বাড়লো	GL posting
+Done!	Trial balance check
+🎯 Interview-Ready One-Line Answer
+
+“When I deposit Tk 10,000, CBS first updates customer and cash sub-ledgers, then posts aggregated entries into the General Ledger, ensuring trial balance before completing the transaction.”
+
+🧠 Final Real-Life Mental Model
+
+Sub-Ledger আপনার ব্যক্তিগত খাতা
+General Ledger ব্যাংকের হিসাব বই
+Cash Deposit মানে—
+আপনার টাকা ↑, ব্যাংকের দায় ↑
+
+
+## 🔐 Step-7: End-of-Day (EOD) Controls
+
+* Teller cash ↔ Vault reconcile
+* Branch cash report
+* Audit trail preserved
+* All vouchers Posted
+
+---
