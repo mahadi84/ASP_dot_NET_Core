@@ -1,0 +1,221 @@
+
+Date: 3 January 2026
+
+
+
+নিচে Banking CBS–based Accounting Syllabus দেওয়া হলো—
+এটা এমনভাবে সাজানো যে আপনি Accounting → CBS → Software Posting → Audit/Regulation—সব একসাথে বুঝতে পারবেন।
+(Bank job, interview, CBS developer—সবাইয়ের জন্য কাজে লাগবে)
+
+---
+
+🏦 Banking CBS–Based Accounting Syllabus (বাংলা)
+
+
+
+📘 Module–1: Banking Accounting Fundamentals
+
+- ব্যাংকিং অ্যাকাউন্টিং কী?
+- সাধারণ ব্যবসা বনাম ব্যাংক অ্যাকাউন্টিং
+- ব্যাংকের দৃষ্টিভঙ্গি (Bank = Entity)
+- Accounting Equation in Banking
+  Assets = Liabilities + Equity
+
+---
+
+🧠 Module–2: Debit–Credit Logic (Bank POV)
+
+- Debit কী, Credit কী (Bank’s View)
+- Asset, Liability, Income, Expense আচরণ
+- Customer POV vs Bank POV
+- কেন Customer Deposit = Liability
+
+---
+
+📊 Module–3: Chart of Accounts (CoA)
+
+- CoA কী ও কেন দরকার
+- Asset GL (Cash, Loan, Investment)
+- Liability GL (Deposit, Payable)
+- Income GL (Interest, Charges)
+- Expense GL (Salary, Rent)
+- Head Office GL vs Branch GL
+
+---
+
+🧾 Module–4: Voucher Management in CBS
+
+- Voucher কী (Evidence)
+- Voucher Types:
+
+  - Cash Voucher
+  - Transfer Voucher
+  - Journal Voucher
+  - Reversal Voucher
+- Voucher Lifecycle:
+  Create → Verify → Approve → Post
+
+---
+
+🧑 Module–5: Sub-Ledger Accounting
+
+- Sub-Ledger কী?
+- Customer Deposit Sub-Ledger
+- Loan Sub-Ledger
+- Cash / Vault Sub-Ledger
+- Teller-wise & Branch-wise Ledger
+- Balance calculation logic
+
+---
+
+📘 Module–6: General Ledger (GL)
+
+- GL কী ও কেন আলাদা
+- Summary vs Detail concept
+- GL posting structure
+- Branch GL vs HO GL
+- GL control accounts
+
+---
+
+🔁 Module–7: Sub-Ledger → GL Posting Rules
+
+- Mapping Rules (SL → GL)
+- Debit–Credit automation logic
+- Posting failures & mismatch
+- Control totals
+- Suspense account concept
+
+---
+
+🧮 Module–8: Trial Balance in CBS
+
+- Trial Balance কী
+- Daily Trial Balance (DTB)
+- Branch Trial Balance
+- GL-wise debit = credit check
+- Why “No GL balance = No commit”
+
+---
+
+🏦 Module–9: Core Banking Transactions (Real Life)
+
+- Branch Cash Deposit
+- Cash Withdrawal
+- Fund Transfer (Same bank)
+- Inter-branch transaction
+- ATM Deposit vs Branch Deposit
+- Online/Mobile banking transaction flow
+
+---
+
+💰 Module–10: Interest & Charges Accounting
+
+- Savings interest accrual
+- Loan interest accrual
+- Service charge posting
+- Penal interest
+- Monthly / Daily accrual logic
+- Income recognition
+
+---
+
+📅 Module–11: End of Day (EOD) & End of Month (EOM)
+
+- Teller cash balancing
+- Vault reconciliation
+- Auto-posting jobs
+- Interest posting
+- GL cleanup
+- Report generation
+
+---
+
+⚠️ Module–12: Errors, Reversal & Rectification
+
+- Wrong posting scenarios
+- Voucher reversal
+- Back-dated correction
+- GL mismatch handling
+- Audit trail preservation
+
+---
+
+🔍 Module–13: Bank Reconciliation (BRS)
+
+- Cash vs Bank balance difference
+- Outstanding cheque
+- Deposit in transit
+- Charges & interest mismatch
+- CBS-generated BRS
+
+---
+
+🔐 Module–14: Control, Audit & Compliance
+
+- Maker–Checker principle
+- User role & authorization
+- Audit log
+- Bangladesh Bank / Central Bank reporting
+- Data integrity & controls
+
+---
+
+💻 Module–15: CBS for Developers (Very Important)
+
+- Double-entry engine design
+- Voucher-based posting logic
+- Transaction atomicity
+- Rollback & commit
+- GL posting SQL logic
+- Performance & scalability
+
+---
+
+🎯 Module–16: Islamic Banking (Optional / Advanced)
+
+- Murabaha accounting
+- Profit vs Interest difference
+- Islamic deposit accounting
+- Shariah-compliant GL structure
+
+---
+
+
+
+
+
+
+
+
+
+
+
+🧠 Exam / Interview Focus Areas (Must Prepare)
+
+1️⃣ Debit–Credit logic (Bank POV)
+2️⃣ Sub-Ledger vs General Ledger
+3️⃣ Voucher → Posting → Trial Balance
+4️⃣ Deposit & Loan accounting
+5️⃣ Error handling & reversal
+
+---
+
+🧠 এক লাইনের Master Summary
+
+> CBS–based Accounting মানে—
+> Voucher দিয়ে প্রমাণ,
+> Sub-Ledger দিয়ে বিস্তারিত,
+> General Ledger দিয়ে সারসংক্ষেপ,
+> Trial Balance দিয়ে নিশ্চয়তা।
+
+---
+
+আপনি চাইলে আমি পরের ধাপে দিতে পারি 👇
+
+- 📄 এই syllabus অনুযায়ী Full Notes (Module-wise)
+- 🧾 Each module-এর Real CBS Example
+- 💻 .NET / SQL–based CBS Accounting Implementation
+- 🏦 Bank job interview Q&A (Bangla)
+
+👉 বলুন, পরের ধাপে কী চান?
