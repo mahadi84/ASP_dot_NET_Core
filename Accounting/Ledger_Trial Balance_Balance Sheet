@@ -1,0 +1,376 @@
+
+
+
+Banking Accounting–এ:
+-কি (What), কেন (Why), কিভাবে (How)
+
+01. 👉 Ledger, General Ledger (GL) ও Trial Balance?
+02. 👉 একই ট্রানজ্যাকশন: Ledger → GL → Trial Balance (side-by-side)
+03. 👉 Balance Sheet কী? 
+        Balance Sheet বনাম Trial Balance.
+
+---
+
+## 🏦 Banking Accounting Big Picture (এক নজরে)
+
+```
+Transaction
+   ↓
+Ledger (Sub-Ledger)
+   ↓
+General Ledger (GL)
+   ↓
+Trial Balance
+```
+
+---
+
+# 📘 ১️⃣ Ledger (লেজার) কী?
+
+## 🔹 WHAT (কি)
+
+Ledger হলো হিসাবের খাতা, যেখানে একটি নির্দিষ্ট অ্যাকাউন্টের সব Debit–Credit ধারাবাহিকভাবে লেখা থাকে।
+
+👉 ব্যাংকিংয়ে সাধারণত Sub-Ledger বোঝায়:
+
+- Customer Ledger (Savings/Current)
+- Loan Ledger
+- Cash/Teller Ledger
+
+---
+
+## 🔹 WHY (কেন দরকার)
+
+- গ্রাহকভিত্তিক ব্যালান্স জানতে
+- SMS/Statement দিতে
+- দৈনন্দিন অপারেশন চালাতে
+
+---
+
+## 🔹 HOW (উদাহরণ)
+
+👉 গ্রাহক ১০,০০০ টাকা জমা দিল
+
+### Customer Sub-Ledger
+
+| Date  | Debit | Credit | Balance |
+| ----- | ----- | ------ | ------- |
+| Today | —     | 10,000 | 10,000  |
+
+📌 এখানে গ্রাহক-ওয়াইজ হিসাব থাকে
+❌ এখান থেকে Financial Statement হয় না
+
+---
+
+# 📗 ২️⃣ General Ledger (GL) কী?
+
+## 🔹 WHAT (কি)
+
+GL হলো ব্যাংকের মাস্টার/অফিশিয়াল খাতা—
+যেখানে সব Sub-Ledger-এর সারসংক্ষেপ (Total) জমা হয়।
+
+👉 GL Customer-wise নয়, Head-wise:
+
+- Cash (Asset)
+- Deposits (Liability)
+- Income
+- Expense
+
+---
+
+## 🔹 WHY (কেন দরকার)
+
+- Balance Sheet & P/L তৈরি করতে
+- Audit & Central Bank রিপোর্টিং
+- ব্যাংকের মোট অবস্থান জানতে
+
+---
+
+## 🔹 HOW (উদাহরণ)
+
+👉 একই ১০,০০০ টাকা ডিপোজিট
+
+### General Ledger Entry
+
+| GL Head                      | Debit  | Credit |
+| ---------------------------- | ------ | ------ |
+| Cash (Asset)                 | 10,000 | —      |
+| Customer Deposit (Liability) | —      | 10,000 |
+
+📌 এখানে মোট Cash ও মোট Deposit দেখা যায়
+❌ কোন গ্রাহক—তা দেখা যায় না
+
+---
+
+# 📊 ৩️⃣ Trial Balance কী?
+
+## 🔹 WHAT (কি)
+
+Trial Balance হলো একটি তালিকা যেখানে
+👉 সব GL অ্যাকাউন্টের Debit ও Credit যোগফল দেখানো হয়।
+
+মূল নিয়ম:
+
+> Total Debit = Total Credit
+
+---
+
+## 🔹 WHY (কেন দরকার)
+
+- হিসাব ঠিক আছে কি না যাচাই
+- GL Posting সঠিক কি না নিশ্চিত
+- Financial Statement তৈরির আগে চেক
+
+---
+
+## 🔹 HOW (উদাহরণ)
+
+### Trial Balance
+
+| Account          | Debit      | Credit     |
+| ---------------- | ---------- | ---------- |
+| Cash             | 10,000     | —          |
+| Customer Deposit | —          | 10,000     |
+| Total        | 10,000 | 10,000 |
+
+✔️ মিলেছে → হিসাব ঠিক
+❌ না মিললে → Error / Posting issue
+
+---
+
+# 🔍 Ledger vs GL vs Trial Balance (Clear Comparison)
+
+| বিষয়          | Ledger (Sub-Ledger)       | GL                  | Trial Balance  |
+| ------------- | ------------------------- | ------------------- | -------------- |
+| Level         | Detail (Customer-wise)    | Summary (Head-wise) | Summary Check  |
+| Purpose       | Daily ops, SMS, Statement | Financial records   | Accuracy check |
+| Customer Name | থাকে                      | থাকে না             | থাকে না        |
+| Output        | Balance per account       | Total per head      | Debit = Credit |
+| CBS Role      | Operational               | Official book       | Validation     |
+
+---
+
+# 🧠 মনে রাখার সহজ লাইন
+
+> Ledger = গ্রাহকের খাতা
+> GL = ব্যাংকের খাতা
+> Trial Balance = হিসাব মিলানোর তালিকা
+
+---
+
+## 🎯 Interview / Exam One-Liners
+
+- Ledger records detailed transactions for a specific account.
+- General Ledger summarizes all ledgers for reporting.
+- Trial Balance checks whether debits equal credits.
+
+---
+
+
+
+############################## 02. 🧾 একই ট্রানজ্যাকশন: Ledger → GL → Trial Balance (side-by-side)  ##########################
+
+চলুন একই ট্রানজ্যাকশন (Branch Cash Deposit) Ledger → GL → Trial Balance
+👉 side-by-side, একই পেজে, copy-study friendlyভাবে দেখি।
+
+
+## 🎯 Scenario (একটাই ট্রানজ্যাকশন)
+
+👉 গ্রাহক Savings Account-এ ১০,০০০ টাকা ক্যাশ জমা দিল (Branch Counter)
+
+---
+
+# 🧾 ① Ledger (Sub-Ledger) — Detail / Customer-wise
+
+> এখানে গ্রাহকভিত্তিক বিস্তারিত থাকে (SMS/Statement এখান থেকেই)
+
+### 🧑 Customer Deposit Sub-Ledger
+
+| Date  | Particulars         | Debit | Credit |    Balance |
+| ----- | ------------------- | ----: | -----: | ---------: |
+| Today | Branch Cash Deposit |     — | 10,000 | 10,000 |
+
+### 🏦 Cash (Vault/Teller) Sub-Ledger
+
+| Date  | Particulars   |  Debit | Credit |     Balance |
+| ----- | ------------- | -----: | -----: | ----------: |
+| Today | Cash Received | 10,000 |      — | +10,000 |
+
+Logic (Bank POV):
+
+- Customer Deposit = Liability ↑ → Credit
+- Cash = Asset ↑ → Debit
+
+---
+
+# 📘 ② General Ledger (GL) — Summary / Head-wise
+
+> এখানে গ্রাহক নাম নেই—শুধু মোট অঙ্ক
+
+| GL Code | GL Head                     |      Debit |     Credit |
+| ------- | --------------------------- | ---------: | ---------: |
+| 101     | Cash (Asset)                | 10,000 |          — |
+| 201     | Savings Deposit (Liability) |          — | 10,000 |
+
+Why GL?
+- Financial Statement, Audit, Central Bank রিপোর্ট—সব এখান থেকে
+
+---
+
+# 📊 ③ Trial Balance — Accuracy Check
+
+> Rule: Total Debit = Total Credit
+
+| Account         |      Debit |     Credit |
+| --------------- | ---------: | ---------: |
+| Cash            |     10,000 |          — |
+| Savings Deposit |          — |     10,000 |
+| Total       | 10,000 | 10,000 |
+
+✔️ Balanced → Transaction Complete
+
+---
+
+## 🔍 Side-by-Side Summary (এক নজরে)
+
+| Stage         | কী দেখায়         | Customer-wise? | উদ্দেশ্য            |
+| ------------- | ---------------- | -------------- | ------------------- |
+| Ledger (SL)   | Detail entries   | ✅ হ্যাঁ          | SMS, Statement, Ops |
+| GL            | Head-wise totals | ❌ না           | FS, Audit           |
+| Trial Balance | Debit=Credit     | ❌ না           | Accuracy check      |
+
+---
+
+## 🧠 মনে রাখার ১-লাইনের ম্যাপ
+
+> Ledger লিখে বিস্তারিত → GL বানায় সারসংক্ষেপ → Trial Balance মিলিয়ে নিশ্চয়তা
+
+---
+
+## 🎯 Exam / Interview One-Liner
+
+> -“A transaction first updates sub-ledgers for detail, then posts to the general ledger for totals, and finally passes the trial balance check.”-
+
+
+######################################### 03. 👉 নিচে Balance Sheet কী— WHAT (কি), WHY (কেন), HOW (কিভাবে)? Balance Sheet বনাম Trial Balance #########################################
+
+
+---
+
+## 📊 Balance Sheet কী? (WHAT)
+
+Balance Sheet হলো একটি আর্থিক বিবরণী (Financial Statement),
+যেখানে একটি নির্দিষ্ট তারিখে কোনো প্রতিষ্ঠান (ব্যাংক)—
+
+* কী কী সম্পদ (Assets) আছে
+* কী কী দায় (Liabilities) আছে
+* মালিকের Equity কত
+
+👉 সব একসাথে দেখানো হয়।
+
+📌 সহজ ভাষায়:
+
+> Balance Sheet = নির্দিষ্ট দিনে ব্যাংকের আর্থিক ছবি (Snapshot)
+
+---
+
+## ❓ কেন Balance Sheet দরকার? (WHY)
+
+1️⃣ ব্যাংকের আর্থিক অবস্থান জানার জন্য
+2️⃣ ব্যাংক কতটা শক্তিশালী/ঝুঁকিপূর্ণ বোঝার জন্য
+3️⃣ Central Bank ও Audit রিপোর্টিংয়ের জন্য
+4️⃣ বিনিয়োগকারী ও ব্যবস্থাপনার সিদ্ধান্তের জন্য
+5️⃣ Accounting Equation মিলছে কি না যাচাই করতে
+
+---
+
+## 🧮 Balance Sheet-এর মূল সমীকরণ (HOW)
+
+```
+Assets = Liabilities + Equity
+```
+
+👉 Balance Sheet সবসময় এই সমীকরণে ব্যালান্স থাকে।
+
+---
+
+## 🏦 ব্যাংকিং Balance Sheet-এর গঠন
+
+### 🔵 Assets (ব্যাংকের নিজের যা আছে)
+
+* Cash & Bank Balance
+* Loans & Advances
+* Investments
+* Fixed Assets (Building, ATM)
+
+---
+
+### 🔴 Liabilities (ব্যাংকের দায়)
+
+* Customer Deposits (Savings, Current, FD)
+* Borrowings
+* Payables
+
+---
+
+### 🟢 Equity (মালিকের অংশ)
+
+* Paid-up Capital
+* Retained Earnings
+* Reserve & Surplus
+
+---
+
+## 🧾 Real Banking Example (সহজ)
+
+👉 ধরুন, আজ ব্যাংকের অবস্থা:
+
+### Balance Sheet (As on Today)
+
+| Assets    |     Amount | Liabilities & Equity |     Amount |
+| --------- | ---------: | -------------------- | ---------: |
+| Cash      |     10,000 | Customer Deposit     |     10,000 |
+| Total | 10,000 | Total            | 10,000 |
+
+✔️ Balanced
+
+---
+
+## 🔁 Ledger → GL → Trial Balance → Balance Sheet
+
+
+* Ledger: Detail হিসাব
+* GL: Head-wise মোট
+* Trial Balance: Debit = Credit চেক
+* Balance Sheet: আর্থিক অবস্থান প্রকাশ
+
+---
+
+## 🧠 Balance Sheet বনাম Trial Balance (Confusion Clear)
+
+| বিষয়     | Trial Balance  | Balance Sheet                 |
+| -------- | -------------- | ----------------------------- |
+| উদ্দেশ্য   | হিসাব মিলানো   | আর্থিক অবস্থা দেখানো          |
+| সময়     | যেকোনো সময়     | নির্দিষ্ট তারিখে              |
+| Account  | সব GL          | Asset, Liability, Equity      |
+| Output   | Debit = Credit | Assets = Liabilities + Equity |
+
+---
+
+## 🎯 Exam / Interview One-Liner
+
+> Balance Sheet shows the financial position of a bank at a specific point in time.
+
+---
+
+## 🧠 মনে রাখার লাইন
+
+> Trial Balance বলে হিসাব ঠিক,
+> Balance Sheet বলে ব্যাংক কতটা শক্ত।
+
+
+
+
+
+
+.
