@@ -160,20 +160,10 @@ CBS এখন ব্যাংকের General Ledger আপডেট করে:
 
 ---
 
-
-
-🧠 আপনি বাইরে যা দেখেন vs ভিতরে যা হয়
-আপনি দেখেন	CBS-এর ভিতরে
-Cash দিলাম	Voucher তৈরি
-SMS পেলাম	Sub-Ledger update
-Balance বাড়লো	GL posting
-Done!	Trial balance check
 🎯 Interview-Ready One-Line Answer
-
 “When I deposit Tk 10,000, CBS first updates customer and cash sub-ledgers, then posts aggregated entries into the General Ledger, ensuring trial balance before completing the transaction.”
 
 🧠 Final Real-Life Mental Model
-
 Sub-Ledger আপনার ব্যক্তিগত খাতা
 General Ledger ব্যাংকের হিসাব বই
 Cash Deposit মানে—
@@ -181,7 +171,6 @@ Cash Deposit মানে—
 
 
 ## 🔐 Step-7: End-of-Day (EOD) Controls
-
 * Teller cash ↔ Vault reconcile
 * Branch cash report
 * Audit trail preserved
