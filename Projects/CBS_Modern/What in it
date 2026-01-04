@@ -1,0 +1,222 @@
+
+
+
+Use: Double Entry Accounting System
+
+```
+Transaction Entry (Checker)
+        ↓
+Authorization (Maker)
+        ↓
+Sub-Ledger Posting
+        ↓
+General Ledger (GL) Posting
+        ↓
+Reconciliation & Controls (Sub-ledger ↔ GL, Cash Proof, Trial Balance)
+```
+
+---
+
+General Ledger Head for:
+- A/C-1001 : Cash (Asset)
+- A/C-2001 : Customer Deposits (Liability)
+
+---
+
+Sub-Ledger for:
+- Customer Ledger (Savings / Current Accounts)
+- Cash / Teller Ledger (Checker-wise cash drawer)
+
+---
+
+Deposit Validation:
+- Account must be active
+- Amount must be greater than zero (> 0)
+
+---
+
+Withdraw Validation:
+- Account must be active
+- Available balance ≥ withdrawal amount (+ applicable charges)
+- Cash drawer current cash ≥ withdrawal amount
+  (otherwise branch vault transfer is required)
+
+---
+
+### Reconciliation (How to confirm Sub-ledger and GL store the right value)
+
+- Reconciliation ensures no mismatch between detail ledgers (Sub-ledger) and summary books (GL)
+
+- Control Account Rules:
+  - GL A/C-2001 (Customer Deposits) must equal Σ(Customer Ledger balances)
+  - GL A/C-1001 (Cash) must equal Σ(All Checker Cash Drawer balances)
+
+- Trial Balance Rule:
+  - Σ(All GL Debits) = Σ(All GL Credits) at any point in time
+
+- Transaction Integrity Checks:
+  - No partial posting (Sub-ledger posted but GL not posted, or vice versa)
+  - No pending “Initiated but not Posted” transactions included in reconciliation totals
+
+- Suspense / Exception Control (if implemented):
+  - Suspense balance should be 0 or must have clear ageing/settlement explanation
+
+- Cash Proof (Branch-level):
+  - Teller system cash (cash_drawers.current_cash) must match physical cash count at end of day
+
+- Reconciliation Reports (PDF):
+  - Sub-ledger vs GL control account comparison report
+  - Trial Balance report with totals
+  - Cash over/short report (if physical count differs)
+
+---
+
+### Login Account for Checker:
+
+- Responsible for customer creation
+  (Name, Account Type: Saving (111) / Current (222), system-generated 5-digit account number)
+- Responsible for deposit and withdrawal transaction initiation
+- Each initiated transaction generates a Batch Number
+- Instrument Type: Cash
+- Transaction Status: Initiated
+- Initiated By: Logged-in Checker ID
+- Can view and generate PDF report of:
+  - Total number of customers created today
+  - Total number of deposit/withdraw transactions initiated today
+  - End-of-day cash-in-hand (cash drawer balance)
+- Can generate date-to-date customer statements in PDF format
+  (with complete double-entry accounting view)
+
+---
+
+### Login Account for Maker:
+
+- Responsible for approval or rejection of:
+
+  - Customers created by Checker
+  - Transactions initiated by Checker
+- Approval Status:
+  - Approved (Approved By: Logged-in Maker ID)
+  - Rejected (Rejected By: Logged-in Maker ID)
+- Can edit or delete customer/transaction records before approval only
+- Can view a separate list of all transactions approved today
+- Can generate date-to-date statements in PDF format
+  (with double-entry accounting details)
+
+---
+
+### Login Account for Admin:
+
+- Responsible for user management:
+  - Create / Edit / Delete users
+  - Activate / Deactivate users
+  - Change roles (Checker / Maker)
+  - Reset passwords
+- Can generate date-to-date statements in PDF format
+  (with double-entry accounting)
+  Can add, edit, or delete:
+  - General Ledger heads
+  - Sub-Ledger configurations
+- Can generate financial statements of the bank
+  (Assets and Liabilities) for any selected date in PDF format
+
+---
+
+### Login Account for Auditor:
+
+- Can monitor who performed what actions in the system
+- Can view detailed audit logs
+- Can generate Trial Balance reports in PDF format
+  (based on double-entry accounting principles)
+- Can generate reconciliation reports in PDF format:
+  - GL-2001 vs Σ(Customer Sub-ledger) reconciliation
+  - GL-1001 vs Σ(Cash Drawer Sub-ledger) reconciliation
+  - Exception/Pending postings list (if any)
+
+---
+- A complete MVC-based web application where customer deposit and withdrawal transactions flow exactly like a real banking system:
+  Checker → Maker → Sub-Ledger → General Ledger → Trial Balance → Reconciliation
+
+Use:
+- .NET Core v9 MVC
+- Clean Architecture
+- Centralized success/failure message handling
+- Database: MySQL
+
+---
+
+### ✅ Why this version is best practice
+
+- Clear separation of roles and responsibilities
+- Correct banking terminology (Initiated, Approved, Posted)
+- Explicit double-entry accounting flow
+- Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
+- Audit- and compliance-friendly
+- Ready for real CBS simulation
+
+---
+
+
+
+
+===============================================================================
+
+
+এই কয়টা জিনিস bank-grade feel like Real Bank দেয়:
+   -Maker-Checker workflow (Initiated vs Posted)
+   -Atomic posting (single DB transaction)
+   -Audit logs (before/after)
+   -Cash drawer control (each checker has hand cash)
+   -GL Trial balance & Financial statement (as-of date)
+   -Reports with reference numbers (Batch/Txn/Journal)
+   -Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
+
+
+
+
+তোমার requirement অনেক বড়, তাই cleanভাবে build করার best order-এগোলে “Complete app” দ্রুত দাঁড়াবে:
+   -Auth + Roles (Checker/Maker/Admin/Auditor)
+   -Customer Draft + Approval
+   -Cash drawer table + basic update
+   -Deposit/Withdraw initiate + approve/post
+   -GL journal + trial balance
+   -PDF reports (daily + statement + trial + financial)
+
+
+
+
+############################# CBS আসলে কী? (মডার্ন আর্কিটেকচার) #############################
+
+আজকের CBS সাধারণত একটা বড় monolith না—এটা অনেকগুলো component/service মিলে কাজ করে:
+   -Teller/Branch App (Cash counter UI)
+   -Customer & Account Service (CIF/KYC, account status)
+   -Product & Pricing Service (Savings, Current, fees, rules)
+   -Limits & Controls (teller limit, branch limit, per txn limit)
+   -Risk/AML/Fraud (sanction/PEP screening, unusual pattern)
+   -Transaction Orchestrator (workflow engine)
+   -Posting/Ledger Engine (double-entry posting)
+   -Sub-ledger (customer account balances/details)
+   -GL Service (general ledger, chart of accounts)
+   -Cash Management (cash drawer, vault, cash-in-transit)
+   -Audit & Compliance Logging
+   -Reconciliation & EOD (end-of-day processes)
+   -Message Queue/Event Bus (Kafka/RabbitMQ style; async work)
+
+বড় কথা: Approval/Authorization আর Posting অনেক সময় আলাদা আলাদা হয়—modern CBS-এ throughput আর reliability এর জন্য।
+
+
+
+Data Model: Bank-এ “money” কোথায় থাকে?
+ব্যাংকের সফটওয়্যারে টাকা ৩টা জায়গায় “ধারণা” হিসেবে থাকে:
+   1. Transaction (Txn): কী ঘটেছে—তার রেকর্ড
+   2. Ledger/Sub-ledger balances: Customer A/C এর ব্যালান্স
+   3. GL: Accounting view (Bank’s books)
+Double Entry rule: প্রতিটা txn এ কমপক্ষে ২টা posting (Debit/Credit)
+✅ Total Debit = Total Credit (সবসময়)
+
+
+
+
+
+
+.
