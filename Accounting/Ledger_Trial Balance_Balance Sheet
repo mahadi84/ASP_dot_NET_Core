@@ -206,7 +206,13 @@ GL Code	        GL Head Name	        Category	Total Debit	Total Credit	Net Balan
 5001	        Expense (Salary)	  Expense	        50,000	        0	        50,000 (Dr)
 -----------------------------------------------------------------------------------------------------
 
+টাকা জমা দেওয়ার সময় (When Customer Deposits Money):
+-ধরা যাক, একজন গ্রাহক ১,০০০ টাকা জমা দিলেন। এটি আপনার ডাটাবেসে ২টি GL Head-কে পরিবর্তন করবে:
+-আপনার সিস্টেমে Assets (Cash) বাড়ছে এবং সমানভাবে Liabilities (Deposit) বাড়ছে।
 
+টাকা তোলার সময় (When Customer Withdraws Money):
+ধরা যাক, গ্রাহক ৫০০ টাকা তুলে নিলেন। (এখন উল্টো ঘটনা ঘটবে-)২টি GL Head-কে পরিবর্তন করব:
+আপনার সিস্টেমে Assets (Cash) কমছে এবং সমানভাবে Liabilities (Deposit) কমছে।
 
 
 
