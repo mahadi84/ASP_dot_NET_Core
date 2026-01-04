@@ -1,3 +1,4 @@
+Date: 4 January 2026
 
 
 
@@ -70,7 +71,54 @@ Withdraw Validation:
   - Sub-ledger vs GL control account comparison report
   - Trial Balance report with totals
   - Cash over/short report (if physical count differs)
-  - *How can be solved?
+  
+  How can be solved? (Mismatch Correction / Resolution)
+
+    - Step-1: Detect mismatch scope
+      - Identify which control account mismatched (GL-2001 or GL-1001)
+      - Identify date range and batch/txn references involved
+
+    - Step-2: Trace transactions (Txn → Sub-ledger → GL)
+      - For each suspicious txn_ref:
+        - Check txn status: Initiated / Approved / Posted / Failed
+        - Compare sub_ledger_entries vs gl_journal_lines for the same txn_id
+        - Find missing line, wrong amount, or duplicate posting
+
+    - Step-3: Fix rule (Best Practice: Never edit posted data)
+      - If Sub-ledger updated but GL missing:
+        - Create Maker-approved “Correction Journal” to post the missing GL line(s)
+        - Reference original txn_ref and reason in narration/audit log
+
+      - If GL updated but Sub-ledger missing:
+        - Create Maker-approved “Sub-ledger Adjustment Entry”
+        - Recompute/update account balance snapshot from ledger entries (as-of date)
+
+      - If wrong amount posted:
+        - Post a full “Reversal Transaction” (exact opposite Dr/Cr)
+        - Then post a new correct transaction (with new txn_ref)
+
+      - If duplicate posting happened:
+        - Reverse the duplicate transaction
+        - Enforce idempotency (txn_ref unique) to prevent re-posting
+
+      - If Cash drawer ≠ physical cash:
+        - Create “Cash Over/Short” adjustment (with Maker approval) or force recount
+        - Investigate missing/misposted cash movement and clear it with correction entries
+
+      - If Suspense exists (optional design):
+        - Move suspense amount to correct GL/Sub-ledger via “Suspense Clearance” posting
+        - Suspense ageing must be monitored until balance becomes 0
+
+    - Step-4: Re-run reconciliation (must pass)
+      - Confirm: GL-2001 = Σ(Customer sub-ledger)
+      - Confirm: GL-1001 = Σ(Cash drawers)
+      - Confirm: Trial Balance ΣDr = ΣCr
+      - Confirm: No pending “Initiated but not Posted” counted in totals
+
+    - Step-5: Governance & Audit (mandatory)
+      - All corrections require Maker approval
+      - Keep immutable history: correction entries must reference original txn_ref
+      - Store reason, before/after snapshot (optional), and user/time in audit_logs
 
 ---
 
@@ -95,11 +143,11 @@ Withdraw Validation:
 ### Login Account for Maker:
 
 Responsible for approval or rejection of:
-  - Customers created by Checker
-  - Transactions initiated by Checker
-Approval Status:
-  - Approved (Approved By: Logged-in Maker ID)
-  - Rejected (Rejected By: Logged-in Maker ID)
+- Customers created by Checker
+- Transactions initiated by Checker
+  Approval Status:
+- Approved (Approved By: Logged-in Maker ID)
+- Rejected (Rejected By: Logged-in Maker ID)
 - Can edit or delete customer/transaction records before approval only
 - Can view a separate list of all transactions approved today
 - Can generate date-to-date statements in PDF format
@@ -110,13 +158,13 @@ Approval Status:
 ### Login Account for Admin:
 
 Responsible for user management:
-  - Create / Edit / Delete users
-  - Activate / Deactivate users
-  - Change roles (Checker / Maker)
-  - Reset passwords
+- Create / Edit / Delete users
+- Activate / Deactivate users
+- Change roles (Checker / Maker)
+- Reset passwords
 - Can generate date-to-date statements in PDF format
   (with double-entry accounting)
-Can add, edit, or delete:
+  Can add, edit, or delete:
   - General Ledger heads
   - Sub-Ledger configurations
 - Can generate financial statements of the bank
@@ -136,6 +184,7 @@ Can add, edit, or delete:
   - Exception/Pending postings list (if any)
 
 ---
+
 - A complete MVC-based web application where customer deposit and withdrawal transactions flow exactly like a real banking system:
   Checker → Maker → Sub-Ledger → General Ledger → Trial Balance → Reconciliation
 
@@ -146,6 +195,8 @@ Use:
 - Database: MySQL
 
 ---
+
+
 
 
 
