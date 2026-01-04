@@ -91,11 +91,10 @@ Withdraw Validation:
 
 ### Login Account for Maker:
 
-- Responsible for approval or rejection of:
-
+Responsible for approval or rejection of:
   - Customers created by Checker
   - Transactions initiated by Checker
-- Approval Status:
+Approval Status:
   - Approved (Approved By: Logged-in Maker ID)
   - Rejected (Rejected By: Logged-in Maker ID)
 - Can edit or delete customer/transaction records before approval only
@@ -107,14 +106,14 @@ Withdraw Validation:
 
 ### Login Account for Admin:
 
-- Responsible for user management:
+Responsible for user management:
   - Create / Edit / Delete users
   - Activate / Deactivate users
   - Change roles (Checker / Maker)
   - Reset passwords
 - Can generate date-to-date statements in PDF format
   (with double-entry accounting)
-  Can add, edit, or delete:
+Can add, edit, or delete:
   - General Ledger heads
   - Sub-Ledger configurations
 - Can generate financial statements of the bank
@@ -145,6 +144,14 @@ Use:
 
 ---
 
+
+
+
+
+
+===============================================================================
+
+
 ### ✅ Why this version is best practice
 
 - Clear separation of roles and responsibilities
@@ -157,9 +164,6 @@ Use:
 ---
 
 
-
-
-===============================================================================
 
 
 এই কয়টা জিনিস bank-grade feel like Real Bank দেয়:
