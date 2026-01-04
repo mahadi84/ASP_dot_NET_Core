@@ -245,13 +245,11 @@ Why GL?
 ---
 
 ## 🧠 মনে রাখার ১-লাইনের ম্যাপ
-
 > Ledger লিখে বিস্তারিত → GL বানায় সারসংক্ষেপ → Trial Balance মিলিয়ে নিশ্চয়তা
 
 ---
 
 ## 🎯 Exam / Interview One-Liner
-
 > -“A transaction first updates sub-ledgers for detail, then posts to the general ledger for totals, and finally passes the trial balance check.”-
 
 
@@ -272,7 +270,6 @@ Balance Sheet হলো একটি আর্থিক বিবরণী (Fina
 👉 সব একসাথে দেখানো হয়।
 
 📌 সহজ ভাষায়:
-
 > Balance Sheet = নির্দিষ্ট দিনে ব্যাংকের আর্থিক ছবি (Snapshot)
 
 ---
@@ -295,62 +292,49 @@ Assets = Liabilities + Equity
 
 👉 Balance Sheet সবসময় এই সমীকরণে ব্যালান্স থাকে।
 
----
-
 ## 🏦 ব্যাংকিং Balance Sheet-এর গঠন
 
 ### 🔵 Assets (ব্যাংকের নিজের যা আছে)
-
 * Cash & Bank Balance
 * Loans & Advances
 * Investments
 * Fixed Assets (Building, ATM)
 
----
 
 ### 🔴 Liabilities (ব্যাংকের দায়)
-
 * Customer Deposits (Savings, Current, FD)
 * Borrowings
 * Payables
 
----
 
 ### 🟢 Equity (মালিকের অংশ)
-
 * Paid-up Capital
 * Retained Earnings
 * Reserve & Surplus
 
----
 
 ## 🧾 Real Banking Example (সহজ)
 
 👉 ধরুন, আজ ব্যাংকের অবস্থা:
 
 ### Balance Sheet (As on Today)
-
 --------------------------------------------------------------
 | Assets    |     Amount | Liabilities & Equity |     Amount |
 | --------- | ---------: | -------------------- | ---------: |
 | Cash      |     10,000 | Customer Deposit     |     10,000 |
 --------------------------------------------------------------
-| Total     | 10,000     | Total                | 10,000 |
+| Total     | 10,000     | Total                | 10,000     |
 --------------------------------------------------------------
 
 ✔️ Balanced
 
----
 
 ## 🔁 Ledger → GL → Trial Balance → Balance Sheet
+        * Ledger: Detail হিসাব
+        * GL: Head-wise মোট
+        * Trial Balance: Debit = Credit চেক
+        * Balance Sheet: আর্থিক অবস্থান প্রকাশ
 
-
-* Ledger: Detail হিসাব
-* GL: Head-wise মোট
-* Trial Balance: Debit = Credit চেক
-* Balance Sheet: আর্থিক অবস্থান প্রকাশ
-
----
 
 ## 🧠 Balance Sheet বনাম Trial Balance (Confusion Clear)
 
@@ -363,16 +347,11 @@ Assets = Liabilities + Equity
 | Output   | Debit = Credit | Assets = Liabilities + Equity |
 -------------------------------------------------------------
 
----
-
 ## 🎯 Exam / Interview One-Liner
-
 > Balance Sheet shows the financial position of a bank at a specific point in time.
 
----
 
 ## 🧠 মনে রাখার লাইন
-
 > Trial Balance বলে হিসাব ঠিক,
 > Balance Sheet বলে ব্যাংক কতটা শক্ত।
 
