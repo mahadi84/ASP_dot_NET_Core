@@ -32,12 +32,14 @@ Sub-Ledger for:
 Deposit Validation:
 - Account must be active
 - Amount must be greater than zero (> 0)
+- Teller limit, branch limit, per txn limit
 
 ---
 
 Withdraw Validation:
 - Account must be active
 - Available balance ≥ withdrawal amount (+ applicable charges)
+- Teller limit, branch limit, per txn limit
 - Cash drawer current cash ≥ withdrawal amount
   (otherwise branch vault transfer is required)
 
@@ -68,6 +70,7 @@ Withdraw Validation:
   - Sub-ledger vs GL control account comparison report
   - Trial Balance report with totals
   - Cash over/short report (if physical count differs)
+  - *How can be solved?
 
 ---
 
