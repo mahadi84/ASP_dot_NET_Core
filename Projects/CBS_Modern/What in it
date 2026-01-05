@@ -125,7 +125,7 @@ Withdraw Validation:
 ### Login Account for Checker:
 
 - Responsible for customer creation
-  (Name, Account Type: Saving (111) / Current (222), system-generated 5-digit account number)
+  (Name, Account Type: Saving (111) / Current (222), system-will-generate 5-digit account number after form submision)
 - Responsible for deposit and withdrawal transaction initiation
 - Each initiated transaction generates a Batch Number
 - Instrument Type: Cash
