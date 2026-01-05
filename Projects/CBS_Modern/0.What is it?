@@ -1,7 +1,6 @@
 Date: 4 January 2026
 
 
-
 CBS with Double Entry Accounting System
 
 ```
@@ -288,6 +287,7 @@ Data Model: Bank-এ “money” কোথায় থাকে?
    3. GL: Accounting view (Bank’s books)
 Double Entry rule: প্রতিটা txn এ কমপক্ষে ২টা posting (Debit/Credit)
 ✅ Total Debit = Total Credit (সবসময়)
+
 
 
 
