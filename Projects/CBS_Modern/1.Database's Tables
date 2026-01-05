@@ -148,6 +148,22 @@ CREATE TABLE audit_logs (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- ১১. জেনারেল লেজার (GL) এবং সাব-লেজার (SL) ব্যালেন্সের মধ্যে কোনো পার্থক্য আছে কি না তার ইতিহাস এখানে থাকে।
+-- এটি অডিটরদের রিপোর্ট তৈরিতে সাহায্য করে এবং প্রতিদিনের ব্যালেন্স ম্যাচিং স্ট্যাটাস (Match/Mismatch) রেকর্ড করে।
+CREATE TABLE reconciliation_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    recon_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    gl_code INT,
+    gl_balance DECIMAL(18, 2) NOT NULL, -- GL টেবিলের মোট ব্যালেন্স
+    sl_total_balance DECIMAL(18, 2) NOT NULL, -- সাব-লেজার বা একাউন্টস টেবিলের মোট যোগফল
+    difference DECIMAL(18, 2) NOT NULL, -- GL এবং SL এর মধ্যে পার্থক্য (ব্যালেন্স ০ হওয়া উচিত)
+    status ENUM('Matched', 'Mismatch') NOT NULL,
+    performed_by INT, -- কোন ইউজার বা অডিটর চেক করেছেন
+    remarks TEXT, -- কোনো পার্থক্য থাকলে তার নোট বা কারণ
+    FOREIGN KEY (gl_code) REFERENCES gl_heads(gl_code),
+    FOREIGN KEY (performed_by) REFERENCES users(id)
+);
+
 -- প্রাথমিক সেটআপ ডেটা (ক্যাশ এবং কাস্টমার ডিপোজিট কন্ট্রোল হেড)
 INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (1001, 'Cash In Hand', 'Asset');
 INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (2001, 'Customer Deposits', 'Liability');
