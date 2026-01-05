@@ -191,10 +191,11 @@ Customer Account management:
 - Prevent Concurrency/Race Condition
 
 Use:
-- .NET Core v9 MVC
+- .NET Core MVC --version 9
 - Clean Architecture
-- Centralized success/failure message handling
+- Global_Carrier Result<T> for common Success/Failure message to user
 - Database: MySQL
+- Authentication and Authorization: Cookie based with Claim
 
 
 ---
