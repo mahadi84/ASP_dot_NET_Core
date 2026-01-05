@@ -162,6 +162,8 @@ Responsible for user management:
 - Activate / Deactivate users
 - Change roles (Checker / Maker)
 - Reset passwords
+Customer Account management:
+- Activate / Deactivate users
 - Can generate date-to-date statements in PDF format
   (with double-entry accounting)
   Can add, edit, or delete:
