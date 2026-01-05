@@ -189,12 +189,14 @@ Customer Account management:
 
 - A complete MVC-based web application where customer deposit and withdrawal transactions flow exactly like a real banking system:
   Checker → Maker → Sub-Ledger → General Ledger → Trial Balance → Reconciliation
+- Prevent Concurrency/Race Condition
 
 Use:
 - .NET Core v9 MVC
 - Clean Architecture
 - Centralized success/failure message handling
 - Database: MySQL
+
 
 ---
 
