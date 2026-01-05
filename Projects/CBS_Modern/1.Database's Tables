@@ -14,19 +14,150 @@ These tables are needed to ensure:
 - Security and audit trails.
 - Ensuring financial consistency and reconciliation.
 
-These tables ensure that the banking system is 
--robust, secure, and capable of handling all required processes for financial transactions and auditing.
 
 
-- Users
-- Customer
-- Transactions
-- General Ledger (GL)
-- Sub-Ledger
-- Audit Logs
-- Suspense Account (Optional)
-- Reconciliation Reports
 
+===========================================
+              DATABASE 01 
+===========================================
+
+CREATE DATABASE CBS_DoubleEntry;
+USE CBS_DoubleEntry;
+
+-- ১. ব্যাংকের শাখাগুলোর তথ্য এবং মূল ভল্টের মোট ব্যালেন্স এখানে জমা থাকে।
+-- এটি হেড অফিস বা ব্রাঞ্চ লেভেলে কত লিকুইড ক্যাশ আছে তা ট্র্যাক করতে ব্যবহৃত হয়।
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00
+);
+
+-- ২. ব্যাংকের কর্মকর্তা বা ব্যবহারকারীদের তথ্য এবং তাদের রোল (Checker/Maker) এখানে থাকে।
+-- এটি লগইন ম্যানেজমেন্ট এবং ব্রাঞ্চ ভিত্তিক ইউজার অ্যাক্সেস কন্ট্রোল নিশ্চিত করে।
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('Admin', 'Maker', 'Checker', 'Auditor') NOT NULL,
+    branch_id INT,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (branch_id) REFERENCES branches(id)
+);
+
+-- ৩. চার্ট অফ অ্যাকাউন্টস বা মূল লেজার হেডগুলো (যেমন: ১০০১-ক্যাশ, ২০০১-ডিপোজিট) এখানে সংজ্ঞায়িত থাকে।
+-- এটি ট্রায়াল ব্যালেন্স এবং ফিন্যান্সিয়াল স্টেটমেন্ট তৈরির প্রধান ভিত্তি।
+CREATE TABLE gl_heads (
+    gl_code INT PRIMARY KEY,
+    gl_name VARCHAR(100) NOT NULL,
+    gl_type ENUM('Asset', 'Liability', 'Equity', 'Income', 'Expense') NOT NULL
+);
+
+-- ৪. ব্যাংকের গ্রাহকদের ব্যক্তিগত পরিচিতি এবং তাদের বর্তমান স্ট্যাটাস এখানে সংরক্ষিত হয়।
+-- চেকার গ্রাহক তৈরি করে এবং মেকার তা ভেরিফাই করে অনুমোদন করার আগ পর্যন্ত এটি পেন্ডিং থাকে।
+CREATE TABLE customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    nid_number VARCHAR(20) UNIQUE NOT NULL,
+    status ENUM('Pending', 'Active', 'Rejected') DEFAULT 'Pending',
+    created_by INT,
+    approved_by INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+);
+
+-- ৫. গ্রাহকদের ৫-ডিজিটের অ্যাকাউন্ট নাম্বার এবং সঞ্চিত অর্থের ব্যালেন্স এখানে থাকে।
+-- এটি মূলত সাব-লেজারের মূল অ্যাকাউন্ট যা কাস্টমার ডিপোজিট হেড (২০০১) এর সাথে রিকনসিল করা হয়।
+CREATE TABLE accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    account_number VARCHAR(5) UNIQUE NOT NULL, 
+    account_type ENUM('111', '222') NOT NULL, -- 111=Savings, 222=Current
+    balance DECIMAL(18, 2) DEFAULT 0.00,
+    status ENUM('Active', 'Inactive') DEFAULT 'Active',
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+-- ৬. প্রতিজন চেকারের অধীনে থাকা বর্তমান ক্যাশ বা ড্রয়ার ব্যালেন্স রিয়েল-টাইমে এখানে আপডেট হয়।
+-- দিনের শেষে ফিজিক্যাল ক্যাশ এবং এই ড্রয়ারের ব্যালেন্স মিলিয়ে ক্যাশ প্রুফ নিশ্চিত করা হয়।
+CREATE TABLE cash_drawers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    checker_id INT UNIQUE,
+    current_cash DECIMAL(18, 2) DEFAULT 0.00,
+    FOREIGN KEY (checker_id) REFERENCES users(id)
+);
+
+-- ৭. প্রতিটি ডিপোজিট বা উইথড্র ট্রানজ্যাকশন এবং মেকার-চেকার এপ্রুভাল স্ট্যাটাস এখানে থাকে।
+-- এখানে কোনো ট্রানজ্যাকশন এপ্রুভ না হওয়া পর্যন্ত ব্যালেন্স বা লেজারে কোনো পরিবর্তন ঘটে না।
+CREATE TABLE transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    batch_number VARCHAR(20) UNIQUE NOT NULL,
+    account_id INT,
+    txn_type ENUM('Deposit', 'Withdraw') NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    instrument_type VARCHAR(20) DEFAULT 'Cash',
+    status ENUM('Initiated', 'Approved', 'Rejected') DEFAULT 'Initiated',
+    checker_id INT,
+    maker_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (checker_id) REFERENCES users(id),
+    FOREIGN KEY (maker_id) REFERENCES users(id)
+);
+
+-- ৮. এটি কাস্টমার লেজার এন্ট্রি টেবিল যেখান থেকে গ্রাহকের ব্যাংক স্টেটমেন্ট জেনারেট করা হয়।
+-- অনুমোদিত প্রতিটি লেনদেনের জন্য এখানে ডেবিট অথবা ক্রেডিট এবং রানিং ব্যালেন্স রেকর্ড করা হয়।
+CREATE TABLE sub_ledger_entries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    txn_id INT,
+    account_id INT,
+    dr_cr_flag ENUM('Dr', 'Cr') NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    running_balance DECIMAL(18, 2) NOT NULL,
+    posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (txn_id) REFERENCES transactions(id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
+
+-- ৯. ডাবল-এন্ট্রি অ্যাকাউন্টিং সিস্টেমের মূল ডায়েরি যেখানে ডেবিট ও ক্রেডিট লাইন স্টোর করা হয়।
+-- এটি নিশ্চিত করে যে প্রতিটি লেনদেনে সমপরিমাণ টাকা ডেবিট ও ক্রেডিট হয়ে অ্যাকাউন্টিং ইকুয়েশন রক্ষা করেছে।
+CREATE TABLE gl_journal_lines (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    txn_id INT,
+    gl_code INT,
+    debit_amount DECIMAL(18, 2) DEFAULT 0.00,
+    credit_amount DECIMAL(18, 2) DEFAULT 0.00,
+    narration TEXT,
+    posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (txn_id) REFERENCES transactions(id),
+    FOREIGN KEY (gl_code) REFERENCES gl_heads(gl_code)
+);
+
+-- ১০. সিস্টেমের যেকোনো পরিবর্তন বা স্পর্শকাতর অ্যাকশন ট্র্যাকিং এর জন্য অডিট ট্রেইল হিসেবে কাজ করে।
+-- ডাটা এডিট বা ডিলিট করার আগে ও পরের মান (Old/New Value) অডিটরদের পর্যবেক্ষণের জন্য জমা থাকে।
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(100),
+    table_name VARCHAR(50),
+    record_id INT,
+    old_value TEXT,
+    new_value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- প্রাথমিক সেটআপ ডেটা (ক্যাশ এবং কাস্টমার ডিপোজিট কন্ট্রোল হেড)
+INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (1001, 'Cash In Hand', 'Asset');
+INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (2001, 'Customer Deposits', 'Liability');
+
+
+
+
+===========================================
+            DATABASE 02 
+============================================
 
 
 ### 1. Users Table
