@@ -221,7 +221,9 @@ Use:
 ---
 
 
-এই ডিজাইনটি কীভাবে কাজ করবে (Workflow Summary):
+===========================================================================================================
+                        এই ডিজাইনটি কীভাবে কাজ করবে (Workflow Summary):
+===========================================================================================================
 চেকার (Checker): কাস্টমার তৈরি করবে বা লেনদেন (Deposit/Withdraw) ইনিশিয়েট করবে। ডেটা transactions টেবিলে যাবে Initiated স্ট্যাটাসে।
 
 মেকার (Maker): ট্রানজ্যাকশনটি দেখে Approved করবে। এপ্রুভ করার সাথে সাথে একটি Database Transaction শুরু হবে যা নিচের কাজগুলো একসাথে করবে:
@@ -237,50 +239,23 @@ Use:
 
 
 
-
-
-
 ===============================================================================
-
-
-### ✅ Why this version is best practice
+                 ✅ Components/Services, I've used/designed
+===============================================================================
 
 - Clear separation of roles and responsibilities
 - Correct banking terminology (Initiated, Approved, Posted)
 - Explicit double-entry accounting flow
 - Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
 - Audit- and compliance-friendly
+- PDF reports (daily + statement + trial + financial)
 - Ready for real CBS simulation
 
----
 
 
-
-
-এই কয়টা জিনিস bank-grade feel like Real Bank দেয়:
-   -Maker-Checker workflow (Initiated vs Posted)
-   -Atomic posting (single DB transaction)
-   -Audit logs (before/after)
-   -Cash drawer control (each checker has hand cash)
-   -GL Trial balance & Financial statement (as-of date)
-   -Reports with reference numbers (Batch/Txn/Journal)
-   -Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
-
-
-
-
-তোমার requirement অনেক বড়, তাই cleanভাবে build করার best order-এগোলে “Complete app” দ্রুত দাঁড়াবে:
-   -Auth + Roles (Checker/Maker/Admin/Auditor)
-   -Customer Draft + Approval
-   -Cash drawer table + basic update
-   -Deposit/Withdraw initiate + approve/post
-   -GL journal + trial balance
-   -PDF reports (daily + statement + trial + financial)
-
-
-
-
-############################# CBS আসলে কী? (মডার্ন আর্কিটেকচার) #############################
+####################################################################################### 
+                 ✅  CBS আসলে কী? (মডার্ন আর্কিটেকচার)
+#######################################################################################
 
 আজকের CBS সাধারণত একটা বড় monolith না—এটা অনেকগুলো component/service মিলে কাজ করে:
    -Teller/Branch App (Cash counter UI)
