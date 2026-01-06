@@ -80,30 +80,30 @@ Responsible for approval or rejection of:
 
 ### Login Account for BrAdmin:
 
-Responsible for user management:
+Responsible for user management for his branch:
 - Activate / Deactivate users
 
-Customer Account management:
+Customer Account management for his branch:
 - Activate / Deactivate Accounts
 
-Responsible for genrating statements:
+Responsible for genrating statements for his branch:
  - date-to-date statements  for any account in PDF format (with double-entry accounting)
  - financial statements of the his branch  (Assets and Liabilities) for any selected date in PDF format
 
 
 ### Login Account for HoSuperAdmin:
 
-Responsible for user management:
-- Create and Edit users for all branches
+Responsible for user management for all branches:
+- Create and Edit users 
 - Activate and Deactivate users
 - Change roles (Checker / Maker)
 - Reset passwords
 - 3 times wrong password user will be locked for 5minutes
 - Lock/Unlock users
 
-Customer Account management:
+Customer Account management for all branches:
 - Activate / Deactivate users
-- Can generate date-to-date statements in PDF format  (with double-entry accounting)
+- Can generate date-to-date statements in PDF format for any branches (with double-entry accounting)
   Can add and edit:
   - General Ledger heads
   - Sub-Ledger configurations
@@ -115,11 +115,11 @@ Customer Account management:
 
 ### Login Account for Auditor:
 
-- Can monitor who performed what actions in the system
-- Can view detailed audit logs
-- Can generate Trial Balance reports in PDF format
+- Can monitor who performed what actions in the system for any branches
+- Can view detailed audit logs for any branches
+- Can generate Trial Balance reports in PDF format for any branches
   (based on double-entry accounting principles)
-- Can generate reconciliation reports in PDF format:
+- Can generate reconciliation reports in PDF format for any branches:
   - GL-2001 vs Σ(Customer Sub-ledger) reconciliation
   - GL-1001 vs Σ(Cash Drawer Sub-ledger) reconciliation
   - Exception/Pending postings list (if any)
@@ -129,6 +129,7 @@ Customer Account management:
 ### Reconciliation (How to confirm Sub-ledger and GL store the right value)
 
 - Reconciliation ensures no mismatch between detail ledgers (Sub-ledger) and summary books (GL)
+- every independent, one branch  does not effect other branch reconsilation
 
 - Control Account Rules:
   - GL A/C-2001 (Customer Deposits) must equal Σ(Customer Ledger balances)
