@@ -117,6 +117,8 @@ CREATE TABLE transactions (
     branch_id INT NOT NULL,
     batch_number VARCHAR(20) UNIQUE NOT NULL,
     account_id INT NOT NULL,
+    instrument_type ENUM('Cash', 'Cheque') NOT NULL,
+    instrument_number TEXT,
     txn_type ENUM('Deposit', 'Withdraw') NOT NULL,
     amount DECIMAL(18, 2) NOT NULL,
     status ENUM('Initiated', 'Approved', 'Rejected') DEFAULT 'Initiated',
@@ -210,9 +212,10 @@ CREATE TABLE audit_logs (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- প্রাথমিক সেটআপ ডেটা (ক্যাশ এবং কাস্টমার ডিপোজিট কন্ট্রোল হেড)
-INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (1001, 'Cash In Hand', 'Asset');
-INSERT INTO gl_heads (gl_code, gl_name, gl_type) VALUES (2001, 'Customer Deposits', 'Liability');
+
+-- উদাহরণস্বরূপ শাখা ১-এর জন্য GL তৈরি
+INSERT INTO gl_heads (branch_id, gl_code, gl_name, gl_type) VALUES (1, 1001, 'Cash In Hand', 'Asset');
+INSERT INTO gl_heads (branch_id, gl_code, gl_name, gl_type) VALUES (1, 2001, 'Customer Deposits', 'Liability');
 
 
 
