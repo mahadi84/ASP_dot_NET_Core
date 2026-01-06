@@ -55,10 +55,10 @@ Withdraw Validation:
 - Transaction Status: Initiated
 - Initiated By: Logged-in Checker ID
 - Can view and generate PDF report of:
-  - Total number of customers created today
+  - Total number of customers created today with status like Initiated/Approved with pagination search 
   - Total number of deposit/withdraw transactions initiated today
   - End-of-day cash-in-hand (cash drawer balance)
-- Can generate date-to-date customer statements in PDF format
+- Can generate date-to-date customer statements for any account in PDF format
   (with complete double-entry accounting view)
 
 ---
@@ -70,10 +70,10 @@ Responsible for approval or rejection of:
 - Transactions initiated by Checker
   Approval Status:
 - Approved (Approved By: Logged-in Maker ID)
-- Rejected (Rejected By: Logged-in Maker ID)
+- Rejected (Rejected By: Logged-in Maker ID) with comments
 - Can edit or delete customer/transaction records before approval only
 - Can view a separate list of all transactions approved today
-- Can generate date-to-date statements in PDF format
+- Can generate date-to-date statements for any account in PDF format
   (with double-entry accounting details)
 
 ---
@@ -82,33 +82,29 @@ Responsible for approval or rejection of:
 
 Responsible for user management:
 - Activate / Deactivate users
-- 3 times wrong password user will be locked for 5minutes
-- Lock/Unlock users
+
 Customer Account management:
-- Activate / Deactivate users
-- Can generate date-to-date statements in PDF format
-  (with double-entry accounting)
-  Can add, edit, or delete:
-  - General Ledger heads
-  - Sub-Ledger configurations
-- Can generate financial statements of the his branch
-  (Assets and Liabilities) for any selected date in PDF format
+- Activate / Deactivate Accounts
+
+Responsible for genrating statements:
+ - date-to-date statements  for any account in PDF format (with double-entry accounting)
+ - financial statements of the his branch  (Assets and Liabilities) for any selected date in PDF format
 
 
 ### Login Account for HoSuperAdmin:
 
 Responsible for user management:
-- Create / Edit / Delete users
-- Activate / Deactivate users
+- Create and Edit users for all branches
+- Activate and Deactivate users
 - Change roles (Checker / Maker)
 - Reset passwords
 - 3 times wrong password user will be locked for 5minutes
 - Lock/Unlock users
+
 Customer Account management:
 - Activate / Deactivate users
-- Can generate date-to-date statements in PDF format
-  (with double-entry accounting)
-  Can add, edit, or delete:
+- Can generate date-to-date statements in PDF format  (with double-entry accounting)
+  Can add and edit:
   - General Ledger heads
   - Sub-Ledger configurations
 - Can generate financial statements of the bank
