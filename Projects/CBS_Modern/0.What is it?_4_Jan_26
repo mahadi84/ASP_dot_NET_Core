@@ -70,7 +70,7 @@ Responsible for approval or rejection of:
 - Transactions initiated by Checker for his branch
   Approval Status:
 - Approved (Approved By: Logged-in Maker ID) 
-- Must maintain Atomicity (Transaction (COMMIT/ROLLBACK))
+- Must maintain Atomicity (Transaction (COMMIT/ROLLBACK)) while txn is approved.
 - Rejected (Rejected By: Logged-in Maker ID) with comments
 - Can edit or delete customer/transaction records before approval only
 - Can view a separate list of all transactions approved today
