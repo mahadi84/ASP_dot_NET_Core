@@ -38,6 +38,7 @@ CREATE TABLE branches (
 -- ২. ব্যাংকের কর্মকর্তা বা ইউজারদের তথ্য এবং তাদের নির্দিষ্ট শাখা (branch_id) এখানে সংরক্ষিত থাকে।
 -- এটি নিশ্চিত করে যে একজন চেকার বা মেকার শুধুমাত্র তার নিজ শাখার কাস্টমার বা ট্রানজ্যাকশন দেখতে পাবেন।
 -- ইউজারের পাসওয়ার্ড হাশ এবং সিস্টেম রোল (Admin/Checker/Maker/Auditor) এখান থেকেই নিয়ন্ত্রিত হয়।
+-- লকিং এবং সিকিউরিটি ফিল্ডসমূহ
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
