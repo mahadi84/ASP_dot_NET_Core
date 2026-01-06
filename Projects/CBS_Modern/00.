@@ -1,0 +1,73 @@
+
+
+
+
+===========================================================================================================
+                        এই ডিজাইনটি কীভাবে কাজ করবে (Workflow Summary):
+===========================================================================================================
+চেকার (Checker): কাস্টমার তৈরি করবে বা লেনদেন (Deposit/Withdraw) ইনিশিয়েট করবে। ডেটা transactions টেবিলে যাবে Initiated স্ট্যাটাসে।
+
+মেকার (Maker): ট্রানজ্যাকশনটি দেখে Approved করবে। এপ্রুভ করার সাথে সাথে একটি Database Transaction শুরু হবে যা নিচের কাজগুলো একসাথে করবে:
+        -accounts টেবিলের ব্যালেন্স আপডেট করবে।
+        -cash_drawers টেবিলের চেকারের ক্যাশ আপডেট করবে।
+        -sub_ledger_entries এ কাস্টমারের লেজার এন্ট্রি দিবে।
+        -gl_journal_lines এ ডাবল-এন্ট্রি (GL-1001 vs GL-2001) পোস্টিং দিবে।
+
+রিকনসিলিয়েশন: অডিটর বা এডমিন চেক করবেন:
+        -SUM(accounts.balance) যেন GL-2001 এর সমান হয়।
+        -SUM(cash_drawers.current_cash) যেন GL-1001 এর সমান হয়।
+
+
+
+
+===============================================================================
+                 ✅ Components/Services, I've used/designed
+===============================================================================
+
+- Clear separation of roles and responsibilities
+- Correct banking terminology (Initiated, Approved, Posted)
+- Explicit double-entry accounting flow
+- Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
+- Audit- and compliance-friendly
+- PDF reports (daily + statement + trial + financial)
+- Ready for real CBS simulation
+
+
+
+####################################################################################### 
+                 ✅  CBS আসলে কী? (মডার্ন আর্কিটেকচার)
+#######################################################################################
+
+আজকের CBS সাধারণত একটা বড় monolith না—এটা অনেকগুলো component/service মিলে কাজ করে:
+   -Teller/Branch App (Cash counter UI)
+   -Customer & Account Service (CIF/KYC, account status)
+   -Product & Pricing Service (Savings, Current, fees, rules)
+   -Limits & Controls (teller limit, branch limit, per txn limit)
+   -Risk/AML/Fraud (sanction/PEP screening, unusual pattern)
+   -Transaction Orchestrator (workflow engine)
+   -Posting/Ledger Engine (double-entry posting)
+   -Sub-ledger (customer account balances/details)
+   -GL Service (general ledger, chart of accounts)
+   -Cash Management (cash drawer, vault, cash-in-transit)
+   -Audit & Compliance Logging
+   -Reconciliation & EOD (end-of-day processes)
+   -Message Queue/Event Bus (Kafka/RabbitMQ style; async work)
+
+বড় কথা: Approval/Authorization আর Posting অনেক সময় আলাদা আলাদা হয়—modern CBS-এ throughput আর reliability এর জন্য।
+
+
+
+Data Model: Bank-এ “money” কোথায় থাকে?
+ব্যাংকের সফটওয়্যারে টাকা ৩টা জায়গায় “ধারণা” হিসেবে থাকে:
+   1. Transaction (Txn): কী ঘটেছে—তার রেকর্ড
+   2. Ledger/Sub-ledger balances: Customer A/C এর ব্যালান্স
+   3. GL: Accounting view (Bank’s books)
+Double Entry rule: প্রতিটা txn এ কমপক্ষে ২টা posting (Debit/Credit)
+✅ Total Debit = Total Credit (সবসময়)
+
+
+
+
+
+
+.
