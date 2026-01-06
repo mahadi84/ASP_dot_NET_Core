@@ -45,6 +45,73 @@ Withdraw Validation:
 
 ---
 
+### Login Account for Checker:
+
+- Responsible for customer creation
+  (Name, Account Type: Saving (111) / Current (222), system-will-generate 5-digit account number after form submision)
+- Responsible for deposit and withdrawal transaction initiation
+- Each initiated transaction generates a Batch Number
+- Instrument Type: Cash
+- Transaction Status: Initiated
+- Initiated By: Logged-in Checker ID
+- Can view and generate PDF report of:
+  - Total number of customers created today
+  - Total number of deposit/withdraw transactions initiated today
+  - End-of-day cash-in-hand (cash drawer balance)
+- Can generate date-to-date customer statements in PDF format
+  (with complete double-entry accounting view)
+
+---
+
+### Login Account for Maker:
+
+Responsible for approval or rejection of:
+- Customers created by Checker
+- Transactions initiated by Checker
+  Approval Status:
+- Approved (Approved By: Logged-in Maker ID)
+- Rejected (Rejected By: Logged-in Maker ID)
+- Can edit or delete customer/transaction records before approval only
+- Can view a separate list of all transactions approved today
+- Can generate date-to-date statements in PDF format
+  (with double-entry accounting details)
+
+---
+
+### Login Account for Admin:
+
+Responsible for user management:
+- Create / Edit / Delete users
+- Activate / Deactivate users
+- Change roles (Checker / Maker)
+- Reset passwords
+- 3 times wrong password user will be locked for 5minutes
+- Lock/Unlock users
+Customer Account management:
+- Activate / Deactivate users
+- Can generate date-to-date statements in PDF format
+  (with double-entry accounting)
+  Can add, edit, or delete:
+  - General Ledger heads
+  - Sub-Ledger configurations
+- Can generate financial statements of the bank
+  (Assets and Liabilities) for any selected date in PDF format
+
+---
+
+### Login Account for Auditor:
+
+- Can monitor who performed what actions in the system
+- Can view detailed audit logs
+- Can generate Trial Balance reports in PDF format
+  (based on double-entry accounting principles)
+- Can generate reconciliation reports in PDF format:
+  - GL-2001 vs Σ(Customer Sub-ledger) reconciliation
+  - GL-1001 vs Σ(Cash Drawer Sub-ledger) reconciliation
+  - Exception/Pending postings list (if any)
+
+---
+
 ### Reconciliation (How to confirm Sub-ledger and GL store the right value)
 
 - Reconciliation ensures no mismatch between detail ledgers (Sub-ledger) and summary books (GL)
@@ -121,74 +188,10 @@ Withdraw Validation:
 
 ---
 
-### Login Account for Checker:
-
-- Responsible for customer creation
-  (Name, Account Type: Saving (111) / Current (222), system-will-generate 5-digit account number after form submision)
-- Responsible for deposit and withdrawal transaction initiation
-- Each initiated transaction generates a Batch Number
-- Instrument Type: Cash
-- Transaction Status: Initiated
-- Initiated By: Logged-in Checker ID
-- Can view and generate PDF report of:
-  - Total number of customers created today
-  - Total number of deposit/withdraw transactions initiated today
-  - End-of-day cash-in-hand (cash drawer balance)
-- Can generate date-to-date customer statements in PDF format
-  (with complete double-entry accounting view)
-
----
-
-### Login Account for Maker:
-
-Responsible for approval or rejection of:
-- Customers created by Checker
-- Transactions initiated by Checker
-  Approval Status:
-- Approved (Approved By: Logged-in Maker ID)
-- Rejected (Rejected By: Logged-in Maker ID)
-- Can edit or delete customer/transaction records before approval only
-- Can view a separate list of all transactions approved today
-- Can generate date-to-date statements in PDF format
-  (with double-entry accounting details)
-
----
-
-### Login Account for Admin:
-
-Responsible for user management:
-- Create / Edit / Delete users
-- Activate / Deactivate users
-- Change roles (Checker / Maker)
-- Reset passwords
-Customer Account management:
-- Activate / Deactivate users
-- Can generate date-to-date statements in PDF format
-  (with double-entry accounting)
-  Can add, edit, or delete:
-  - General Ledger heads
-  - Sub-Ledger configurations
-- Can generate financial statements of the bank
-  (Assets and Liabilities) for any selected date in PDF format
-
----
-
-### Login Account for Auditor:
-
-- Can monitor who performed what actions in the system
-- Can view detailed audit logs
-- Can generate Trial Balance reports in PDF format
-  (based on double-entry accounting principles)
-- Can generate reconciliation reports in PDF format:
-  - GL-2001 vs Σ(Customer Sub-ledger) reconciliation
-  - GL-1001 vs Σ(Cash Drawer Sub-ledger) reconciliation
-  - Exception/Pending postings list (if any)
-
----
 
 - A complete MVC-based web application where customer deposit and withdrawal transactions flow exactly like a real banking system:
   Checker → Maker → Sub-Ledger → General Ledger → Trial Balance → Reconciliation
-- Prevent Concurrency/Race Condition
+
 
 Use:
 - .NET Core MVC --version 9
@@ -196,6 +199,8 @@ Use:
 - Global_Carrier Result<T> for common Success/Failure message to user
 - Database: MySQL
 - Authentication and Authorization: Cookie based with Claim
+- Prevent Concurrency/Race Condition
+- 
 
 
 ---
