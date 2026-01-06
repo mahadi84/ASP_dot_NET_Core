@@ -78,7 +78,24 @@ Responsible for approval or rejection of:
 
 ---
 
-### Login Account for Admin:
+### Login Account for BrAdmin:
+
+Responsible for user management:
+- Activate / Deactivate users
+- 3 times wrong password user will be locked for 5minutes
+- Lock/Unlock users
+Customer Account management:
+- Activate / Deactivate users
+- Can generate date-to-date statements in PDF format
+  (with double-entry accounting)
+  Can add, edit, or delete:
+  - General Ledger heads
+  - Sub-Ledger configurations
+- Can generate financial statements of the his branch
+  (Assets and Liabilities) for any selected date in PDF format
+
+
+### Login Account for HoAdmin:
 
 Responsible for user management:
 - Create / Edit / Delete users
@@ -96,6 +113,7 @@ Customer Account management:
   - Sub-Ledger configurations
 - Can generate financial statements of the bank
   (Assets and Liabilities) for any selected date in PDF format
+
 
 ---
 
