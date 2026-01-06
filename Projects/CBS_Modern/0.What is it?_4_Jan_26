@@ -70,7 +70,6 @@ Responsible for approval or rejection of:
 - Transactions initiated by Checker for his branch
   Approval Status:
 - Approved (Approved By: Logged-in Maker ID) 
-- Must maintain Atomicity (Transaction (COMMIT/ROLLBACK)) while txn is approved.
 - Rejected (Rejected By: Logged-in Maker ID) with comments
 - Can edit or delete customer/transaction records before approval only
 - Can view a separate list of all transactions approved today
@@ -90,6 +89,10 @@ Customer Account management for his branch:
 Responsible for genrating statements for his branch:
  - date-to-date statements  for any account in PDF format (with double-entry accounting)
  - financial statements of the his branch  (Assets and Liabilities) for any selected date in PDF format
+
+Reponsible for posting GL for his/her branch
+- Must maintain Atomicity (Transaction (COMMIT/ROLLBACK)) while Start_GL Button pressed.
+
 
 
 ### Login Account for HoSuperAdmin:
