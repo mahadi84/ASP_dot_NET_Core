@@ -47,7 +47,7 @@ Withdraw Validation:
 
 ### Login Account for Checker:
 
-- Responsible for customer creation
+- Responsible for customer creation for his branch
   (Name, Account Type: Saving (111) / Current (222), system-will-generate 5-digit account number after form submision)
 - Responsible for deposit and withdrawal transaction initiation
 - Each initiated transaction generates a Batch Number
@@ -58,7 +58,7 @@ Withdraw Validation:
   - Total number of customers created today with status like Initiated/Approved with pagination search 
   - Total number of deposit/withdraw transactions initiated today
   - End-of-day cash-in-hand (cash drawer balance)
-- Can generate date-to-date customer statements for any account in PDF format
+- Can generate date-to-date customer statements for any account for his branch in PDF format
   (with complete double-entry accounting view)
 
 ---
@@ -66,8 +66,8 @@ Withdraw Validation:
 ### Login Account for Maker:
 
 Responsible for approval or rejection of:
-- Customers created by Checker
-- Transactions initiated by Checker
+- Customers created by Checker for his branch
+- Transactions initiated by Checker for his branch
   Approval Status:
 - Approved (Approved By: Logged-in Maker ID)
 - Rejected (Rejected By: Logged-in Maker ID) with comments
