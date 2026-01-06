@@ -45,6 +45,13 @@ CREATE TABLE users (
     role ENUM('Admin', 'Maker', 'Checker', 'Auditor') NOT NULL,
     branch_id INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
+    
+    -- লকিং এবং সিকিউরিটি ফিল্ডসমূহ
+    failed_attempts INT DEFAULT 0,          -- কতবার ভুল পাসওয়ার্ড দেওয়া হয়েছে
+    lock_until TIMESTAMP NULL,              -- কত সময় পর্যন্ত লক থাকবে
+    is_locked BOOLEAN DEFAULT FALSE,        -- অ্যাকাউন্টটি বর্তমানে লক করা কি না
+    last_login TIMESTAMP NULL,              -- শেষবার কখন লগইন করা হয়েছিল
+    
     FOREIGN KEY (branch_id) REFERENCES branches(id)
 );
 
@@ -116,6 +123,7 @@ CREATE TABLE transactions (
     status ENUM('Initiated', 'Approved', 'Rejected') DEFAULT 'Initiated',
     checker_id INT,
     maker_id INT,
+    remarks TEXT, -- কেন রিজেক্ট হলো বা কোনো বিশেষ নোট
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id),
     FOREIGN KEY (account_id) REFERENCES accounts(id)
