@@ -120,7 +120,7 @@ CREATE TABLE transactions (
     txn_type ENUM('Deposit', 'Withdraw') NOT NULL,
     amount DECIMAL(18, 2) NOT NULL,
     status ENUM('Initiated', 'Approved', 'Rejected') DEFAULT 'Initiated',
-    checker_id INT,
+    checker_id INT NOT NULL,
     maker_id INT,
     remarks TEXT, -- কেন রিজেক্ট হলো বা কোনো বিশেষ নোট
     version_no INT DEFAULT 1, -- Concurrency/Race condition হ্যান্ডেল করার জন্য
