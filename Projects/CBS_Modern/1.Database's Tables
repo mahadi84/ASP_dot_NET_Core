@@ -45,12 +45,10 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('Admin', 'Maker', 'Checker', 'Auditor') NOT NULL,
     branch_id INT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    
-    -- লকিং এবং সিকিউরিটি ফিল্ডসমূহ
     failed_attempts INT DEFAULT 0,          -- কতবার ভুল পাসওয়ার্ড দেওয়া হয়েছে
     lock_until TIMESTAMP NULL,              -- কত সময় পর্যন্ত লক থাকবে
     is_locked BOOLEAN DEFAULT FALSE,        -- অ্যাকাউন্টটি বর্তমানে লক করা কি না
+    is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP NULL,              -- শেষবার কখন লগইন করা হয়েছিল
     
     FOREIGN KEY (branch_id) REFERENCES branches(id)
@@ -125,9 +123,12 @@ CREATE TABLE transactions (
     checker_id INT,
     maker_id INT,
     remarks TEXT, -- কেন রিজেক্ট হলো বা কোনো বিশেষ নোট
+    version_no INT DEFAULT 1, -- Concurrency/Race condition হ্যান্ডেল করার জন্য
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id),
-    FOREIGN KEY (account_id) REFERENCES accounts(id)
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (checker_id) REFERENCES users(id),
+    FOREIGN KEY (maker_id) REFERENCES users(id)
 );
 
 -- ৮. এটি কাস্টমার স্টেটমেন্ট তৈরির জন্য ব্যবহৃত সাব-লেজার পোস্টিং টেবিল।
@@ -144,6 +145,7 @@ CREATE TABLE sub_ledger_entries (
     FOREIGN KEY (branch_id) REFERENCES branches(id),
     FOREIGN KEY (txn_id) REFERENCES transactions(id)
 );
+
 
 -- ৯. এটি ডাবল-এন্ট্রি অ্যাকাউন্টিং এর মূল টেবিল যেখানে প্রতিটি লেনদেনের দুটি পক্ষ (Dr/Cr) থাকে।
 -- এখানে প্রতিটি পোস্টিং সরাসরি একটি GL কোডের সাথে এবং একটি নির্দিষ্ট শাখার সাথে যুক্ত থাকে।
