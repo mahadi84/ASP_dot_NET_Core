@@ -1,0 +1,275 @@
+
+
+
+
+# আপনার প্রজেক্টের মডিউলগুলোর বিস্তারিত লিস্ট
+
+## 📊 মোট মডিউল: ৮ টি প্রধান মডিউল (প্রতিটি ১ সপ্তাহ করে)
+
+### ১. 🏗️ Core Infrastructure Module (সপ্তাহ ১)
+```
+✅ এই সপ্তাহের কাজ
+├── Database Design & Setup
+├── Entity Framework Configuration
+├── Repository Pattern Implementation
+├── Unit of Work Pattern
+├── Dependency Injection Setup
+└── Basic Project Structure
+```
+
+### ২. 👥 User Management Module (সপ্তাহ ২)
+```
+✅ Next Module
+├── User Authentication (Login/Logout)
+├── User Registration
+├── Role Management (Checker, Maker, Admin, Auditor)
+├── Password Management
+├── User Profile
+├── User Status Management (Active/Inactive)
+└── Branch-based User Access
+```
+
+### ৩. 👤 Customer Management Module (সপ্তাহ ৩)
+```
+├── Customer Creation (Checker দ্বারা)
+├── Customer Approval (Maker দ্বারা)
+├── Account Creation (Savings/Current)
+├── Account Number Generation
+├── KYC Management
+├── Customer Status Management
+└── Customer Search & Filter
+```
+
+### ৪. 💰 Transaction Processing Module (সপ্তাহ ৪)
+```
+├── Deposit Processing
+├── Withdrawal Processing
+├── Maker-Checker Workflow
+├── Transaction Validation Rules
+├── Cash Drawer Management
+├── Teller Limits
+└── Branch Limits
+```
+
+### ৫. 📊 Accounting & GL Module (সপ্তাহ ৫)
+```
+├── Double Entry Accounting
+├── General Ledger (GL) Posting
+├── Sub-Ledger Management
+├── GL Heads Management
+├── Journal Entries
+├── GL Balance Updates
+└── Pre-GL Checking
+```
+
+### ৬. 🔍 Reconciliation & Audit Module (সপ্তাহ ६)
+```
+├── GL vs Sub-Ledger Reconciliation
+├── Cash Proof (Physical vs System)
+├── Trial Balance Generation
+├── Audit Logs Management
+├── User Activity Tracking
+├── Exception Reports
+└── Mismatch Resolution
+```
+
+### ৭. 📈 Reporting Module (সপ্তাহ ৭)
+```
+├── Customer Statements (PDF)
+├── Daily Transaction Reports
+├── Financial Statements
+├── Branch Performance Reports
+├── User Activity Reports
+├── Reconciliation Reports
+└── Trial Balance Reports
+```
+
+### ৮. ⚙️ Administration Module (সপ্তাহ ৮)
+```
+├── Branch Management
+├── User Management (Create/Edit/Delete)
+├── System Configuration
+├── Limit Management (Teller/Branch/Transaction)
+├── Holiday Management
+├── System Backup/Restore
+└── Dashboard & Analytics
+```
+
+## 📋 সাব-মডিউল ডিটেইলস:
+
+### User Module এর ভিতরে:
+1. Authentication Sub-module
+2. Authorization Sub-module 
+3. Profile Management Sub-module
+4. Security Sub-module (Password policy, Lockout)
+
+### Transaction Module এর ভিতরে:
+1. Deposit Sub-module
+2. Withdrawal Sub-module
+3. Cash Management Sub-module
+4. Limit Management Sub-module
+
+### Accounting Module এর ভিতরে:
+1. GL Posting Sub-module
+2. Journal Entry Sub-module
+3. Balance Calculation Sub-module
+4. Reconciliation Sub-module
+
+## 🎯 প্রতিটি মডিউলের Key Features:
+
+### User Module (সপ্তাহ ২):
+- ✅ Login with username/password/branch
+- ✅ Role-based access control
+- ✅ Session management (30 minutes timeout)
+- ✅ Failed login attempt tracking (3 attempts → lock 5 minutes)
+- ✅ Password change functionality
+- ✅ User activity logging
+
+### Customer Module (সপ্তাহ ৩):
+- ✅ Create customer with NID verification
+- ✅ Generate 5-digit account number
+- ✅ Account types: Savings (111) / Current (222)
+- ✅ Maker approval workflow
+- ✅ Customer search by NID/Account Number
+
+### Transaction Module (সপ্তাহ ৪):
+- ✅ Deposit validation (active account, amount > 0, limits)
+- ✅ Withdrawal validation (sufficient balance, cash drawer check)
+- ✅ Batch number generation
+- ✅ Maker approval required
+- ✅ Cash drawer balance update
+
+### GL Module (সপ্তাহ ৫):
+- ✅ Double-entry (Debit/Credit)
+- ✅ GL-1001: Cash (Asset)
+- ✅ GL-2001: Customer Deposits (Liability)
+- ✅ Atomic transaction (COMMIT/ROLLBACK)
+- ✅ Pre-GL check (approved but not posted)
+
+### Reconciliation Module (সপ্তাহ ৬):
+- ✅ GL-2001 vs Customer Sub-ledger
+- ✅ GL-1001 vs Cash Drawer Sub-ledger
+- ✅ Trial Balance check (ΣDebit = ΣCredit)
+- ✅ Cash proof (physical vs system)
+- ✅ Mismatch detection and resolution
+
+## 📅 প্রতিদিনের টাস্ক ব্রেকডাউন:
+
+### সপ্তাহ ১: Core (এই সপ্তাহ)
+```
+Day 1-2: Project Setup & Database Design
+Day 3-4: Entity Framework & Repositories  
+Day 5-6: Unit of Work & DI Configuration
+Day 7: Testing & Documentation
+```
+
+### সপ্তাহ ২: User Module (পরের সপ্তাহ)
+```
+Day 1: Login/Logout System
+Day 2: Authentication Middleware
+Day 3: Role Management
+Day 4: User Management (CRUD)
+Day 5: Security Features
+Day 6: User Dashboard
+Day 7: Testing
+```
+
+### সপ্তাহ ৩: Customer Module
+```
+Day 1: Customer Entity & Repository
+Day 2: Account Creation Logic
+Day 3: Maker Approval Workflow
+Day 4: Customer Search
+Day 5: KYC Management
+Day 6: Customer Reports
+Day 7: Integration Testing
+```
+
+## 🔄 Workflow মডিউল:
+
+Checker Workflow Module:
+1. Customer Creation → Pending Approval
+2. Deposit/Withdrawal Initiation → Pending Approval
+3. Daily Cash Report Generation
+4. Customer Statement Generation
+
+Maker Workflow Module:
+1. Approve/Reject Customers
+2. Approve/Reject Transactions  
+3. Edit pending records
+4. View approved transactions
+
+Admin Workflow Module:
+1. User Management
+2. GL Posting
+3. Account Management
+4. Branch Reports
+
+Auditor Workflow Module:
+1. Audit Logs Viewing
+2. Reconciliation
+3. Trial Balance
+4. Exception Reports
+
+## 📊 ডাটাবেস টেবিল অনুযায়ী মডিউল:
+
+প্রতিটি Entity একটি মডিউল:
+1. `users` → User Management Module
+2. `customers` → Customer Management Module
+3. `accounts` → Account Management Module
+4. `transactions` → Transaction Processing Module
+5. `gl_heads`, `gl_journals` → Accounting Module
+6. `reconciliation_logs`, `audit_logs` → Audit Module
+7. `branches` → Branch Management Module
+8. `cash_drawers` → Cash Management Module
+
+## 🎯 প্রথমে কোন মডিউলগুলো করবেন?
+
+প্রায়োরিটি অর্ডার:
+1. ✅ Core Infrastructure (এখন করছেন)
+2. 👥 User & Authentication (পরবর্তী)
+3. 👤 Customer Management 
+4. 💰 Basic Transactions (Deposit/Withdraw)
+5. 📊 Accounting Basics (GL Posting)
+6. 🔍 Basic Reports (Statements)
+7. ⚙️ Admin Features
+8. 📈 Advanced Features
+
+## 💡 সাজেশন:
+
+Phase 1 (মাস ১): Minimum Viable Product (MVP)
+- User Management ✅
+- Customer Management ✅  
+- Basic Transactions ✅
+- Simple Accounting ✅
+
+Phase 2 (মাস ২): Enhanced Features
+- Advanced Reporting
+- Audit & Reconciliation
+- Admin Dashboard
+- Email/SMS Notifications
+
+Phase 3 (মাস ৩): Production Ready
+- Security Hardening
+- Performance Optimization
+- Multi-branch Support
+- Backup & Recovery
+
+## 🚀 শুরু করুন:
+
+আজকে শুধু User Entity নিয়ে কাজ করুন:
+1. `User.cs` ক্লাস তৈরি করুন
+2. Basic properties যোগ করুন
+3. Build করুন দেখুন error-free কিনা
+
+পরের ধাপ:
+1. `Result.cs` তৈরি করুন
+2. `IUserRepository` ইন্টারফেস তৈরি করুন
+3. `ApplicationDbContext` তৈরি করুন
+
+প্রতিদিন ১টি Entity/Class শেষ করুন। ১ সপ্তাহে Core Module কমপ্লিট হবে!
+
+
+
+
+.
