@@ -1,0 +1,2424 @@
+
+
+# Application লেয়ারে Use Cases/Handlers
+
+## ১. Application Project Structure
+
+### CBS_MultiBranch.Application.csproj
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="FluentValidation" Version="11.10.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBS_MultiBranch.Domain\CBS_MultiBranch.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
+```
+
+## ২. DTOs (Data Transfer Objects)
+
+### Customer DTOs
+```csharp
+namespace CBS_MultiBranch.Application.DTOs.Customers
+{
+    // Request DTOs
+    public class CreateCustomerRequest
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string NIDNumber { get; set; } = string.Empty;
+        public string AccountType { get; set; } = string.Empty; // "111" or "222"
+        public int CreatedBy { get; set; }
+        public int BranchId { get; set; }
+    }
+
+    public class UpdateCustomerRequest
+    {
+        public int CustomerId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string NIDNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty; // "Active", "Rejected"
+        public string? Reason { get; set; }
+        public int UpdatedBy { get; set; }
+    }
+
+    // Response DTOs
+    public class CustomerResponse
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string NIDNumber { get; set; } = string.Empty;
+        public string AccountNumber { get; set; } = string.Empty;
+        public string AccountType { get; set; } = string.Empty;
+        public decimal Balance { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string CreatedBy { get; set; } = string.Empty;
+        public string? ApprovedBy { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class CustomerApprovalResponse
+    {
+        public int CustomerId { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public DateTime ApprovedAt { get; set; }
+    }
+}
+```
+
+### Transaction DTOs
+```csharp
+namespace CBS_MultiBranch.Application.DTOs.Transactions
+{
+    // Request DTOs
+    public class DepositRequest
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string InstrumentType { get; set; } = string.Empty; // "Cash"
+        public string? InstrumentNumber { get; set; }
+        public int CheckerId { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class WithdrawalRequest
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string InstrumentType { get; set; } = string.Empty; // "Cash"
+        public string? InstrumentNumber { get; set; }
+        public int CheckerId { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class ApproveTransactionRequest
+    {
+        public string BatchNumber { get; set; } = string.Empty;
+        public int MakerId { get; set; }
+        public string? Remarks { get; set; }
+    }
+
+    public class RejectTransactionRequest
+    {
+        public string BatchNumber { get; set; } = string.Empty;
+        public int MakerId { get; set; }
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    // Response DTOs
+    public class TransactionResponse
+    {
+        public int Id { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public string AccountNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string TransactionType { get; set; } = string.Empty; // "Deposit", "Withdraw"
+        public decimal Amount { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public string InstrumentType { get; set; } = string.Empty;
+        public string? InstrumentNumber { get; set; }
+        public string CheckerName { get; set; } = string.Empty;
+        public string? MakerName { get; set; }
+        public string? Remarks { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public bool IsGLPosted { get; set; }
+    }
+
+    public class TransactionApprovalResponse
+    {
+        public string BatchNumber { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public decimal NewBalance { get; set; }
+        public DateTime ApprovedAt { get; set; }
+    }
+}
+```
+
+### GL and Reconciliation DTOs
+```csharp
+namespace CBS_MultiBranch.Application.DTOs.GL
+{
+    public class GLPostingRequest
+    {
+        public int BranchId { get; set; }
+        public int AdminId { get; set; }
+        public DateTime? PostingDate { get; set; }
+    }
+
+    public class GLPostingResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int TransactionsPosted { get; set; }
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public DateTime PostedAt { get; set; }
+    }
+
+    public class ReconciliationRequest
+    {
+        public int BranchId { get; set; }
+        public DateTime ReconDate { get; set; }
+        public int AuditorId { get; set; }
+    }
+
+    public class ReconciliationResponse
+    {
+        public bool IsMatched { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public DateTime ReconDate { get; set; }
+        
+        // GL 1001: Cash
+        public decimal GLBalance1001 { get; set; }
+        public decimal SLTotalCashDrawers { get; set; }
+        public decimal Difference1001 { get; set; }
+        
+        // GL 2001: Customer Deposits
+        public decimal GLBalance2001 { get; set; }
+        public decimal SLTotalCustomers { get; set; }
+        public decimal Difference2001 { get; set; }
+        
+        // Trial Balance
+        public decimal TotalDebits { get; set; }
+        public decimal TotalCredits { get; set; }
+        public bool IsTrialBalanceMatched { get; set; }
+        
+        public List<string> Issues { get; set; } = new();
+    }
+}
+```
+
+### Report DTOs
+```csharp
+namespace CBS_MultiBranch.Application.DTOs.Reports
+{
+    public class StatementRequest
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public int UserId { get; set; }
+    }
+
+    public class StatementResponse
+    {
+        public AccountInfo Account { get; set; } = new();
+        public CustomerInfo Customer { get; set; } = new();
+        public BranchInfo Branch { get; set; } = new();
+        public List<StatementItem> Items { get; set; } = new();
+        public decimal OpeningBalance { get; set; }
+        public decimal ClosingBalance { get; set; }
+        public decimal TotalDeposits { get; set; }
+        public decimal TotalWithdrawals { get; set; }
+        public DateTime GeneratedAt { get; set; }
+    }
+
+    public class AccountInfo
+    {
+        public string AccountNumber { get; set; } = string.Empty;
+        public string AccountType { get; set; } = string.Empty;
+        public decimal CurrentBalance { get; set; }
+        public DateTime CreatedDate { get; set; }
+    }
+
+    public class CustomerInfo
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string NIDNumber { get; set; } = string.Empty;
+    }
+
+    public class BranchInfo
+    {
+        public string BranchCode { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+    }
+
+    public class StatementItem
+    {
+        public DateTime Date { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty; // "Deposit", "Withdraw"
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public decimal Balance { get; set; }
+        public string Reference { get; set; } = string.Empty;
+    }
+
+    public class TrialBalanceRequest
+    {
+        public int BranchId { get; set; }
+        public DateTime Date { get; set; }
+        public int AuditorId { get; set; }
+    }
+
+    public class TrialBalanceResponse
+    {
+        public BranchInfo Branch { get; set; } = new();
+        public DateTime Date { get; set; }
+        public List<TrialBalanceItem> Items { get; set; } = new();
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public bool IsBalanced { get; set; }
+        public DateTime GeneratedAt { get; set; }
+    }
+
+    public class TrialBalanceItem
+    {
+        public int GLCode { get; set; }
+        public string GLName { get; set; } = string.Empty;
+        public string GLType { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+    }
+}
+```
+
+### User and Auth DTOs
+```csharp
+namespace CBS_MultiBranch.Application.DTOs.Auth
+{
+    public class LoginRequest
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public int BranchCode { get; set; }
+    }
+
+    public class LoginResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public UserInfo User { get; set; } = new();
+        public string Token { get; set; } = string.Empty;
+        public DateTime LoginTime { get; set; }
+    }
+
+    public class UserInfo
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public int BranchId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+    }
+
+    public class CreateUserRequest
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public int BranchId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public int CreatedBy { get; set; }
+    }
+
+    public class UpdateUserRequest
+    {
+        public int UserId { get; set; }
+        public string? Password { get; set; }
+        public string? Role { get; set; }
+        public bool? IsActive { get; set; }
+        public bool? IsLocked { get; set; }
+        public int UpdatedBy { get; set; }
+    }
+}
+```
+
+## ৩. CQRS Commands and Queries
+
+### Customer Commands
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Application.Features.Customers.Commands
+{
+    // Create Customer Command
+    public class CreateCustomerCommand : IRequest<Result<CustomerResponse>>
+    {
+        public CreateCustomerRequest Request { get; set; }
+        
+        public CreateCustomerCommand(CreateCustomerRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class CreateCustomerCommandHandler : IRequestHandler<CreateCustomerCommand, Result<CustomerResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly ILogger<CreateCustomerCommandHandler> _logger;
+
+        public CreateCustomerCommandHandler(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<CreateCustomerCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+            _logger = logger;
+        }
+
+        public async Task<Result<CustomerResponse>> Handle(
+            CreateCustomerCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Check if NID already exists
+                var existingCustomer = await _unitOfWork.Customers.GetByNIDAsync(request.NIDNumber);
+                if (existingCustomer != null)
+                {
+                    return Result<CustomerResponse>.Failure(
+                        $"Customer with NID {request.NIDNumber} already exists");
+                }
+
+                // Create customer
+                var customer = new Domain.Entities.Customer
+                {
+                    BranchId = request.BranchId,
+                    FullName = request.FullName,
+                    NIDNumber = request.NIDNumber,
+                    Status = Domain.Entities.CustomerStatus.Pending,
+                    CreatedBy = request.CreatedBy,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Customers.AddAsync(customer);
+
+                // Generate account number
+                var accountNumber = Domain.ValueObjects.AccountNumberGenerator
+                    .GenerateAccountNumber(request.BranchId, customer.Id);
+
+                // Create account
+                var accountType = request.AccountType == "111" 
+                    ? Domain.Entities.AccountType.Savings 
+                    : Domain.Entities.AccountType.Current;
+
+                var account = new Domain.Entities.Account
+                {
+                    BranchId = request.BranchId,
+                    CustomerId = customer.Id,
+                    AccountNumber = accountNumber,
+                    AccountType = accountType,
+                    Balance = 0,
+                    IsActive = false, // Active only after maker approval
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Accounts.AddAsync(account);
+
+                // Create audit log
+                await _unitOfWork.AuditLogs.AddAsync(new Domain.Entities.AuditLog
+                {
+                    BranchId = request.BranchId,
+                    UserId = request.CreatedBy,
+                    Action = "Customer created",
+                    OldValue = null,
+                    NewValue = $"Name: {request.FullName}, NID: {request.NIDNumber}, Account: {accountNumber}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.CompleteAsync();
+
+                _logger.LogInformation("Customer created: {CustomerId}, Account: {AccountNumber}", 
+                    customer.Id, accountNumber);
+
+                // Prepare response
+                var response = new CustomerResponse
+                {
+                    Id = customer.Id,
+                    FullName = customer.FullName,
+                    NIDNumber = customer.NIDNumber,
+                    AccountNumber = accountNumber,
+                    AccountType = request.AccountType,
+                    Balance = 0,
+                    Status = "Pending",
+                    CreatedBy = "Checker",
+                    CreatedAt = customer.CreatedAt
+                };
+
+                return Result<CustomerResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating customer");
+                return Result<CustomerResponse>.Failure($"Error creating customer: {ex.Message}");
+            }
+        }
+    }
+
+    // Approve Customer Command
+    public class ApproveCustomerCommand : IRequest<Result<CustomerApprovalResponse>>
+    {
+        public int CustomerId { get; set; }
+        public int MakerId { get; set; }
+        public string? Remarks { get; set; }
+
+        public ApproveCustomerCommand(int customerId, int makerId, string? remarks = null)
+        {
+            CustomerId = customerId;
+            MakerId = makerId;
+            Remarks = remarks;
+        }
+    }
+
+    public class ApproveCustomerCommandHandler : IRequestHandler<ApproveCustomerCommand, Result<CustomerApprovalResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ApproveCustomerCommandHandler> _logger;
+
+        public ApproveCustomerCommandHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<ApproveCustomerCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<CustomerApprovalResponse>> Handle(
+            ApproveCustomerCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var customer = await _unitOfWork.Customers.GetByIdAsync(command.CustomerId);
+                if (customer == null)
+                {
+                    return Result<CustomerApprovalResponse>.Failure("Customer not found");
+                }
+
+                if (customer.Status != Domain.Entities.CustomerStatus.Pending)
+                {
+                    return Result<CustomerApprovalResponse>.Failure(
+                        $"Customer already {customer.Status}");
+                }
+
+                var maker = await _unitOfWork.Users.GetByIdAsync(command.MakerId);
+                if (maker == null || maker.Role != Domain.Entities.UserRole.Maker)
+                {
+                    return Result<CustomerApprovalResponse>.Failure("Only Maker can approve customers");
+                }
+
+                // Update customer
+                customer.Status = Domain.Entities.CustomerStatus.Active;
+                customer.ApprovedBy = command.MakerId;
+                await _unitOfWork.Customers.UpdateAsync(customer);
+
+                // Activate account
+                var account = await _unitOfWork.Accounts.GetByCustomerIdAsync(command.CustomerId);
+                if (account != null)
+                {
+                    account.IsActive = true;
+                    await _unitOfWork.Accounts.UpdateAsync(account);
+                }
+
+                // Create audit log
+                await _unitOfWork.AuditLogs.AddAsync(new Domain.Entities.AuditLog
+                {
+                    BranchId = customer.BranchId,
+                    UserId = command.MakerId,
+                    Action = "Customer approved",
+                    OldValue = $"Status: Pending",
+                    NewValue = $"Status: Active, ApprovedBy: {maker.Username}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                _logger.LogInformation("Customer approved: {CustomerId} by Maker: {MakerId}", 
+                    command.CustomerId, command.MakerId);
+
+                var response = new CustomerApprovalResponse
+                {
+                    CustomerId = customer.Id,
+                    Status = "Active",
+                    Message = "Customer approved successfully",
+                    ApprovedAt = DateTime.UtcNow
+                };
+
+                return Result<CustomerApprovalResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error approving customer");
+                return Result<CustomerApprovalResponse>.Failure($"Error approving customer: {ex.Message}");
+            }
+        }
+    }
+
+    // Reject Customer Command
+    public class RejectCustomerCommand : IRequest<Result<CustomerApprovalResponse>>
+    {
+        public int CustomerId { get; set; }
+        public int MakerId { get; set; }
+        public string Reason { get; set; }
+
+        public RejectCustomerCommand(int customerId, int makerId, string reason)
+        {
+            CustomerId = customerId;
+            MakerId = makerId;
+            Reason = reason;
+        }
+    }
+
+    public class RejectCustomerCommandHandler : IRequestHandler<RejectCustomerCommand, Result<CustomerApprovalResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<RejectCustomerCommandHandler> _logger;
+
+        public RejectCustomerCommandHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<RejectCustomerCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<CustomerApprovalResponse>> Handle(
+            RejectCustomerCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var customer = await _unitOfWork.Customers.GetByIdAsync(command.CustomerId);
+                if (customer == null)
+                {
+                    return Result<CustomerApprovalResponse>.Failure("Customer not found");
+                }
+
+                if (customer.Status != Domain.Entities.CustomerStatus.Pending)
+                {
+                    return Result<CustomerApprovalResponse>.Failure(
+                        $"Customer already {customer.Status}");
+                }
+
+                var maker = await _unitOfWork.Users.GetByIdAsync(command.MakerId);
+                if (maker == null || maker.Role != Domain.Entities.UserRole.Maker)
+                {
+                    return Result<CustomerApprovalResponse>.Failure("Only Maker can reject customers");
+                }
+
+                // Update customer
+                customer.Status = Domain.Entities.CustomerStatus.Rejected;
+                customer.ApprovedBy = command.MakerId;
+                await _unitOfWork.Customers.UpdateAsync(customer);
+
+                // Create audit log
+                await _unitOfWork.AuditLogs.AddAsync(new Domain.Entities.AuditLog
+                {
+                    BranchId = customer.BranchId,
+                    UserId = command.MakerId,
+                    Action = "Customer rejected",
+                    OldValue = $"Status: Pending",
+                    NewValue = $"Status: Rejected, Reason: {command.Reason}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.CompleteAsync();
+
+                _logger.LogInformation("Customer rejected: {CustomerId} by Maker: {MakerId}, Reason: {Reason}", 
+                    command.CustomerId, command.MakerId, command.Reason);
+
+                var response = new CustomerApprovalResponse
+                {
+                    CustomerId = customer.Id,
+                    Status = "Rejected",
+                    Message = $"Customer rejected: {command.Reason}",
+                    ApprovedAt = DateTime.UtcNow
+                };
+
+                return Result<CustomerApprovalResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting customer");
+                return Result<CustomerApprovalResponse>.Failure($"Error rejecting customer: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+### Transaction Commands
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+using CBS_MultiBranch.Domain.Services;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Application.Features.Transactions.Commands
+{
+    // Deposit Command
+    public class DepositCommand : IRequest<Result<TransactionResponse>>
+    {
+        public DepositRequest Request { get; set; }
+        
+        public DepositCommand(DepositRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class DepositCommandHandler : IRequestHandler<DepositCommand, Result<TransactionResponse>>
+    {
+        private readonly ITransactionService _transactionService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly ILogger<DepositCommandHandler> _logger;
+
+        public DepositCommandHandler(
+            ITransactionService transactionService,
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<DepositCommandHandler> logger)
+        {
+            _transactionService = transactionService;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+            _logger = logger;
+        }
+
+        public async Task<Result<TransactionResponse>> Handle(
+            DepositCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Get account
+                var account = await _unitOfWork.Accounts.GetByAccountNumberAsync(request.AccountNumber);
+                if (account == null)
+                {
+                    return Result<TransactionResponse>.Failure("Account not found");
+                }
+
+                // Get checker
+                var checker = await _unitOfWork.Users.GetByIdAsync(request.CheckerId);
+                if (checker == null || checker.Role != Domain.Entities.UserRole.Checker)
+                {
+                    return Result<TransactionResponse>.Failure("Invalid checker");
+                }
+
+                // Initiate deposit
+                var result = await _transactionService.InitiateDepositAsync(
+                    account.Id, request.Amount, request.CheckerId, request.InstrumentNumber);
+
+                if (!result.IsSuccess)
+                {
+                    return Result<TransactionResponse>.Failure(result.Error);
+                }
+
+                var transaction = result.Value;
+
+                // Get transaction with details
+                var fullTransaction = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+
+                // Prepare response
+                var response = new TransactionResponse
+                {
+                    Id = fullTransaction.Id,
+                    BatchNumber = fullTransaction.BatchNumber,
+                    AccountNumber = account.AccountNumber,
+                    CustomerName = account.Customer?.FullName ?? "N/A",
+                    TransactionType = "Deposit",
+                    Amount = fullTransaction.Amount,
+                    Status = "Initiated",
+                    InstrumentType = fullTransaction.InstrumentType.ToString(),
+                    InstrumentNumber = fullTransaction.InstrumentNumber,
+                    CheckerName = checker.Username,
+                    Remarks = request.Remarks,
+                    CreatedAt = fullTransaction.CreatedAt,
+                    IsGLPosted = false
+                };
+
+                _logger.LogInformation("Deposit initiated: {BatchNumber}, Amount: {Amount}, Account: {AccountNumber}",
+                    response.BatchNumber, response.Amount, response.AccountNumber);
+
+                return Result<TransactionResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing deposit");
+                return Result<TransactionResponse>.Failure($"Error processing deposit: {ex.Message}");
+            }
+        }
+    }
+
+    // Withdraw Command
+    public class WithdrawCommand : IRequest<Result<TransactionResponse>>
+    {
+        public WithdrawalRequest Request { get; set; }
+        
+        public WithdrawCommand(WithdrawalRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class WithdrawCommandHandler : IRequestHandler<WithdrawCommand, Result<TransactionResponse>>
+    {
+        private readonly ITransactionService _transactionService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly ILogger<WithdrawCommandHandler> _logger;
+
+        public WithdrawCommandHandler(
+            ITransactionService transactionService,
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<WithdrawCommandHandler> logger)
+        {
+            _transactionService = transactionService;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+            _logger = logger;
+        }
+
+        public async Task<Result<TransactionResponse>> Handle(
+            WithdrawCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Get account
+                var account = await _unitOfWork.Accounts.GetByAccountNumberAsync(request.AccountNumber);
+                if (account == null)
+                {
+                    return Result<TransactionResponse>.Failure("Account not found");
+                }
+
+                // Get checker
+                var checker = await _unitOfWork.Users.GetByIdAsync(request.CheckerId);
+                if (checker == null || checker.Role != Domain.Entities.UserRole.Checker)
+                {
+                    return Result<TransactionResponse>.Failure("Invalid checker");
+                }
+
+                // Initiate withdrawal
+                var result = await _transactionService.InitiateWithdrawalAsync(
+                    account.Id, request.Amount, request.CheckerId, request.InstrumentNumber);
+
+                if (!result.IsSuccess)
+                {
+                    return Result<TransactionResponse>.Failure(result.Error);
+                }
+
+                var transaction = result.Value;
+
+                // Get transaction with details
+                var fullTransaction = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+
+                // Prepare response
+                var response = new TransactionResponse
+                {
+                    Id = fullTransaction.Id,
+                    BatchNumber = fullTransaction.BatchNumber,
+                    AccountNumber = account.AccountNumber,
+                    CustomerName = account.Customer?.FullName ?? "N/A",
+                    TransactionType = "Withdraw",
+                    Amount = fullTransaction.Amount,
+                    Status = "Initiated",
+                    InstrumentType = fullTransaction.InstrumentType.ToString(),
+                    InstrumentNumber = fullTransaction.InstrumentNumber,
+                    CheckerName = checker.Username,
+                    Remarks = request.Remarks,
+                    CreatedAt = fullTransaction.CreatedAt,
+                    IsGLPosted = false
+                };
+
+                _logger.LogInformation("Withdrawal initiated: {BatchNumber}, Amount: {Amount}, Account: {AccountNumber}",
+                    response.BatchNumber, response.Amount, response.AccountNumber);
+
+                return Result<TransactionResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing withdrawal");
+                return Result<TransactionResponse>.Failure($"Error processing withdrawal: {ex.Message}");
+            }
+        }
+    }
+
+    // Approve Transaction Command
+    public class ApproveTransactionCommand : IRequest<Result<TransactionApprovalResponse>>
+    {
+        public ApproveTransactionRequest Request { get; set; }
+        
+        public ApproveTransactionCommand(ApproveTransactionRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class ApproveTransactionCommandHandler : IRequestHandler<ApproveTransactionCommand, Result<TransactionApprovalResponse>>
+    {
+        private readonly ITransactionService _transactionService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ApproveTransactionCommandHandler> _logger;
+
+        public ApproveTransactionCommandHandler(
+            ITransactionService transactionService,
+            IUnitOfWork unitOfWork,
+            ILogger<ApproveTransactionCommandHandler> logger)
+        {
+            _transactionService = transactionService;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<TransactionApprovalResponse>> Handle(
+            ApproveTransactionCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Get transaction
+                var transaction = await _unitOfWork.Transactions.GetByBatchNumberAsync(request.BatchNumber);
+                if (transaction == null)
+                {
+                    return Result<TransactionApprovalResponse>.Failure("Transaction not found");
+                }
+
+                if (transaction.Status != Domain.Entities.TransactionStatus.Initiated)
+                {
+                    return Result<TransactionApprovalResponse>.Failure(
+                        $"Transaction already {transaction.Status}");
+                }
+
+                // Approve transaction
+                var result = await _transactionService.ApproveTransactionAsync(
+                    transaction.Id, request.MakerId, request.Remarks);
+
+                if (!result.IsSuccess)
+                {
+                    return Result<TransactionApprovalResponse>.Failure(result.Error);
+                }
+
+                // Get updated transaction and account
+                var updatedTransaction = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+                var account = await _unitOfWork.Accounts.GetByIdAsync(transaction.AccountId);
+
+                var response = new TransactionApprovalResponse
+                {
+                    BatchNumber = updatedTransaction.BatchNumber,
+                    Status = "Approved",
+                    Message = "Transaction approved successfully",
+                    NewBalance = account?.Balance ?? 0,
+                    ApprovedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("Transaction approved: {BatchNumber} by Maker: {MakerId}",
+                    response.BatchNumber, request.MakerId);
+
+                return Result<TransactionApprovalResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving transaction");
+                return Result<TransactionApprovalResponse>.Failure($"Error approving transaction: {ex.Message}");
+            }
+        }
+    }
+
+    // Reject Transaction Command
+    public class RejectTransactionCommand : IRequest<Result<TransactionApprovalResponse>>
+    {
+        public RejectTransactionRequest Request { get; set; }
+        
+        public RejectTransactionCommand(RejectTransactionRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class RejectTransactionCommandHandler : IRequestHandler<RejectTransactionCommand, Result<TransactionApprovalResponse>>
+    {
+        private readonly ITransactionService _transactionService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<RejectTransactionCommandHandler> _logger;
+
+        public RejectTransactionCommandHandler(
+            ITransactionService transactionService,
+            IUnitOfWork unitOfWork,
+            ILogger<RejectTransactionCommandHandler> logger)
+        {
+            _transactionService = transactionService;
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<TransactionApprovalResponse>> Handle(
+            RejectTransactionCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Get transaction
+                var transaction = await _unitOfWork.Transactions.GetByBatchNumberAsync(request.BatchNumber);
+                if (transaction == null)
+                {
+                    return Result<TransactionApprovalResponse>.Failure("Transaction not found");
+                }
+
+                if (transaction.Status != Domain.Entities.TransactionStatus.Initiated)
+                {
+                    return Result<TransactionApprovalResponse>.Failure(
+                        $"Transaction already {transaction.Status}");
+                }
+
+                // Reject transaction
+                var result = await _transactionService.RejectTransactionAsync(
+                    transaction.Id, request.MakerId, request.Reason);
+
+                if (!result.IsSuccess)
+                {
+                    return Result<TransactionApprovalResponse>.Failure(result.Error);
+                }
+
+                // Get updated transaction
+                var updatedTransaction = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+
+                var response = new TransactionApprovalResponse
+                {
+                    BatchNumber = updatedTransaction.BatchNumber,
+                    Status = "Rejected",
+                    Message = $"Transaction rejected: {request.Reason}",
+                    NewBalance = 0,
+                    ApprovedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("Transaction rejected: {BatchNumber} by Maker: {MakerId}, Reason: {Reason}",
+                    response.BatchNumber, request.MakerId, request.Reason);
+
+                return Result<TransactionApprovalResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting transaction");
+                return Result<TransactionApprovalResponse>.Failure($"Error rejecting transaction: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+### GL Posting Commands
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.GL;
+using CBS_MultiBranch.Domain.ValueObjects;
+using CBS_MultiBranch.Domain.Entities;
+
+namespace CBS_MultiBranch.Application.Features.GL.Commands
+{
+    // Post GL Command
+    public class PostGLCommand : IRequest<Result<GLPostingResponse>>
+    {
+        public GLPostingRequest Request { get; set; }
+        
+        public PostGLCommand(GLPostingRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class PostGLCommandHandler : IRequestHandler<PostGLCommand, Result<GLPostingResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<PostGLCommandHandler> _logger;
+
+        public PostGLCommandHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<PostGLCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<GLPostingResponse>> Handle(
+            PostGLCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Check if GL posting is already running
+                // This prevents concurrent GL posting
+                var systemControl = await _unitOfWork.SystemControls.GetAsync();
+                if (systemControl?.IsGLPostingRunning == true)
+                {
+                    return Result<GLPostingResponse>.Failure("GL posting is already in progress");
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Get approved but unposted transactions
+                var transactions = await _unitOfWork.Transactions
+                    .GetApprovedUnpostedTransactionsAsync(request.BranchId);
+
+                if (!transactions.Any())
+                {
+                    return Result<GLPostingResponse>.Success(new GLPostingResponse
+                    {
+                        Success = true,
+                        Message = "No transactions to post",
+                        TransactionsPosted = 0,
+                        TotalDebit = 0,
+                        TotalCredit = 0,
+                        PostedAt = DateTime.UtcNow
+                    });
+                }
+
+                decimal totalDebit = 0;
+                decimal totalCredit = 0;
+                int postedCount = 0;
+
+                // Get required GL heads
+                var cashGL = await _unitOfWork.GLHeads.GetByCodeAsync(request.BranchId, 1001); // Cash
+                var depositGL = await _unitOfWork.GLHeads.GetByCodeAsync(request.BranchId, 2001); // Customer Deposits
+
+                if (cashGL == null || depositGL == null)
+                {
+                    return Result<GLPostingResponse>.Failure("Required GL heads not found");
+                }
+
+                foreach (var transaction in transactions)
+                {
+                    try
+                    {
+                        // Create GL Journal
+                        var journal = new GLJournal
+                        {
+                            TransactionId = transaction.Id,
+                            BranchId = transaction.BranchId,
+                            Narration = $"Transaction: {transaction.BatchNumber}",
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        if (transaction.TransactionType == TransactionType.Deposit)
+                        {
+                            // Deposit: Dr Cash, Cr Customer Deposits
+                            journal.TotalDebit = transaction.Amount;
+                            journal.TotalCredit = transaction.Amount;
+
+                            // Cash Dr
+                            var cashLine = new GLJournalLine
+                            {
+                                BranchId = transaction.BranchId,
+                                TransactionId = transaction.Id,
+                                GLCodeId = cashGL.Id,
+                                DebitAmount = transaction.Amount,
+                                CreditAmount = 0,
+                                Narration = $"Deposit from {transaction.Account.AccountNumber}"
+                            };
+
+                            // Customer Deposits Cr
+                            var depositLine = new GLJournalLine
+                            {
+                                BranchId = transaction.BranchId,
+                                TransactionId = transaction.Id,
+                                GLCodeId = depositGL.Id,
+                                DebitAmount = 0,
+                                CreditAmount = transaction.Amount,
+                                Narration = $"Deposit to {transaction.Account.AccountNumber}"
+                            };
+
+                            await _unitOfWork.GLJournals.AddAsync(journal);
+                            await _unitOfWork.GLJournals.AddLineAsync(cashLine);
+                            await _unitOfWork.GLJournals.AddLineAsync(depositLine);
+
+                            // Update GL balances
+                            cashGL.CurrentBalance += transaction.Amount; // Asset increase
+                            depositGL.CurrentBalance += transaction.Amount; // Liability increase
+                        }
+                        else if (transaction.TransactionType == TransactionType.Withdraw)
+                        {
+                            // Withdrawal: Dr Customer Deposits, Cr Cash
+                            journal.TotalDebit = transaction.Amount;
+                            journal.TotalCredit = transaction.Amount;
+
+                            // Customer Deposits Dr
+                            var depositLine = new GLJournalLine
+                            {
+                                BranchId = transaction.BranchId,
+                                TransactionId = transaction.Id,
+                                GLCodeId = depositGL.Id,
+                                DebitAmount = transaction.Amount,
+                                CreditAmount = 0,
+                                Narration = $"Withdrawal from {transaction.Account.AccountNumber}"
+                            };
+
+                            // Cash Cr
+                            var cashLine = new GLJournalLine
+                            {
+                                BranchId = transaction.BranchId,
+                                TransactionId = transaction.Id,
+                                GLCodeId = cashGL.Id,
+                                DebitAmount = 0,
+                                CreditAmount = transaction.Amount,
+                                Narration = $"Withdrawal to {transaction.Account.AccountNumber}"
+                            };
+
+                            await _unitOfWork.GLJournals.AddAsync(journal);
+                            await _unitOfWork.GLJournals.AddLineAsync(depositLine);
+                            await _unitOfWork.GLJournals.AddLineAsync(cashLine);
+
+                            // Update GL balances
+                            depositGL.CurrentBalance -= transaction.Amount; // Liability decrease
+                            cashGL.CurrentBalance -= transaction.Amount; // Asset decrease
+                        }
+
+                        // Mark transaction as GL posted
+                        transaction.IsGLPosted = true;
+                        await _unitOfWork.Transactions.UpdateAsync(transaction);
+
+                        totalDebit += journal.TotalDebit;
+                        totalCredit += journal.TotalCredit;
+                        postedCount++;
+
+                        _logger.LogDebug("GL posted for transaction: {BatchNumber}", transaction.BatchNumber);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error posting GL for transaction: {TransactionId}", transaction.Id);
+                        // Continue with other transactions
+                    }
+                }
+
+                // Update GL head balances
+                await _unitOfWork.GLHeads.UpdateAsync(cashGL);
+                await _unitOfWork.GLHeads.UpdateAsync(depositGL);
+
+                // Create audit log
+                await _unitOfWork.AuditLogs.AddAsync(new AuditLog
+                {
+                    BranchId = request.BranchId,
+                    UserId = request.AdminId,
+                    Action = "GL Posting",
+                    OldValue = null,
+                    NewValue = $"Transactions posted: {postedCount}, Debit: {totalDebit}, Credit: {totalCredit}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                var response = new GLPostingResponse
+                {
+                    Success = true,
+                    Message = $"GL posted for {postedCount} transactions",
+                    TransactionsPosted = postedCount,
+                    TotalDebit = totalDebit,
+                    TotalCredit = totalCredit,
+                    PostedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("GL posting completed: {PostedCount} transactions, Branch: {BranchId}",
+                    postedCount, request.BranchId);
+
+                return Result<GLPostingResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error in GL posting");
+                return Result<GLPostingResponse>.Failure($"Error in GL posting: {ex.Message}");
+            }
+        }
+    }
+
+    // Reconcile Branch Command
+    public class ReconcileBranchCommand : IRequest<Result<ReconciliationResponse>>
+    {
+        public ReconciliationRequest Request { get; set; }
+        
+        public ReconcileBranchCommand(ReconciliationRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class ReconcileBranchCommandHandler : IRequestHandler<ReconcileBranchCommand, Result<ReconciliationResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<ReconcileBranchCommandHandler> _logger;
+
+        public ReconcileBranchCommandHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<ReconcileBranchCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<ReconciliationResponse>> Handle(
+            ReconcileBranchCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+
+                // Get GL balances
+                var cashGL = await _unitOfWork.GLHeads.GetByCodeAsync(request.BranchId, 1001);
+                var depositGL = await _unitOfWork.GLHeads.GetByCodeAsync(request.BranchId, 2001);
+
+                if (cashGL == null || depositGL == null)
+                {
+                    return Result<ReconciliationResponse>.Failure("Required GL heads not found");
+                }
+
+                // Get Sub-Ledger totals
+                var totalCustomerDeposits = await _unitOfWork.Accounts
+                    .GetTotalCustomerDepositsAsync(request.BranchId);
+                
+                var totalCashInDrawers = await _unitOfWork.CashDrawers
+                    .GetTotalCashInDrawersAsync(request.BranchId);
+
+                // Calculate differences
+                var cashDifference = cashGL.CurrentBalance - totalCashInDrawers;
+                var depositDifference = depositGL.CurrentBalance - totalCustomerDeposits;
+
+                // Get all GL heads for trial balance
+                var glHeads = await _unitOfWork.GLHeads.GetGLHeadsByBranchAsync(request.BranchId);
+                decimal totalDebits = 0;
+                decimal totalCredits = 0;
+
+                foreach (var glHead in glHeads)
+                {
+                    if (glHead.GLType == GLType.Asset || glHead.GLType == GLType.Expense)
+                    {
+                        totalDebits += glHead.CurrentBalance;
+                    }
+                    else // Liability, Equity, Income
+                    {
+                        totalCredits += glHead.CurrentBalance;
+                    }
+                }
+
+                var isTrialBalanceMatched = Math.Abs(totalDebits - totalCredits) < 0.01m;
+                var isCashMatched = Math.Abs(cashDifference) < 0.01m;
+                var isDepositMatched = Math.Abs(depositDifference) < 0.01m;
+                var isAllMatched = isCashMatched && isDepositMatched && isTrialBalanceMatched;
+
+                // Create reconciliation log
+                var reconLog = new ReconciliationLog
+                {
+                    BranchId = request.BranchId,
+                    ReconDate = request.ReconDate,
+                    GLCode = 1001,
+                    GLBalance = cashGL.CurrentBalance,
+                    SLTotalBalance = totalCashInDrawers,
+                    Difference = cashDifference,
+                    Status = isCashMatched ? ReconStatus.Matched : ReconStatus.Mismatch
+                };
+
+                await _unitOfWork.ReconciliationLogs.AddAsync(reconLog);
+
+                reconLog = new ReconciliationLog
+                {
+                    BranchId = request.BranchId,
+                    ReconDate = request.ReconDate,
+                    GLCode = 2001,
+                    GLBalance = depositGL.CurrentBalance,
+                    SLTotalBalance = totalCustomerDeposits,
+                    Difference = depositDifference,
+                    Status = isDepositMatched ? ReconStatus.Matched : ReconStatus.Mismatch
+                };
+
+                await _unitOfWork.ReconciliationLogs.AddAsync(reconLog);
+
+                // Create audit log
+                await _unitOfWork.AuditLogs.AddAsync(new AuditLog
+                {
+                    BranchId = request.BranchId,
+                    UserId = request.AuditorId,
+                    Action = "Reconciliation",
+                    OldValue = null,
+                    NewValue = $"Cash Matched: {isCashMatched}, Deposit Matched: {isDepositMatched}, TB Matched: {isTrialBalanceMatched}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _unitOfWork.CompleteAsync();
+
+                var response = new ReconciliationResponse
+                {
+                    IsMatched = isAllMatched,
+                    Message = isAllMatched ? "All accounts reconciled successfully" : "Reconciliation mismatches found",
+                    ReconDate = request.ReconDate,
+                    
+                    GLBalance1001 = cashGL.CurrentBalance,
+                    SLTotalCashDrawers = totalCashInDrawers,
+                    Difference1001 = cashDifference,
+                    
+                    GLBalance2001 = depositGL.CurrentBalance,
+                    SLTotalCustomers = totalCustomerDeposits,
+                    Difference2001 = depositDifference,
+                    
+                    TotalDebits = totalDebits,
+                    TotalCredits = totalCredits,
+                    IsTrialBalanceMatched = isTrialBalanceMatched
+                };
+
+                if (!isCashMatched)
+                {
+                    response.Issues.Add($"Cash mismatch: GL={cashGL.CurrentBalance}, SL={totalCashInDrawers}, Diff={cashDifference}");
+                }
+
+                if (!isDepositMatched)
+                {
+                    response.Issues.Add($"Deposit mismatch: GL={depositGL.CurrentBalance}, SL={totalCustomerDeposits}, Diff={depositDifference}");
+                }
+
+                if (!isTrialBalanceMatched)
+                {
+                    response.Issues.Add($"Trial Balance mismatch: Debits={totalDebits}, Credits={totalCredits}, Diff={totalDebits - totalCredits}");
+                }
+
+                _logger.LogInformation("Reconciliation completed for Branch: {BranchId}, Matched: {IsMatched}",
+                    request.BranchId, isAllMatched);
+
+                return Result<ReconciliationResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during reconciliation");
+                return Result<ReconciliationResponse>.Failure($"Error during reconciliation: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+## ৪. Queries
+
+### Customer Queries
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Application.Features.Customers.Queries
+{
+    // Get Pending Customers Query
+    public class GetPendingCustomersQuery : IRequest<Result<List<CustomerResponse>>>
+    {
+        public int BranchId { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        
+        public GetPendingCustomersQuery(int branchId, int pageNumber = 1, int pageSize = 20)
+        {
+            BranchId = branchId;
+            PageNumber = pageNumber;
+            PageSize = pageSize;
+        }
+    }
+
+    public class GetPendingCustomersQueryHandler : IRequestHandler<GetPendingCustomersQuery, Result<List<CustomerResponse>>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+        private readonly ILogger<GetPendingCustomersQueryHandler> _logger;
+
+        public GetPendingCustomersQueryHandler(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ILogger<GetPendingCustomersQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+            _logger = logger;
+        }
+
+        public async Task<Result<List<CustomerResponse>>> Handle(
+            GetPendingCustomersQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.GetPendingCustomersAsync(query.BranchId);
+                
+                var response = customers.Select(c => new CustomerResponse
+                {
+                    Id = c.Id,
+                    FullName = c.FullName,
+                    NIDNumber = c.NIDNumber,
+                    AccountNumber = c.Accounts.FirstOrDefault()?.AccountNumber ?? "N/A",
+                    AccountType = c.Accounts.FirstOrDefault()?.AccountType.ToString() ?? "N/A",
+                    Balance = c.Accounts.FirstOrDefault()?.Balance ?? 0,
+                    Status = c.Status.ToString(),
+                    CreatedBy = c.Creator?.Username ?? "Unknown",
+                    ApprovedBy = null,
+                    CreatedAt = c.CreatedAt
+                }).ToList();
+
+                // Pagination
+                var paginatedResponse = response
+                    .Skip((query.PageNumber - 1) * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToList();
+
+                _logger.LogDebug("Retrieved {Count} pending customers for Branch: {BranchId}",
+                    paginatedResponse.Count, query.BranchId);
+
+                return Result<List<CustomerResponse>>.Success(paginatedResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving pending customers");
+                return Result<List<CustomerResponse>>.Failure($"Error retrieving pending customers: {ex.Message}");
+            }
+        }
+    }
+
+    // Get Customer By Account Number Query
+    public class GetCustomerByAccountNumberQuery : IRequest<Result<CustomerResponse>>
+    {
+        public string AccountNumber { get; set; }
+        
+        public GetCustomerByAccountNumberQuery(string accountNumber)
+        {
+            AccountNumber = accountNumber;
+        }
+    }
+
+    public class GetCustomerByAccountNumberQueryHandler : IRequestHandler<GetCustomerByAccountNumberQuery, Result<CustomerResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetCustomerByAccountNumberQueryHandler> _logger;
+
+        public GetCustomerByAccountNumberQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetCustomerByAccountNumberQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<CustomerResponse>> Handle(
+            GetCustomerByAccountNumberQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var account = await _unitOfWork.Accounts.GetByAccountNumberAsync(query.AccountNumber);
+                if (account == null)
+                {
+                    return Result<CustomerResponse>.Failure("Account not found");
+                }
+
+                var customer = await _unitOfWork.Customers.GetByIdAsync(account.CustomerId);
+                if (customer == null)
+                {
+                    return Result<CustomerResponse>.Failure("Customer not found");
+                }
+
+                var response = new CustomerResponse
+                {
+                    Id = customer.Id,
+                    FullName = customer.FullName,
+                    NIDNumber = customer.NIDNumber,
+                    AccountNumber = account.AccountNumber,
+                    AccountType = account.AccountType.ToString(),
+                    Balance = account.Balance,
+                    Status = customer.Status.ToString(),
+                    CreatedBy = customer.Creator?.Username ?? "Unknown",
+                    ApprovedBy = null,
+                    CreatedAt = customer.CreatedAt
+                };
+
+                _logger.LogDebug("Retrieved customer by account: {AccountNumber}", query.AccountNumber);
+
+                return Result<CustomerResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving customer by account number");
+                return Result<CustomerResponse>.Failure($"Error retrieving customer: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+### Transaction Queries
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Application.Features.Transactions.Queries
+{
+    // Get Pending Transactions Query
+    public class GetPendingTransactionsQuery : IRequest<Result<List<TransactionResponse>>>
+    {
+        public int BranchId { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        
+        public GetPendingTransactionsQuery(int branchId, int pageNumber = 1, int pageSize = 20)
+        {
+            BranchId = branchId;
+            PageNumber = pageNumber;
+            PageSize = pageSize;
+        }
+    }
+
+    public class GetPendingTransactionsQueryHandler : IRequestHandler<GetPendingTransactionsQuery, Result<List<TransactionResponse>>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetPendingTransactionsQueryHandler> _logger;
+
+        public GetPendingTransactionsQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetPendingTransactionsQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<List<TransactionResponse>>> Handle(
+            GetPendingTransactionsQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var transactions = await _unitOfWork.Transactions.GetPendingTransactionsAsync(query.BranchId);
+                
+                var response = transactions.Select(t => new TransactionResponse
+                {
+                    Id = t.Id,
+                    BatchNumber = t.BatchNumber,
+                    AccountNumber = t.Account.AccountNumber,
+                    CustomerName = t.Account.Customer?.FullName ?? "N/A",
+                    TransactionType = t.TransactionType.ToString(),
+                    Amount = t.Amount,
+                    Status = t.Status.ToString(),
+                    InstrumentType = t.InstrumentType.ToString(),
+                    InstrumentNumber = t.InstrumentNumber,
+                    CheckerName = t.Checker.Username,
+                    MakerName = t.Maker?.Username,
+                    Remarks = t.Remarks,
+                    CreatedAt = t.CreatedAt,
+                    IsGLPosted = t.IsGLPosted
+                }).ToList();
+
+                // Pagination
+                var paginatedResponse = response
+                    .Skip((query.PageNumber - 1) * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToList();
+
+                _logger.LogDebug("Retrieved {Count} pending transactions for Branch: {BranchId}",
+                    paginatedResponse.Count, query.BranchId);
+
+                return Result<List<TransactionResponse>>.Success(paginatedResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving pending transactions");
+                return Result<List<TransactionResponse>>.Failure($"Error retrieving pending transactions: {ex.Message}");
+            }
+        }
+    }
+
+    // Get Approved Transactions Query
+    public class GetApprovedTransactionsQuery : IRequest<Result<List<TransactionResponse>>>
+    {
+        public int BranchId { get; set; }
+        public DateTime Date { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        
+        public GetApprovedTransactionsQuery(int branchId, DateTime date, int pageNumber = 1, int pageSize = 20)
+        {
+            BranchId = branchId;
+            Date = date;
+            PageNumber = pageNumber;
+            PageSize = pageSize;
+        }
+    }
+
+    public class GetApprovedTransactionsQueryHandler : IRequestHandler<GetApprovedTransactionsQuery, Result<List<TransactionResponse>>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetApprovedTransactionsQueryHandler> _logger;
+
+        public GetApprovedTransactionsQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetApprovedTransactionsQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<List<TransactionResponse>>> Handle(
+            GetApprovedTransactionsQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var startDate = query.Date.Date;
+                var endDate = startDate.AddDays(1);
+
+                var allTransactions = await _unitOfWork.Transactions.GetAllAsync();
+                var transactions = allTransactions
+                    .Where(t => t.BranchId == query.BranchId 
+                        && t.Status == Domain.Entities.TransactionStatus.Approved
+                        && t.CreatedAt >= startDate 
+                        && t.CreatedAt < endDate)
+                    .OrderByDescending(t => t.CreatedAt)
+                    .ToList();
+                
+                var response = transactions.Select(t => new TransactionResponse
+                {
+                    Id = t.Id,
+                    BatchNumber = t.BatchNumber,
+                    AccountNumber = t.Account.AccountNumber,
+                    CustomerName = t.Account.Customer?.FullName ?? "N/A",
+                    TransactionType = t.TransactionType.ToString(),
+                    Amount = t.Amount,
+                    Status = t.Status.ToString(),
+                    InstrumentType = t.InstrumentType.ToString(),
+                    InstrumentNumber = t.InstrumentNumber,
+                    CheckerName = t.Checker.Username,
+                    MakerName = t.Maker?.Username,
+                    Remarks = t.Remarks,
+                    CreatedAt = t.CreatedAt,
+                    IsGLPosted = t.IsGLPosted
+                }).ToList();
+
+                // Pagination
+                var paginatedResponse = response
+                    .Skip((query.PageNumber - 1) * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToList();
+
+                _logger.LogDebug("Retrieved {Count} approved transactions for Branch: {BranchId} on {Date}",
+                    paginatedResponse.Count, query.BranchId, query.Date);
+
+                return Result<List<TransactionResponse>>.Success(paginatedResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving approved transactions");
+                return Result<List<TransactionResponse>>.Failure($"Error retrieving approved transactions: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+### Report Queries
+```csharp
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Reports;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Application.Features.Reports.Queries
+{
+    // Get Customer Statement Query
+    public class GetCustomerStatementQuery : IRequest<Result<StatementResponse>>
+    {
+        public StatementRequest Request { get; set; }
+        
+        public GetCustomerStatementQuery(StatementRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class GetCustomerStatementQueryHandler : IRequestHandler<GetCustomerStatementQuery, Result<StatementResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetCustomerStatementQueryHandler> _logger;
+
+        public GetCustomerStatementQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetCustomerStatementQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<StatementResponse>> Handle(
+            GetCustomerStatementQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = query.Request;
+
+                // Get account
+                var account = await _unitOfWork.Accounts.GetByAccountNumberAsync(request.AccountNumber);
+                if (account == null)
+                {
+                    return Result<StatementResponse>.Failure("Account not found");
+                }
+
+                // Verify user has access to this branch
+                var user = await _unitOfWork.Users.GetByIdAsync(request.UserId);
+                if (user == null || (user.BranchId != account.BranchId && user.Role != Domain.Entities.UserRole.Admin))
+                {
+                    return Result<StatementResponse>.Failure("Access denied");
+                }
+
+                // Get sub-ledger entries
+                var entries = await _unitOfWork.SubLedgers.GetEntriesByAccountAsync(
+                    account.Id, request.FromDate, request.ToDate);
+
+                // Get branch info
+                var branch = account.Branch;
+
+                // Calculate opening balance (balance before fromDate)
+                var openingBalance = 0m;
+                var entriesBefore = await _unitOfWork.SubLedgers.GetEntriesByAccountAsync(
+                    account.Id, DateTime.MinValue, request.FromDate.AddDays(-1));
+                
+                if (entriesBefore.Any())
+                {
+                    openingBalance = entriesBefore.OrderByDescending(e => e.EntryDate)
+                        .First().RunningBalance;
+                }
+
+                // Process entries
+                var statementItems = new List<StatementItem>();
+                var currentBalance = openingBalance;
+                decimal totalDeposits = 0;
+                decimal totalWithdrawals = 0;
+
+                foreach (var entry in entries.OrderBy(e => e.EntryDate))
+                {
+                    var transaction = entry.Transaction;
+                    
+                    if (transaction.TransactionType == Domain.Entities.TransactionType.Deposit)
+                    {
+                        totalDeposits += entry.Amount;
+                    }
+                    else
+                    {
+                        totalWithdrawals += entry.Amount;
+                    }
+
+                    var item = new StatementItem
+                    {
+                        Date = entry.EntryDate,
+                        BatchNumber = transaction.BatchNumber,
+                        Description = $"{transaction.TransactionType} - {transaction.InstrumentType}",
+                        Type = transaction.TransactionType.ToString(),
+                        Debit = entry.DrCrFlag == Domain.Entities.DrCrFlag.Dr ? entry.Amount : 0,
+                        Credit = entry.DrCrFlag == Domain.Entities.DrCrFlag.Cr ? entry.Amount : 0,
+                        Balance = entry.RunningBalance,
+                        Reference = transaction.InstrumentNumber ?? transaction.BatchNumber
+                    };
+
+                    statementItems.Add(item);
+                    currentBalance = entry.RunningBalance;
+                }
+
+                var response = new StatementResponse
+                {
+                    Account = new AccountInfo
+                    {
+                        AccountNumber = account.AccountNumber,
+                        AccountType = account.AccountType.ToString(),
+                        CurrentBalance = account.Balance,
+                        CreatedDate = account.CreatedAt
+                    },
+                    Customer = new CustomerInfo
+                    {
+                        FullName = account.Customer?.FullName ?? "N/A",
+                        NIDNumber = account.Customer?.NIDNumber ?? "N/A"
+                    },
+                    Branch = new BranchInfo
+                    {
+                        BranchCode = branch?.BranchCode ?? "N/A",
+                        BranchName = branch?.BranchName ?? "N/A"
+                    },
+                    Items = statementItems,
+                    OpeningBalance = openingBalance,
+                    ClosingBalance = currentBalance,
+                    TotalDeposits = totalDeposits,
+                    TotalWithdrawals = totalWithdrawals,
+                    GeneratedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("Statement generated for Account: {AccountNumber}, From: {FromDate}, To: {ToDate}",
+                    request.AccountNumber, request.FromDate, request.ToDate);
+
+                return Result<StatementResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating customer statement");
+                return Result<StatementResponse>.Failure($"Error generating statement: {ex.Message}");
+            }
+        }
+    }
+
+    // Get Trial Balance Query
+    public class GetTrialBalanceQuery : IRequest<Result<TrialBalanceResponse>>
+    {
+        public TrialBalanceRequest Request { get; set; }
+        
+        public GetTrialBalanceQuery(TrialBalanceRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class GetTrialBalanceQueryHandler : IRequestHandler<GetTrialBalanceQuery, Result<TrialBalanceResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<GetTrialBalanceQueryHandler> _logger;
+
+        public GetTrialBalanceQueryHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<GetTrialBalanceQueryHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<TrialBalanceResponse>> Handle(
+            GetTrialBalanceQuery query, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = query.Request;
+
+                // Get branch
+                var branch = await _unitOfWork.Branches.GetByIdAsync(request.BranchId);
+                if (branch == null)
+                {
+                    return Result<TrialBalanceResponse>.Failure("Branch not found");
+                }
+
+                // Get GL heads
+                var glHeads = await _unitOfWork.GLHeads.GetGLHeadsByBranchAsync(request.BranchId);
+
+                var items = new List<TrialBalanceItem>();
+                decimal totalDebit = 0;
+                decimal totalCredit = 0;
+
+                foreach (var glHead in glHeads)
+                {
+                    var item = new TrialBalanceItem
+                    {
+                        GLCode = glHead.GLCode,
+                        GLName = glHead.GLName,
+                        GLType = glHead.GLType.ToString()
+                    };
+
+                    if (glHead.GLType == Domain.Entities.GLType.Asset || glHead.GLType == Domain.Entities.GLType.Expense)
+                    {
+                        item.Debit = glHead.CurrentBalance;
+                        item.Credit = 0;
+                        totalDebit += glHead.CurrentBalance;
+                    }
+                    else // Liability, Equity, Income
+                    {
+                        item.Debit = 0;
+                        item.Credit = glHead.CurrentBalance;
+                        totalCredit += glHead.CurrentBalance;
+                    }
+
+                    items.Add(item);
+                }
+
+                var isBalanced = Math.Abs(totalDebit - totalCredit) < 0.01m;
+
+                var response = new TrialBalanceResponse
+                {
+                    Branch = new BranchInfo
+                    {
+                        BranchCode = branch.BranchCode,
+                        BranchName = branch.BranchName
+                    },
+                    Date = request.Date,
+                    Items = items,
+                    TotalDebit = totalDebit,
+                    TotalCredit = totalCredit,
+                    IsBalanced = isBalanced,
+                    GeneratedAt = DateTime.UtcNow
+                };
+
+                _logger.LogInformation("Trial Balance generated for Branch: {BranchId}, Date: {Date}",
+                    request.BranchId, request.Date);
+
+                return Result<TrialBalanceResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating trial balance");
+                return Result<TrialBalanceResponse>.Failure($"Error generating trial balance: {ex.Message}");
+            }
+        }
+    }
+}
+```
+
+## ৫. Validators
+
+```csharp
+using FluentValidation;
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+
+namespace CBS_MultiBranch.Application.Validators
+{
+    // Customer Validators
+    public class CreateCustomerRequestValidator : AbstractValidator<CreateCustomerRequest>
+    {
+        public CreateCustomerRequestValidator()
+        {
+            RuleFor(x => x.FullName)
+                .NotEmpty().WithMessage("Full name is required")
+                .MaximumLength(100).WithMessage("Full name cannot exceed 100 characters");
+
+            RuleFor(x => x.NIDNumber)
+                .NotEmpty().WithMessage("NID number is required")
+                .MaximumLength(20).WithMessage("NID number cannot exceed 20 characters")
+                .Matches(@"^\d+$").WithMessage("NID number must contain only digits");
+
+            RuleFor(x => x.AccountType)
+                .NotEmpty().WithMessage("Account type is required")
+                .Must(x => x == "111" || x == "222").WithMessage("Account type must be '111' (Savings) or '222' (Current)");
+
+            RuleFor(x => x.CreatedBy)
+                .GreaterThan(0).WithMessage("Created by user ID is required");
+
+            RuleFor(x => x.BranchId)
+                .GreaterThan(0).WithMessage("Branch ID is required");
+        }
+    }
+
+    public class UpdateCustomerRequestValidator : AbstractValidator<UpdateCustomerRequest>
+    {
+        public UpdateCustomerRequestValidator()
+        {
+            RuleFor(x => x.CustomerId)
+                .GreaterThan(0).WithMessage("Customer ID is required");
+
+            RuleFor(x => x.FullName)
+                .NotEmpty().When(x => !string.IsNullOrEmpty(x.FullName))
+                .MaximumLength(100).WithMessage("Full name cannot exceed 100 characters");
+
+            RuleFor(x => x.NIDNumber)
+                .NotEmpty().When(x => !string.IsNullOrEmpty(x.NIDNumber))
+                .MaximumLength(20).WithMessage("NID number cannot exceed 20 characters")
+                .Matches(@"^\d+$").WithMessage("NID number must contain only digits");
+
+            RuleFor(x => x.Status)
+                .Must(x => string.IsNullOrEmpty(x) || 
+                    x == "Active" || x == "Rejected" || x == "Pending")
+                .WithMessage("Status must be 'Active', 'Rejected', or 'Pending'");
+
+            RuleFor(x => x.UpdatedBy)
+                .GreaterThan(0).WithMessage("Updated by user ID is required");
+        }
+    }
+
+    // Transaction Validators
+    public class DepositRequestValidator : AbstractValidator<DepositRequest>
+    {
+        public DepositRequestValidator()
+        {
+            RuleFor(x => x.AccountNumber)
+                .NotEmpty().WithMessage("Account number is required")
+                .Length(5).WithMessage("Account number must be 5 digits")
+                .Matches(@"^\d{5}$").WithMessage("Account number must contain only 5 digits");
+
+            RuleFor(x => x.Amount)
+                .GreaterThan(0).WithMessage("Amount must be greater than zero")
+                .LessThanOrEqualTo(500000).WithMessage("Amount cannot exceed 500,000 per transaction");
+
+            RuleFor(x => x.InstrumentType)
+                .NotEmpty().WithMessage("Instrument type is required")
+                .Must(x => x == "Cash").WithMessage("Only Cash instrument type is supported");
+
+            RuleFor(x => x.CheckerId)
+                .GreaterThan(0).WithMessage("Checker ID is required");
+        }
+    }
+
+    public class WithdrawalRequestValidator : AbstractValidator<WithdrawalRequest>
+    {
+        public WithdrawalRequestValidator()
+        {
+            RuleFor(x => x.AccountNumber)
+                .NotEmpty().WithMessage("Account number is required")
+                .Length(5).WithMessage("Account number must be 5 digits")
+                .Matches(@"^\d{5}$").WithMessage("Account number must contain only 5 digits");
+
+            RuleFor(x => x.Amount)
+                .GreaterThan(0).WithMessage("Amount must be greater than zero")
+                .LessThanOrEqualTo(500000).WithMessage("Amount cannot exceed 500,000 per transaction");
+
+            RuleFor(x => x.InstrumentType)
+                .NotEmpty().WithMessage("Instrument type is required")
+                .Must(x => x == "Cash").WithMessage("Only Cash instrument type is supported");
+
+            RuleFor(x => x.CheckerId)
+                .GreaterThan(0).WithMessage("Checker ID is required");
+        }
+    }
+
+    public class ApproveTransactionRequestValidator : AbstractValidator<ApproveTransactionRequest>
+    {
+        public ApproveTransactionRequestValidator()
+        {
+            RuleFor(x => x.BatchNumber)
+                .NotEmpty().WithMessage("Batch number is required")
+                .Matches(@"^BR\d{3}-\d{8}-\d{3}$").WithMessage("Invalid batch number format");
+
+            RuleFor(x => x.MakerId)
+                .GreaterThan(0).WithMessage("Maker ID is required");
+        }
+    }
+
+    public class RejectTransactionRequestValidator : AbstractValidator<RejectTransactionRequest>
+    {
+        public RejectTransactionRequestValidator()
+        {
+            RuleFor(x => x.BatchNumber)
+                .NotEmpty().WithMessage("Batch number is required")
+                .Matches(@"^BR\d{3}-\d{8}-\d{3}$").WithMessage("Invalid batch number format");
+
+            RuleFor(x => x.MakerId)
+                .GreaterThan(0).WithMessage("Maker ID is required");
+
+            RuleFor(x => x.Reason)
+                .NotEmpty().WithMessage("Rejection reason is required")
+                .MaximumLength(500).WithMessage("Reason cannot exceed 500 characters");
+        }
+    }
+}
+```
+
+## ৬. Dependency Injection Configuration
+
+```csharp
+using MediatR;
+using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+
+namespace CBS_MultiBranch.Application
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddApplication(this IServiceCollection services)
+        {
+            // Register MediatR
+            services.AddMediatR(cfg => 
+                cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+            // Register AutoMapper
+            services.AddAutoMapper(Assembly.GetExecutingAssembly());
+
+            // Register FluentValidation validators
+            services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+            // Register pipeline behaviors
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+
+            return services;
+        }
+    }
+
+    // Validation Behavior
+    public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
+    {
+        private readonly IEnumerable<IValidator<TRequest>> _validators;
+        private readonly ILogger<ValidationBehavior<TRequest, TResponse>> _logger;
+
+        public ValidationBehavior(
+            IEnumerable<IValidator<TRequest>> validators,
+            ILogger<ValidationBehavior<TRequest, TResponse>> logger)
+        {
+            _validators = validators;
+            _logger = logger;
+        }
+
+        public async Task<TResponse> Handle(
+            TRequest request,
+            RequestHandlerDelegate<TResponse> next,
+            CancellationToken cancellationToken)
+        {
+            if (_validators.Any())
+            {
+                var context = new ValidationContext<TRequest>(request);
+
+                var validationResults = await Task.WhenAll(
+                    _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+
+                var failures = validationResults
+                    .SelectMany(r => r.Errors)
+                    .Where(f => f != null)
+                    .ToList();
+
+                if (failures.Any())
+                {
+                    var errorMessage = string.Join(", ", failures.Select(f => f.ErrorMessage));
+                    _logger.LogWarning("Validation failed for {RequestType}: {Errors}", 
+                        typeof(TRequest).Name, errorMessage);
+                    
+                    throw new ValidationException(failures);
+                }
+            }
+
+            return await next();
+        }
+    }
+
+    // Logging Behavior
+    public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
+    {
+        private readonly ILogger<LoggingBehavior<TRequest, TResponse>> _logger;
+
+        public LoggingBehavior(ILogger<LoggingBehavior<TRequest, TResponse>> logger)
+        {
+            _logger = logger;
+        }
+
+        public async Task<TResponse> Handle(
+            TRequest request,
+            RequestHandlerDelegate<TResponse> next,
+            CancellationToken cancellationToken)
+        {
+            var requestName = typeof(TRequest).Name;
+            
+            _logger.LogInformation("Starting request: {RequestName}", requestName);
+            
+            var response = await next();
+            
+            _logger.LogInformation("Completed request: {RequestName}", requestName);
+            
+            return response;
+        }
+    }
+}
+```
+
+## ৭. AutoMapper Profiles
+
+```csharp
+using AutoMapper;
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+using CBS_MultiBranch.Domain.Entities;
+
+namespace CBS_MultiBranch.Application.Mapping
+{
+    public class CustomerProfile : Profile
+    {
+        public CustomerProfile()
+        {
+            CreateMap<Customer, CustomerResponse>()
+                .ForMember(dest => dest.AccountNumber, 
+                    opt => opt.MapFrom(src => src.Accounts.FirstOrDefault().AccountNumber))
+                .ForMember(dest => dest.AccountType, 
+                    opt => opt.MapFrom(src => src.Accounts.FirstOrDefault().AccountType.ToString()))
+                .ForMember(dest => dest.Balance, 
+                    opt => opt.MapFrom(src => src.Accounts.FirstOrDefault().Balance))
+                .ForMember(dest => dest.Status, 
+                    opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.CreatedBy, 
+                    opt => opt.MapFrom(src => src.Creator.Username))
+                .ForMember(dest => dest.ApprovedBy, 
+                    opt => opt.MapFrom(src => src.ApprovedBy.HasValue ? "Maker" : null));
+        }
+    }
+
+    public class TransactionProfile : Profile
+    {
+        public TransactionProfile()
+        {
+            CreateMap<Transaction, TransactionResponse>()
+                .ForMember(dest => dest.AccountNumber, 
+                    opt => opt.MapFrom(src => src.Account.AccountNumber))
+                .ForMember(dest => dest.CustomerName, 
+                    opt => opt.MapFrom(src => src.Account.Customer.FullName))
+                .ForMember(dest => dest.TransactionType, 
+                    opt => opt.MapFrom(src => src.TransactionType.ToString()))
+                .ForMember(dest => dest.Status, 
+                    opt => opt.MapFrom(src => src.Status.ToString()))
+                .ForMember(dest => dest.InstrumentType, 
+                    opt => opt.MapFrom(src => src.InstrumentType.ToString()))
+                .ForMember(dest => dest.CheckerName, 
+                    opt => opt.MapFrom(src => src.Checker.Username))
+                .ForMember(dest => dest.MakerName, 
+                    opt => opt.MapFrom(src => src.Maker != null ? src.Maker.Username : null))
+                .ForMember(dest => dest.IsGLPosted, 
+                    opt => opt.MapFrom(src => src.IsGLPosted));
+        }
+    }
+
+    public class AccountProfile : Profile
+    {
+        public AccountProfile()
+        {
+            CreateMap<Account, AccountInfo>()
+                .ForMember(dest => dest.AccountNumber, 
+                    opt => opt.MapFrom(src => src.AccountNumber))
+                .ForMember(dest => dest.AccountType, 
+                    opt => opt.MapFrom(src => src.AccountType.ToString()))
+                .ForMember(dest => dest.CurrentBalance, 
+                    opt => opt.MapFrom(src => src.Balance))
+                .ForMember(dest => dest.CreatedDate, 
+                    opt => opt.MapFrom(src => src.CreatedAt));
+        }
+    }
+}
+```
+
+## ৮. ব্যাখ্যা (বাংলায়)
+
+### Application লেয়ার কি করে?
+Application লেয়ার হল Use Cases বা Business Workflows এর জায়গা। এখানে ব্যবহারকারীরা কি করতে পারবে (deposit, withdraw, approve, ইত্যাদি) তার বাস্তবায়ন থাকে।
+
+### প্রধান উপাদানসমূহ:
+
+**১. DTOs (Data Transfer Objects):**
+- Request DTOs: UI থেকে আসা ডাটা
+- Response DTOs: UI তে পাঠানোর ডাটা
+- Domain Entities থেকে আলাদা, শুধু প্রয়োজনীয় ডাটা
+
+**২. CQRS Pattern:**
+- **Commands**: ডাটা পরিবর্তনের অপারেশন (Create, Update, Delete)
+- **Queries**: ডাটা পড়ার অপারেশন (Read)
+- **Handlers**: প্রতিটি Command/Query এর business logic
+
+**৩. MediatR:**
+- Commands এবং Queries হ্যান্ডেল করার জন্য
+- Pipeline behaviors (validation, logging)
+
+**৪. AutoMapper:**
+- Domain Entities থেকে DTOs এ ম্যাপিং
+- Manual mapping এর ঝামেলা কমায়
+
+**৫. FluentValidation:**
+- Request ভ্যালিডেশন
+- Business rules validation
+
+### কিভাবে কাজ করে?
+
+**উদাহরণ: Deposit Transaction**
+
+1. **UI থেকে Request আসে:**
+   ```json
+   {
+     "accountNumber": "01001",
+     "amount": 5000,
+     "instrumentType": "Cash",
+     "checkerId": 1
+   }
+   ```
+
+2. **Controller থেকে Command তৈরি:**
+   ```csharp
+   var command = new DepositCommand(request);
+   var result = await _mediator.Send(command);
+   ```
+
+3. **Handler কাজ করে:**
+   - Validation চেক করে
+   - Business rules apply করে
+   - Domain Service কল করে
+   - Database এ সেভ করে
+   - Audit log তৈরি করে
+   - Response প্রস্তুত করে
+
+4. **Response যায় UI তে:**
+   ```json
+   {
+     "isSuccess": true,
+     "value": {
+       "batchNumber": "BR001-20241215-001",
+       "accountNumber": "01001",
+       "amount": 5000,
+       "status": "Initiated"
+     },
+     "error": ""
+   }
+   ```
+
+### গুরুত্বপূর্ণ Features:
+
+**১. Atomic Operations:**
+- সব Command ট্রানজ্যাকশনের মধ্যে চলে
+- কোন Error হলে সব rollback হয়
+
+**২. Validation Pipeline:**
+- সব Request automatically validate হয়
+- Error গুলো structured ভাবে রিটার্ন হয়
+
+**৩. Audit Logging:**
+- প্রতিটি অপারেশনের লগ থাকে
+- Who did what, when
+
+**৪. Pagination:**
+- Large data sets এর জন্য
+- Performance optimization
+
+**৫. Role-based Access:**
+- Checker শুধু initiate করতে পারবে
+- Maker শুধু approve/reject করতে পারবে
+- Admin শুধু GL post করতে পারবে
+
+### Business Workflows:
+
+**১. Customer Creation Workflow:**
+```
+Checker → Create Customer → Pending
+Maker → Approve/Reject → Active/Rejected
+Account → Activated with account number
+```
+
+**২. Transaction Workflow:**
+```
+Checker → Initiate Transaction → Pending
+Maker → Approve/Reject → Approved/Rejected
+Sub-ledger → Updated if Approved
+Admin → Post GL → GL Updated
+```
+
+**৩. Reconciliation Workflow:**
+```
+Auditor → Run Reconciliation → Check GL vs SL
+System → Calculate Differences → Show Issues
+Admin → Fix Issues → Re-run Reconciliation
+```
+
+### পরবর্তী ধাপ:
+1. Presentation লেয়ারে Controllers
+2. Authentication এবং Authorization
+3. PDF report generation (iTextSharp বা QuestPDF)
+4. Frontend (Razor Pages বা MVC Views)
+
+এই Application লেয়ারটি সম্পূর্ণ ব্যাংকিং সিস্টেমের business logic কাভার করে। প্রতিটি Use Case আলাদা Command/Query এ আছে, যা maintainability এবং testability বৃদ্ধি করে।
