@@ -91,6 +91,7 @@ Responsible for genrating statements for his branch:
 
 Reponsible for posting GL for his/her branch
 - Must maintain Atomicity (Transaction (COMMIT/ROLLBACK)) while Start_GL Button pressed.
+- Also can check which data approved but not posted GL today(Pre-Gl-Check)
 
 
 
