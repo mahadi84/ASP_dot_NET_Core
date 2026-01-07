@@ -17,9 +17,217 @@ These tables are needed to ensure:
 
 
 
-===========================================
-              DATABASE 01 
-===========================================
+
+================================================================
+              DATABASE 03 -Gl_by_button_press_by_admin
+===============================================================
+
+CREATE DATABASE CBS_MultiBranch;
+USE CBS_MultiBranch;
+
+-- ১. এই টেবিলে ব্যাংকের প্রতিটি শাখার মৌলিক তথ্য এবং প্রধান ভল্টের ব্যালেন্স সংরক্ষিত থাকে।
+-- এটি হেড অফিসকে প্রতিটি শাখার নগদ টাকার প্রবাহ (Liquidity) পর্যবেক্ষণ করতে সাহায্য করে।
+-- সিস্টেমের প্রতিটি লেনদেন বা ইউজারের সাথে একটি নির্দিষ্ট শাখার আইডি যুক্ত করার জন্য এটি প্রধান রেফারেন্স।
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- ২. এখানে ব্যাংকের সকল কর্মকর্তাদের ইউজার আইডি, পাসওয়ার্ড এবং তাদের রোল (Role) সংরক্ষিত থাকে।
+-- এটি নিশ্চিত করে যে শুধুমাত্র অনুমোদিত ইউজাররা নির্দিষ্ট শাখায় লগইন এবং লেনদেন করতে পারছেন।
+-- সিকিউরিটি নিশ্চিত করতে ভুল লগইন এটেম্পট এবং অ্যাকাউন্ট লকিং সংক্রান্ত তথ্যও এখানে থাকে।
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('Admin', 'Maker', 'Checker', 'Auditor') NOT NULL,
+    branch_id INT NOT NULL,
+    failed_attempts INT DEFAULT 0,
+    lock_until TIMESTAMP NULL,
+    is_locked BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP NULL,
+    FOREIGN KEY (branch_id) REFERENCES branches(id)
+);
+
+-- ৩. এটি ব্যাংকের চার্ট অফ অ্যাকাউন্টস যেখানে প্রতিটি শাখার আলাদা জেনারেল লেজার (GL) ব্যালেন্স থাকে।
+-- অ্যাডমিন যখন 'GL Now' ক্লিক করেন, তখন এই টেবিলের current_balance আপডেট হয়।
+-- শাখা ভিত্তিক লাভ-ক্ষতি এবং ট্রায়াল ব্যালেন্স রিপোর্ট তৈরি করতে এই টেবিলটি ব্যবহৃত হয়।
+CREATE TABLE gl_heads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    gl_code INT NOT NULL, 
+    gl_name VARCHAR(100) NOT NULL,
+    gl_type ENUM('Asset', 'Liability', 'Equity', 'Income', 'Expense') NOT NULL,
+    current_balance DECIMAL(18, 2) DEFAULT 0.00,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    UNIQUE KEY (branch_id, gl_code)
+);
+
+-- ৪. গ্রাহকের নাম, এনআইডি এবং কেওয়াইসি (KYC) সম্পর্কিত তথ্য এই টেবিলে সংরক্ষিত থাকে।
+-- নতুন কাস্টমার এন্ট্রি করার পর মেকার অনুমোদন না করা পর্যন্ত তার স্ট্যাটাস 'Pending' থাকে।
+-- গ্রাহকের বৈধতা নিশ্চিত করতে এবং আইনি পরিপালন (Compliance) বজায় রাখতে এই টেবিলটি প্রয়োজন।
+CREATE TABLE customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    nid_number VARCHAR(20) UNIQUE NOT NULL,
+    status ENUM('Pending', 'Active', 'Rejected') DEFAULT 'Pending',
+    created_by INT,
+    approved_by INT,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- ৫. এটি গ্রাহকের সঞ্চয়ী বা চলতি অ্যাকাউন্টের বর্তমান ব্যালেন্স স্টোর করে।
+-- মেকার এপ্রুভ করার সাথে সাথে এই টেবিলের balance আপডেট হয় যেন গ্রাহক টাকা ব্যবহার করতে পারেন।
+-- এটি সাব-লেজারের সারসংক্ষেপ হিসেবে কাজ করে যা রিয়েল-টাইম ব্যাংকিং নিশ্চিত করে।
+CREATE TABLE accounts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    account_number VARCHAR(5) UNIQUE NOT NULL,
+    account_type ENUM('111', '222') NOT NULL,
+    balance DECIMAL(18, 2) DEFAULT 0.00,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+);
+
+-- ৬. প্রতিটি শাখার ক্যাশ কাউন্টারে থাকা নগদ টাকার তাৎক্ষণিক পরিমাণ এখানে রেকর্ড থাকে।
+-- চেকার তার হাতে থাকা ক্যাশ লিমিটের বেশি লেনদেন করছেন কি না তা এখান থেকে চেক করা হয়।
+-- দিনের শেষে ফিজিক্যাল ক্যাশ এবং এই টেবিলের ব্যালেন্স মিলিয়ে ক্যাশ-প্রুফ সম্পন্ন করা হয়।
+CREATE TABLE cash_drawers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    checker_id INT UNIQUE,
+    current_cash DECIMAL(18, 2) DEFAULT 0.00,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (checker_id) REFERENCES users(id)
+);
+
+-- ৭. এটি লেনদেনের মূল টেবিল যেখানে ট্রানজ্যাকশনের এপ্রুভাল এবং GL পোস্টিং স্ট্যাটাস থাকে।
+-- 'is_gl_posted' কলামটি নিশ্চিত করে যে লেনদেনটি প্রধান লেজারে হিট করেছে কি না।
+-- মেকার এপ্রুভ করলে এটি Approved হয় এবং অ্যাডমিন ক্লিক করলে is_gl_posted সত্য হয়।
+CREATE TABLE transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    batch_number VARCHAR(20) UNIQUE NOT NULL,
+    account_id INT NOT NULL,
+    instrument_type ENUM('Cash', 'Cheque') NOT NULL,
+    instrument_number TEXT,
+    txn_type ENUM('Deposit', 'Withdraw') NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    status ENUM('Initiated', 'Approved', 'Rejected') DEFAULT 'Initiated',
+    is_gl_posted BOOLEAN DEFAULT FALSE, 
+    checker_id INT NOT NULL,
+    maker_id INT,
+    remarks TEXT,
+    version_no INT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (checker_id) REFERENCES users(id),
+    FOREIGN KEY (maker_id) REFERENCES users(id)
+);
+
+-- ৮. এটি গ্রাহকের ব্যক্তিগত লেজার বা স্টেটমেন্ট তৈরির জন্য প্রতিটি লেনদেনের রেকর্ড রাখে।
+-- মেকার এপ্রুভ করার সাথে সাথে এখানে একটি ডেবিট বা ক্রেডিট এন্ট্রি তৈরি করা হয়।
+-- গ্রাহকের ঐতিহাসিক লেনদেন এবং চলমান ব্যালেন্স (Running Balance) এই টেবিল থেকে পাওয়া যায়।
+CREATE TABLE sub_ledger_entries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    txn_id INT NOT NULL,
+    account_id INT NOT NULL,
+    dr_cr_flag ENUM('Dr', 'Cr') NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    running_balance DECIMAL(18, 2) NOT NULL,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (txn_id) REFERENCES transactions(id)
+);
+
+-- ৯. এটি জেনারেল লেজারের প্রতিটি ভাউচারের মাস্টার বা হেডার তথ্য ধারণ করে।
+-- অ্যাডমিন 'Post GL' বাটনে ক্লিক করলে পেন্ডিং ট্রানজ্যাকশনের বিপরীতে এখানে এন্ট্রি হয়।
+-- প্রতিটি জার্নালের মোট ডেবিট এবং ক্রেডিট ব্যালেন্স সমান কি না তা এখান থেকে নিশ্চিত হওয়া যায়।
+CREATE TABLE gl_journals (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    txn_id INT NOT NULL,
+    branch_id INT NOT NULL,
+    total_debit DECIMAL(18, 2),
+    total_credit DECIMAL(18, 2),
+    narration TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (txn_id) REFERENCES transactions(id),
+    FOREIGN KEY (branch_id) REFERENCES branches(id)
+);
+
+-- ১০. এটি ডাবল-এন্ট্রি অ্যাকাউন্টিং সিস্টেমের মূল টেবিল যেখানে প্রতিটি GL কোডের ডাটা থাকে।
+-- এখানে প্রতিটি লেনদেনের দুটি পক্ষ (যেমন: ক্যাশ ডেবিট এবং ডিপোজিট ক্রেডিট) ইনসার্ট হয়।
+-- ফাইনান্সিয়াল রিপোর্ট এবং ট্রায়াল ব্যালেন্সের জন্য এটিই তথ্যের প্রধান উৎস।
+CREATE TABLE gl_journal_lines (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    txn_id INT NOT NULL,
+    gl_code_id INT NOT NULL, 
+    debit_amount DECIMAL(18, 2) DEFAULT 0.00,
+    credit_amount DECIMAL(18, 2) DEFAULT 0.00,
+    narration TEXT,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (gl_code_id) REFERENCES gl_heads(id)
+);
+
+-- ১১. এটি সাব-লেজার (SL) এবং জেনারেল লেজার (GL) ব্যালেন্সের মধ্যে গরমিল চেক করার জন্য ব্যবহৃত হয়।
+-- অডিটররা এখান থেকে দেখতে পারেন কোনো শাখার হিসেবে কোনো অমিল বা ডিফারেন্স আছে কি না।
+-- সিস্টেম চেক করার পর কোনো হিসেবে অমিল পেলে এখানে 'Mismatch' স্ট্যাটাস রেকর্ড করা হয়।
+CREATE TABLE reconciliation_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    recon_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    gl_code INT NOT NULL,
+    gl_balance DECIMAL(18, 2) NOT NULL,
+    sl_total_balance DECIMAL(18, 2) NOT NULL,
+    difference DECIMAL(18, 2) NOT NULL,
+    status ENUM('Matched', 'Mismatch') NOT NULL,
+    FOREIGN KEY (branch_id) REFERENCES branches(id)
+);
+
+-- ১২. সিস্টেমের প্রতিটি গুরুত্বপূর্ণ পরিবর্তনের ইতিহাস (আগের মান এবং পরের মান) এখানে থাকে।
+-- এটি জালিয়াতি রোধ করতে এবং কোনো ভুল সংশোধনের জন্য অডিটরদের সাহায্য করে।
+-- কে, কখন এবং কোন শাখা থেকে ডাটা পরিবর্তন করেছে তা এখান থেকে ট্র্যাক করা যায়।
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    user_id INT,
+    action VARCHAR(100),
+    old_value TEXT,
+    new_value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ১৩. এটি গ্লোবাল সিস্টেম কন্ট্রোল টেবিল যা GL পোস্টিং প্রসেসের সময় নতুন কাজ লক করতে ব্যবহৃত হয়।
+-- যখন অ্যাডমিন GL পোস্টিং চালান, তখন এটি অনাকাঙ্ক্ষিত নতুন ডাটা এন্ট্রি রোধ করে।
+-- সর্বশেষ কবে দিনের হিসাব বন্ধ (EOD) করা হয়েছে সেই তারিখটিও এখানে সংরক্ষিত থাকে।
+CREATE TABLE system_controls (
+    id INT PRIMARY KEY,
+    is_gl_posting_running BOOLEAN DEFAULT FALSE,
+    last_eod_date DATE
+);
+
+
+-- উদাহরণস্বরূপ শাখা ১-এর জন্য GL তৈরি
+INSERT INTO gl_heads (branch_id, gl_code, gl_name, gl_type) VALUES (1, 1001, 'Cash In Hand', 'Asset');
+INSERT INTO gl_heads (branch_id, gl_code, gl_name, gl_type) VALUES (1, 2001, 'Customer Deposits', 'Liability');
+
+
+
+
+========================================================
+              DATABASE 02 -maker-approve-gl
+========================================================
 
 CREATE DATABASE CBS_MultiBranch;
 USE CBS_MultiBranch;
@@ -221,7 +429,7 @@ INSERT INTO gl_heads (branch_id, gl_code, gl_name, gl_type) VALUES (1, 2001, 'Cu
 
 
 ===========================================
-            DATABASE 02 
+            DATABASE 01 
 ============================================
 
 
