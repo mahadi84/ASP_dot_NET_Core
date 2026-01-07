@@ -61,6 +61,154 @@
 
 
 
+=================================================
+                    code
+=================================================
+
+
+আপনার ব্যাংকিং সিস্টেমের জন্য .NET 9 (Core) MVC প্যাটার্ন এবং Domain-Driven Design (DDD) অনুসরণ করে ডোমেইন লেয়ারের কোড নিচে দেওয়া হলো। 
+আমি এই কোডটিকে `Models` এবং `Logic` সেকশনে ভাগ করেছি যাতে আপনি সরাসরি আপনার প্রজেক্টে ব্যবহার করতে পারেন।
+
+### ১. Domain Entities (Models ফোল্ডারে রাখুন)
+
+```csharp
+namespace CBS.Domain.Entities
+{
+    // ১. অ্যাকাউন্ট এনটিটি: ব্যালেন্স এবং লিমিট চেক করার বিজনেস রুলস
+    public class Account
+    {
+        public int Id { get; set; }
+        public string AccountNumber { get; set; }
+        public decimal Balance { get; private set; }
+        public string Status { get; set; } // "Active", "Blocked", "Inactive"
+        public decimal MinBalance { get; set; } = 500m;
+
+        public Account(int id, string accNum, decimal balance, string status)
+        {
+            Id = id;
+            AccountNumber = accNum;
+            Balance = balance;
+            Status = status;
+        }
+
+        // বিজনেস রুল: টাকা তোলার অনুমতি আছে কি না?
+        public bool CanWithdraw(decimal amount)
+        {
+            if (Status != "Active")
+                throw new Exception("অ্যাকাউন্টটি সক্রিয় (Active) নয়।");
+
+            if (Balance - amount < MinBalance)
+                throw new Exception("পর্যাপ্ত ব্যালেন্স নেই (মিনিমাম ব্যালেন্স বজায় রাখা বাধ্যতামূলক)।");
+
+            return true;
+        }
+
+        // বিজনেস রুল: ব্যালেন্স আপডেট লজিক
+        public void UpdateBalance(decimal amount, string txnType)
+        {
+            if (txnType == "Deposit")
+            {
+                Balance += amount;
+            }
+            else if (txnType == "Withdraw")
+            {
+                if (CanWithdraw(amount))
+                    Balance -= amount;
+            }
+        }
+    }
+
+    // ২. ট্রানজ্যাকশন এনটিটি: মেকার-চেকার এবং ভ্যালিডেশন রুলস
+    public class Transaction
+    {
+        public int Id { get; set; }
+        public decimal Amount { get; set; }
+        public int CheckerId { get; set; }
+        public int? MakerId { get; private set; }
+        public string Status { get; set; } = "Initiated";
+
+        public void Validate()
+        {
+            if (Amount <= 0)
+                throw new Exception("লেনদেনের পরিমাণ অবশ্যই পজিটিভ হতে হবে।");
+        }
+
+        // বিজনেস রুল: মেকার-চেকার সেপারেশন
+        public void Approve(int makerId)
+        {
+            if (CheckerId == makerId)
+                throw new Exception("যিনি লেনদেন শুরু করেছেন (Checker), তিনি নিজে এটি অনুমোদন (Maker) করতে পারবেন না।");
+
+            MakerId = makerId;
+            Status = "Approved";
+        }
+    }
+}
+
+```
+
+---
+
+### ২. Journal Entry Logic (Services ফোল্ডারে রাখুন)
+
+```csharp
+namespace CBS.Domain.Services
+{
+    public class JournalLine
+    {
+        public int GLCodeId { get; set; }
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+    }
+
+    public class JournalEntry
+    {
+        public List<JournalLine> Lines { get; set; } = new List<JournalLine>();
+
+        // বিজনেস রুল: ডাবল-এন্ট্রি ইকুয়ালিটি চেক
+        public bool IsBalanced()
+        {
+            decimal totalDebit = Lines.Sum(x => x.Debit);
+            decimal totalCredit = Lines.Sum(x => x.Credit);
+
+            if (totalDebit != totalCredit)
+                throw new Exception("Accounting Imbalance: ডেবিট এবং ক্রেডিট সমান হতে হবে।");
+
+            return true;
+        }
+    }
+}
+
+```
+
+---
+
+### ৩. Posting Service (বিজনেস প্রসেস অটোমেশন)
+
+এটি আপনার সেই Maker Approval বাটনের পেছনের মূল লজিক যা একাধিক রুল একসাথে চেক করে।
+
+```csharp
+namespace CBS.Domain.Services
+{
+    using CBS.Domain.Entities;
+
+    public class PostingService
+    {
+        public void ProcessApproval(Transaction txn, Account acc, int currentUserId)
+        {
+            // ১. মেকার-চেকার নিয়ম প্রয়োগ
+            txn.Approve(currentUserId);
+
+            // ২. অ্যাকাউন্টের ব্যালেন্স আপডেট (এটি সাব-লেজার লেভেলে কাজ করবে)
+            // নোট: এখানে GL এন্ট্রি হবে না কারণ এটি Shadow Posting
+            acc.UpdateBalance(txn.Amount, "Deposit"); // বা "Withdraw" ট্রানজ্যাকশন অনুযায়ী
+            
+            // এরপর ডেটাবেসে সেভ করার জন্য রিপোজিটরি কল হবে
+        }
+    }
+}
+
+
 
 
 ---
