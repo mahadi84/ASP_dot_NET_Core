@@ -1,0 +1,955 @@
+
+
+# 🚀 প্রজেক্ট মডিউল-বাই-মডিউল কমপ্লিট করার গাইড
+
+## 📋 মডিউল লিস্ট (মোট ৭ টি মডিউল)
+
+```
+প্রকল্প মডিউল গুলো:
+├── ১. 🏗️ Core Infrastructure Module (সপ্তাহ ১)
+├── ২. 👥 User & Authentication Module (সপ্তাহ ২)
+├── ৩. 👤 Customer Management Module (সপ্তাহ ৩)
+├── ৪. 💰 Transaction Processing Module (সপ্তাহ ৪)
+├── ৫. 📊 Accounting & GL Module (সপ্তাহ ৫)
+├── ৬. 📈 Reporting & Audit Module (সপ্তাহ ৬)
+├── ৭. 🎨 UI/UX Enhancement Module (সপ্তাহ ৭)
+└── 🧪 Testing & Deployment (সপ্তাহ ৮)
+```
+
+## 📅 সাপ্তাহিক প্ল্যান
+
+### সপ্তাহ ১: Core Infrastructure Module (এই সপ্তাহ)
+
+#### দিন ১: প্রজেক্ট সেটআপ
+```bash
+# ১. .NET 9.0 ইনস্টল করুন
+# ২. MySQL ইনস্টল করুন
+# ৩. Visual Studio Code/Visual Studio 2022
+
+# প্রজেক্ট তৈরি
+mkdir CBS_MultiBranch
+cd CBS_MultiBranch
+dotnet new sln --name CBS_MultiBranch
+
+# প্রজেক্ট গুলো তৈরি
+dotnet new classlib -n CBS_MultiBranch.Domain
+dotnet new classlib -n CBS_MultiBranch.Application
+dotnet new classlib -n CBS_MultiBranch.Infrastructure
+dotnet new webapp -n CBS_MultiBranch.Web --framework net9.0
+
+# সল্যুশনে যোগ করুন
+dotnet sln add CBS_MultiBranch.Domain
+dotnet sln add CBS_MultiBranch.Application
+dotnet sln add CBS_MultiBranch.Infrastructure
+dotnet sln add CBS_MultiBranch.Web
+```
+
+#### দিন ২: Domain Layer - Entities
+```bash
+# Domain ফোল্ডার স্ট্রাকচার
+CBS_MultiBranch.Domain/
+├── Entities/
+│   ├── Branch.cs
+│   ├── User.cs          # User Entity তৈরি
+│   ├── Customer.cs      # Customer Entity তৈরি
+│   ├── Account.cs
+│   └── Transaction.cs
+```
+
+User.cs (প্রথম Entity):
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class User
+    {
+        public int Id { get; set; }
+        
+        [Required]
+        [MaxLength(50)]
+        public string Username { get; set; } = string.Empty;
+        
+        [Required]
+        [MaxLength(255)]
+        public string PasswordHash { get; set; } = string.Empty;
+        
+        [Required]
+        [MaxLength(50)]
+        public string FullName { get; set; } = string.Empty;
+        
+        [Required]
+        public UserRole Role { get; set; }
+        
+        [Required]
+        public int BranchId { get; set; }
+        
+        public int FailedAttempts { get; set; } = 0;
+        public DateTime? LockUntil { get; set; }
+        public bool IsLocked { get; set; } = false;
+        public bool IsActive { get; set; } = true;
+        public DateTime? LastLogin { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public int CreatedBy { get; set; }
+        
+        // Navigation properties
+        public virtual Branch Branch { get; set; } = null!;
+        
+        public enum UserRole
+        {
+            SuperAdmin = 1,    // Head Office
+            Admin = 2,         // Branch Admin
+            Maker = 3,
+            Checker = 4,
+            Auditor = 5
+        }
+    }
+}
+```
+
+#### দিন ৩: Domain Layer - Value Objects & Interfaces
+```csharp
+// CBS_MultiBranch.Domain/ValueObjects/Result.cs
+namespace CBS_MultiBranch.Domain.ValueObjects
+{
+    public class Result<T>
+    {
+        public bool IsSuccess { get; }
+        public T? Value { get; }
+        public string Error { get; }
+        public int ErrorCode { get; }
+
+        private Result(bool isSuccess, T? value, string error, int errorCode)
+        {
+            IsSuccess = isSuccess;
+            Value = value;
+            Error = error;
+            ErrorCode = errorCode;
+        }
+
+        public static Result<T> Success(T value) => new(true, value, string.Empty, 0);
+        public static Result<T> Failure(string error, int errorCode = 400) => new(false, default, error, errorCode);
+    }
+}
+
+// CBS_MultiBranch.Domain/Interfaces/IUserRepository.cs
+namespace CBS_MultiBranch.Domain.Interfaces
+{
+    public interface IUserRepository
+    {
+        Task<User?> GetByIdAsync(int id);
+        Task<User?> GetByUsernameAsync(string username);
+        Task<User?> GetByUsernameAndBranchAsync(string username, int branchId);
+        Task<IEnumerable<User>> GetUsersByBranchAsync(int branchId);
+        Task<User> AddAsync(User user);
+        Task UpdateAsync(User user);
+        Task<bool> IsUsernameUniqueAsync(string username);
+        Task<int> GetUserCountByBranchAsync(int branchId);
+    }
+}
+```
+
+#### দিন ৪: Infrastructure Layer - Database Context
+```csharp
+// CBS_MultiBranch.Infrastructure/Data/ApplicationDbContext.cs
+using Microsoft.EntityFrameworkCore;
+using CBS_MultiBranch.Domain.Entities;
+
+namespace CBS_MultiBranch.Infrastructure.Data
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<User> Users { get; set; }
+        // অন্যান্য DbSet গুলো পরে যোগ করব
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            
+            // User Configuration
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                
+                entity.Property(e => e.Username)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                    
+                entity.Property(e => e.PasswordHash)
+                    .IsRequired()
+                    .HasMaxLength(255);
+                    
+                entity.Property(e => e.FullName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                    
+                entity.Property(e => e.Role)
+                    .HasConversion<string>()
+                    .HasMaxLength(20);
+                    
+                entity.Property(e => e.FailedAttempts)
+                    .HasDefaultValue(0);
+                    
+                entity.Property(e => e.IsLocked)
+                    .HasDefaultValue(false);
+                    
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+                    
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    
+                entity.HasIndex(e => e.Username)
+                    .IsUnique();
+                    
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+    }
+}
+```
+
+#### দিন ৫: Infrastructure Layer - Repository Implementation
+```csharp
+// CBS_MultiBranch.Infrastructure/Repositories/UserRepository.cs
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public UserRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<User?> GetByIdAsync(int id)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<User?> GetByUsernameAndBranchAsync(string username, int branchId)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .FirstOrDefaultAsync(u => u.Username == username && u.BranchId == branchId);
+        }
+
+        public async Task<IEnumerable<User>> GetUsersByBranchAsync(int branchId)
+        {
+            return await _context.Users
+                .Where(u => u.BranchId == branchId && u.IsActive)
+                .Include(u => u.Branch)
+                .OrderBy(u => u.Username)
+                .ToListAsync();
+        }
+
+        public async Task<User> AddAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        public async Task UpdateAsync(User user)
+        {
+            _context.Entry(user).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> IsUsernameUniqueAsync(string username)
+        {
+            return !await _context.Users.AnyAsync(u => u.Username == username);
+        }
+
+        public async Task<int> GetUserCountByBranchAsync(int branchId)
+        {
+            return await _context.Users
+                .Where(u => u.BranchId == branchId && u.IsActive)
+                .CountAsync();
+        }
+    }
+}
+```
+
+#### দিন ৬-৭: Unit of Work & Dependency Injection
+```csharp
+// CBS_MultiBranch.Infrastructure/UnitOfWork.cs
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+
+namespace CBS_MultiBranch.Infrastructure
+{
+    public class UnitOfWork : IUnitOfWork
+    {
+        private readonly ApplicationDbContext _context;
+        private IDbContextTransaction? _transaction;
+
+        public UnitOfWork(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        // Add repositories as properties
+        private IUserRepository? _users;
+        public IUserRepository Users => _users ??= new UserRepository(_context);
+
+        public async Task<int> CompleteAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            _transaction = await _context.Database.BeginTransactionAsync();
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            _transaction?.Dispose();
+            _context.Dispose();
+        }
+    }
+}
+```
+
+### সপ্তাহ ২: User & Authentication Module
+
+#### দিন ১: Application Layer - DTOs
+```csharp
+// CBS_MultiBranch.Application/DTOs/Auth/
+namespace CBS_MultiBranch.Application.DTOs.Auth
+{
+    public class LoginRequest
+    {
+        [Required(ErrorMessage = "Username is required")]
+        [StringLength(50, MinimumLength = 3)]
+        public string Username { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Password is required")]
+        [StringLength(100, MinimumLength = 6)]
+        public string Password { get; set; } = string.Empty;
+        
+        [Required(ErrorMessage = "Branch code is required")]
+        public string BranchCode { get; set; } = string.Empty;
+    }
+
+    public class LoginResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public UserInfo User { get; set; } = new();
+        public string Token { get; set; } = string.Empty;
+        public DateTime LoginTime { get; set; }
+    }
+
+    public class UserInfo
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public int BranchId { get; set; }
+        public string BranchCode { get; set; } = string.Empty;
+    }
+
+    public class CreateUserRequest
+    {
+        [Required]
+        public string Username { get; set; } = string.Empty;
+        
+        [Required]
+        [MinLength(6)]
+        public string Password { get; set; } = string.Empty;
+        
+        [Required]
+        public string FullName { get; set; } = string.Empty;
+        
+        [Required]
+        public string Role { get; set; } = string.Empty;
+        
+        [Required]
+        public int BranchId { get; set; }
+        
+        [EmailAddress]
+        public string? Email { get; set; }
+        
+        [Phone]
+        public string? Phone { get; set; }
+        
+        [Required]
+        public int CreatedBy { get; set; }
+    }
+}
+```
+
+#### দিন ২: Application Layer - Commands & Handlers
+```csharp
+// CBS_MultiBranch.Application/Features/Auth/Commands/LoginCommand.cs
+using MediatR;
+using CBS_MultiBranch.Application.DTOs.Auth;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Application.Features.Auth.Commands
+{
+    public class LoginCommand : IRequest<Result<LoginResponse>>
+    {
+        public LoginRequest Request { get; set; }
+        
+        public LoginCommand(LoginRequest request)
+        {
+            Request = request;
+        }
+    }
+
+    public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<LoginResponse>>
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<LoginCommandHandler> _logger;
+
+        public LoginCommandHandler(
+            IUnitOfWork unitOfWork,
+            ILogger<LoginCommandHandler> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        public async Task<Result<LoginResponse>> Handle(
+            LoginCommand command, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var request = command.Request;
+                
+                // Get branch by code
+                // TODO: Implement branch repository
+                // var branch = await _unitOfWork.Branches.GetByCodeAsync(request.BranchCode);
+                
+                // For now, hardcode branch check
+                if (request.BranchCode != "BR001")
+                {
+                    return Result<LoginResponse>.Failure("Invalid branch code");
+                }
+                
+                // Get user by username and branch
+                var user = await _unitOfWork.Users.GetByUsernameAsync(request.Username);
+                if (user == null)
+                {
+                    return Result<LoginResponse>.Failure("Invalid username or password");
+                }
+                
+                // Check if user is active
+                if (!user.IsActive)
+                {
+                    return Result<LoginResponse>.Failure("User account is inactive");
+                }
+                
+                // Check if user is locked
+                if (user.IsLocked)
+                {
+                    if (user.LockUntil > DateTime.UtcNow)
+                    {
+                        var remaining = user.LockUntil.Value - DateTime.UtcNow;
+                        return Result<LoginResponse>.Failure(
+                            $"Account locked. Try again in {remaining.Minutes} minutes");
+                    }
+                    else
+                    {
+                        // Unlock account
+                        user.IsLocked = false;
+                        user.LockUntil = null;
+                        user.FailedAttempts = 0;
+                        await _unitOfWork.Users.UpdateAsync(user);
+                    }
+                }
+                
+                // Verify password (temporary - implement proper hashing)
+                if (user.PasswordHash != request.Password) // Temporary
+                {
+                    user.FailedAttempts++;
+                    
+                    if (user.FailedAttempts >= 3)
+                    {
+                        user.IsLocked = true;
+                        user.LockUntil = DateTime.UtcNow.AddMinutes(5);
+                        await _unitOfWork.Users.UpdateAsync(user);
+                        return Result<LoginResponse>.Failure(
+                            "Account locked for 5 minutes due to 3 failed attempts");
+                    }
+                    
+                    await _unitOfWork.Users.UpdateAsync(user);
+                    return Result<LoginResponse>.Failure(
+                        $"Invalid password. {3 - user.FailedAttempts} attempts remaining");
+                }
+                
+                // Reset failed attempts on successful login
+                user.FailedAttempts = 0;
+                user.LastLogin = DateTime.UtcNow;
+                await _unitOfWork.Users.UpdateAsync(user);
+                
+                // Create response
+                var response = new LoginResponse
+                {
+                    Success = true,
+                    Message = "Login successful",
+                    User = new UserInfo
+                    {
+                        Id = user.Id,
+                        Username = user.Username,
+                        FullName = user.FullName,
+                        Role = user.Role.ToString(),
+                        BranchId = user.BranchId,
+                        BranchName = "Main Branch", // TODO: Get from branch
+                        BranchCode = "BR001"
+                    },
+                    LoginTime = DateTime.UtcNow
+                };
+                
+                _logger.LogInformation("User logged in: {Username}", user.Username);
+                
+                return Result<LoginResponse>.Success(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login");
+                return Result<LoginResponse>.Failure("Error during login process");
+            }
+        }
+    }
+}
+```
+
+#### দিন ৩: Web Layer - Controllers
+```csharp
+// CBS_MultiBranch.Web/Controllers/AccountController.cs
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Security.Claims;
+using CBS_MultiBranch.Application.DTOs.Auth;
+using CBS_MultiBranch.Application.Features.Auth.Commands;
+using MediatR;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    public class AccountController : Controller
+    {
+        private readonly IMediator _mediator;
+        private readonly ILogger<AccountController> _logger;
+
+        public AccountController(
+            IMediator mediator,
+            ILogger<AccountController> logger)
+        {
+            _mediator = mediator;
+            _logger = logger;
+        }
+
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var command = new LoginCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    var loginResponse = result.Value;
+                    
+                    // Create claims
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, loginResponse.User.Id.ToString()),
+                        new Claim(ClaimTypes.Name, loginResponse.User.Username),
+                        new Claim(ClaimTypes.Role, loginResponse.User.Role),
+                        new Claim("FullName", loginResponse.User.FullName),
+                        new Claim("BranchId", loginResponse.User.BranchId.ToString()),
+                        new Claim("BranchName", loginResponse.User.BranchName),
+                        new Claim("BranchCode", loginResponse.User.BranchCode)
+                    };
+
+                    var claimsIdentity = new ClaimsIdentity(
+                        claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = false,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30),
+                        AllowRefresh = true
+                    };
+
+                    await HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(claimsIdentity),
+                        authProperties);
+
+                    // Redirect based on role
+                    return RedirectToAction("Dashboard", GetDashboardController(loginResponse.User.Role));
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login");
+                ModelState.AddModelError("", "An error occurred during login");
+                return View(request);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        private string GetDashboardController(string role)
+        {
+            return role switch
+            {
+                "SuperAdmin" or "Admin" => "Admin",
+                "Maker" => "Maker",
+                "Checker" => "Checker",
+                "Auditor" => "Auditor",
+                _ => "Home"
+            };
+        }
+    }
+}
+```
+
+#### দিন ৪: Web Layer - Views
+```html
+<!-- CBS_MultiBranch.Web/Views/Account/Login.cshtml -->
+@model CBS_MultiBranch.Application.DTOs.Auth.LoginRequest
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-university me-2"></i>CBS Banking System
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Login" method="post">
+                    @Html.AntiForgeryToken()
+                    
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        <input asp-for="Username" class="form-control" placeholder="Enter username" />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Password
+                        </label>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Enter password" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label asp-for="BranchCode" class="form-label">
+                            <i class="fas fa-building me-2"></i>Branch Code
+                        </label>
+                        <input asp-for="BranchCode" class="form-control" placeholder="Enter branch code (e.g., BR001)" />
+                        <span asp-validation-for="BranchCode" class="text-danger"></span>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
+                
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mt-3">
+                        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+#### দিন ৫-৭: User Management Features
+- User List View
+- Create User
+- Edit User
+- Change Password
+- User Status Management
+
+### সপ্তাহ ৩: Customer Management Module
+
+#### কাজগুলো:
+1. Customer Entity তৈরি
+2. Account Entity তৈরি
+3. Customer DTOs
+4. Customer Commands (Create, Update, Approve)
+5. Customer Queries
+6. Customer Controllers
+7. Customer Views
+
+### সপ্তাহ ৪: Transaction Processing Module
+
+#### কাজগুলো:
+1. Transaction Entity তৈরি
+2. CashDrawer Entity তৈরি
+3. Deposit/Withdrawal workflow
+4. Maker-Checker approval system
+5. Transaction validation
+
+### সপ্তাহ ৫: Accounting & GL Module
+
+#### কাজগুলো:
+1. GLHead Entity তৈরি
+2. GLJournal Entity তৈরি
+3. Double-entry accounting
+4. GL Posting
+5. Reconciliation
+
+### সপ্তাহ ৬: Reporting & Audit Module
+
+#### কাজগুলো:
+1. AuditLog Entity তৈরি
+2. Report generation
+3. PDF export
+4. Statement generation
+5. Trial Balance
+
+### সপ্তাহ ৭: UI/UX Enhancement
+
+#### কাজগুলো:
+1. Dashboard design
+2. Responsive design
+3. Data tables with pagination
+4. Charts and graphs
+5. Email/SMS notifications
+
+### সপ্তাহ ৮: Testing & Deployment
+
+#### কাজগুলো:
+1. Unit testing
+2. Integration testing
+3. Security testing
+4. Performance testing
+5. Deployment to server
+
+## 🎯 আজকে শুরু করার স্টেপ বাই স্টেপ:
+
+### ধাপ ১: প্রজেক্ট বেসিক সেটআপ
+```bash
+# ১. প্রজেক্ট ফোল্ডার তৈরি
+mkdir CBS_MultiBranch
+cd CBS_MultiBranch
+
+# ২. সল্যুশন ফাইল তৈরি
+dotnet new sln --name CBS_MultiBranch
+
+# ৩. প্রজেক্ট গুলো তৈরি
+dotnet new classlib -n CBS_MultiBranch.Domain
+dotnet new classlib -n CBS_MultiBranch.Application
+dotnet new classlib -n CBS_MultiBranch.Infrastructure
+dotnet new webapp -n CBS_MultiBranch.Web --framework net9.0
+
+# ৪. সল্যুশনে যোগ করুন
+dotnet sln add CBS_MultiBranch.Domain
+dotnet sln add CBS_MultiBranch.Application
+dotnet sln add CBS_MultiBranch.Infrastructure
+dotnet sln add CBS_MultiBranch.Web
+```
+
+### ধাপ ২: NuGet Packages ইনস্টল
+```bash
+# Domain প্রজেক্টে
+cd CBS_MultiBranch.Domain
+# No extra packages needed
+
+# Application প্রজেক্টে
+cd ../CBS_MultiBranch.Application
+dotnet add package MediatR
+dotnet add package AutoMapper
+dotnet add package FluentValidation
+
+# Infrastructure প্রজেক্টে
+cd ../CBS_MultiBranch.Infrastructure
+dotnet add package Microsoft.EntityFrameworkCore
+dotnet add package Pomelo.EntityFrameworkCore.MySql
+dotnet add package Microsoft.Extensions.Configuration
+
+# Web প্রজেক্টে
+cd ../CBS_MultiBranch.Web
+dotnet add package Microsoft.AspNetCore.Authentication.Cookies
+dotnet add package Microsoft.AspNetCore.Session
+dotnet add package QuestPDF
+```
+
+### ধাপ ৩: প্রথম Entity তৈরি (User.cs)
+উপরের কোড অনুযায়ী `CBS_MultiBranch.Domain/Entities/User.cs` তৈরি করুন।
+
+### ধাপ ৪: Program.cs কনফিগারেশন
+```csharp
+// CBS_MultiBranch.Web/Program.cs
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services
+builder.Services.AddControllersWithViews();
+builder.Services.AddSession();
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+    });
+
+var app = builder.Build();
+
+// Configure pipeline
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
+
+app.Run();
+```
+
+### ধাপ ৫: প্রথম রান
+```bash
+# Build করুন
+dotnet build
+
+# Run করুন
+dotnet run --project CBS_MultiBranch.Web
+```
+
+## 📊 ট্র্যাক করার জন্য সিম্পল এক্সেল শীট:
+
+| Module | Day | Task | Status | Notes |
+|--------|-----|------|--------|-------|
+| Core | 1 | Project Setup | ✅ | Done |
+| Core | 2 | User Entity | 🔄 | In Progress |
+| Core | 3 | Result Pattern | ⏳ | Pending |
+| Core | 4 | DbContext | ⏳ | Pending |
+| Core | 5 | Repository | ⏳ | Pending |
+| Core | 6 | UnitOfWork | ⏳ | Pending |
+| Auth | 1 | Login DTO | ⏳ | Pending |
+| Auth | 2 | Login Command | ⏳ | Pending |
+| Auth | 3 | Account Controller | ⏳ | Pending |
+| Auth | 4 | Login View | ⏳ | Pending |
+
+## 💡 টিপস:
+
+1. প্রতিদিন ১-২ ঘন্টা সময় দিন
+2. ছোট ছোট টাস্কে ভাগ করুন
+3. প্রতিদিন কমিট করুন Git এ
+4. টেস্ট করুন প্রতিটি ফিচারের পর
+5. ডকুমেন্টেশন লিখুন কি করছেন
+
+## 🆘 যদি আটকে যান:
+
+1. প্রথমে Google করুন
+2. Stack Overflow দেখুন
+3. .NET documentation পড়ুন
+4. আমাকে জিজ্ঞেস করুন
+
+## 🎯 আজকের টাস্ক লিস্ট:
+
+✅ আজকে User Module শুরু করুন:
+
+1. [ ] User Entity তৈরি করুন
+2. [ ] Result.cs তৈরি করুন  
+3. [ ] IUserRepository ইন্টারফেস তৈরি করুন
+4. [ ] ApplicationDbContext তৈরি করুন
+5. [ ] UserRepository তৈরি করুন
+6. [ ] Program.cs কনফিগার করুন
+7. [ ] Build & Run করুন
+
+প্রতিদিন এই প্যাটার্ন ফলো করুন। এক সপ্তাহে User Module কমপ্লিট হবে!
+
+কি শুরু করবেন? এখনই প্রথম স্টেপটা নিন! 🚀
+
+
+
+
+
+.
