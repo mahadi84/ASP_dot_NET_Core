@@ -1,0 +1,537 @@
+
+
+# সম্পূর্ণ প্রজেক্ট ফোল্ডার স্ট্রাকচার
+
+## 📁 CBS_MultiBranch (Root Solution)
+
+```
+CBS_MultiBranch/
+├── 📁 CBS_MultiBranch.Domain/           # Domain Layer (ব্যবসায়িক লজিক)
+├── 📁 CBS_MultiBranch.Application/      # Application Layer (Use Cases)
+├── 📁 CBS_MultiBranch.Infrastructure/   # Infrastructure Layer (ডাটাবেস এক্সেস)
+├── 📁 CBS_MultiBranch.Web/             # Presentation Layer (UI)
+├── 📄 CBS_MultiBranch.sln              # Solution File
+└── 📄 README.md                        # Project Documentation
+```
+
+## 📁 ১. Domain Layer (হার্ট অফ দ্য সিস্টেম)
+
+```
+CBS_MultiBranch.Domain/
+├── 📁 Entities/                         # ডেটাবেস টেবিলের রিপ্রেজেন্টেশন
+│   ├── 📄 Branch.cs                    # শাখা তথ্য
+│   ├── 📄 User.cs                      # ইউজার তথ্য
+│   ├── 📄 Customer.cs                  # গ্রাহক তথ্য
+│   ├── 📄 Account.cs                   # একাউন্ট তথ্য
+│   ├── 📄 Transaction.cs               # লেনদেন তথ্য
+│   ├── 📄 CashDrawer.cs                # ক্যাশ ড্রয়ার তথ্য
+│   ├── 📄 GLHead.cs                    # GL হেড তথ্য
+│   ├── 📄 SubLedgerEntry.cs            # সাব-লেজার এন্ট্রি
+│   ├── 📄 GLJournal.cs                 # জেনারেল লেজার জার্নাল
+│   ├── 📄 GLJournalLine.cs             # জার্নাল লাইন
+│   ├── 📄 ReconciliationLog.cs         # রিকনসিলিয়েশন লগ
+│   ├── 📄 AuditLog.cs                  # অডিট লগ
+│   └── 📄 SystemControl.cs             # সিস্টেম কন্ট্রোল
+│
+├── 📁 ValueObjects/                    # মান অবজেক্ট (রিকিউয়ার্ড ডাটা)
+│   ├── 📄 Result.cs                    # গ্লোবাল রেজাল্ট প্যাটার্ন
+│   ├── 📄 ValidationRules.cs           # ভ্যালিডেশন রুলস
+│   └── 📄 AccountNumberGenerator.cs    # একাউন্ট নাম্বার জেনারেটর
+│
+├── 📁 Events/                          # ডোমেইন ইভেন্টস
+│   ├── 📄 DomainEvent.cs               # বেস ডোমেইন ইভেন্ট
+│   ├── 📄 TransactionEvents.cs         # লেনদেন ইভেন্টস
+│   ├── 📄 CustomerEvents.cs            # গ্রাহক ইভেন্টস
+│   └── 📄 GLPostingEvents.cs          # GL পোস্টিং ইভেন্টস
+│
+├── 📁 Interfaces/                      # রিপোজিটরি ইন্টারফেস
+│   ├── 📄 IUnitOfWork.cs              # ইউনিট অফ ওয়ার্ক
+│   ├── 📄 ITransactionRepository.cs   # লেনদেন রিপোজিটরি
+│   ├── 📄 ICustomerRepository.cs      # গ্রাহক রিপোজিটরি
+│   ├── 📄 IAccountRepository.cs       # একাউন্ট রিপোজিটরি
+│   ├── 📄 IUserRepository.cs          # ইউজার রিপোজিটরি
+│   ├── 📄 IGLHeadRepository.cs        # GL হেড রিপোজিটরি
+│   ├── 📄 ICashDrawerRepository.cs    # ক্যাশ ড্রয়ার রিপোজিটরি
+│   ├── 📄 ISubLedgerRepository.cs     # সাব-লেজার রিপোজিটরি
+│   ├── 📄 IGLJournalRepository.cs     # GL জার্নাল রিপোজিটরি
+│   └── 📄 IAuditLogRepository.cs      # অডিট লগ রিপোজিটরি
+│
+├── 📁 Services/                        # ডোমেইন সার্ভিসেস
+│   ├── 📄 ITransactionService.cs      # লেনদেন সার্ভিস
+│   ├── 📄 IGLPostingService.cs        # GL পোস্টিং সার্ভিস
+│   └── 📄 IReportService.cs           # রিপোর্ট সার্ভিস
+│
+├── 📄 CBS_MultiBranch.Domain.csproj   # Domain প্রজেক্ট ফাইল
+└── 📄 README.md                        # Domain লেয়ার ডকুমেন্টেশন
+```
+
+### **Domain Layer এর কাজ:**
+- **Entities**: ডাটাবেস টেবিলের সি# ক্লাস
+- **Value Objects**: ব্যবসায়িক নিয়ম এবং ভ্যালিডেশন
+- **Events**: সিস্টেম ইভেন্ট ট্র্যাকিং
+- **Interfaces**: ডাটা অ্যাক্সেসের কন্ট্র্যাক্ট
+- **Services**: জটিল ব্যবসায়িক লজিক
+
+## 📁 ২. Application Layer (ব্যবহারের ক্ষেত্রে)
+
+```
+CBS_MultiBranch.Application/
+├── 📁 DTOs/                           # ডাটা ট্রান্সফার অবজেক্টস
+│   ├── 📁 Customers/
+│   │   ├── 📄 CreateCustomerRequest.cs
+│   │   ├── 📄 UpdateCustomerRequest.cs
+│   │   ├── 📄 CustomerResponse.cs
+│   │   └── 📄 CustomerApprovalResponse.cs
+│   │
+│   ├── 📁 Transactions/
+│   │   ├── 📄 DepositRequest.cs
+│   │   ├── 📄 WithdrawalRequest.cs
+│   │   ├── 📄 ApproveTransactionRequest.cs
+│   │   ├── 📄 RejectTransactionRequest.cs
+│   │   ├── 📄 TransactionResponse.cs
+│   │   └── 📄 TransactionApprovalResponse.cs
+│   │
+│   ├── 📁 GL/
+│   │   ├── 📄 GLPostingRequest.cs
+│   │   ├── 📄 GLPostingResponse.cs
+│   │   ├── 📄 ReconciliationRequest.cs
+│   │   └── 📄 ReconciliationResponse.cs
+│   │
+│   ├── 📁 Reports/
+│   │   ├── 📄 StatementRequest.cs
+│   │   ├── 📄 StatementResponse.cs
+│   │   ├── 📄 TrialBalanceRequest.cs
+│   │   └── 📄 TrialBalanceResponse.cs
+│   │
+│   └── 📁 Auth/
+│       ├── 📄 LoginRequest.cs
+│       ├── 📄 LoginResponse.cs
+│       ├── 📄 CreateUserRequest.cs
+│       └── 📄 UpdateUserRequest.cs
+│
+├── 📁 Features/                       # CQRS প্যাটার্ন ইমপ্লিমেন্টেশন
+│   ├── 📁 Customers/
+│   │   ├── 📁 Commands/
+│   │   │   ├── 📄 CreateCustomerCommand.cs
+│   │   │   ├── 📄 ApproveCustomerCommand.cs
+│   │   │   └── 📄 RejectCustomerCommand.cs
+│   │   │
+│   │   └── 📁 Queries/
+│   │       ├── 📄 GetPendingCustomersQuery.cs
+│   │       └── 📄 GetCustomerByAccountNumberQuery.cs
+│   │
+│   ├── 📁 Transactions/
+│   │   ├── 📁 Commands/
+│   │   │   ├── 📄 DepositCommand.cs
+│   │   │   ├── 📄 WithdrawCommand.cs
+│   │   │   ├── 📄 ApproveTransactionCommand.cs
+│   │   │   └── 📄 RejectTransactionCommand.cs
+│   │   │
+│   │   └── 📁 Queries/
+│   │       ├── 📄 GetPendingTransactionsQuery.cs
+│   │       └── 📄 GetApprovedTransactionsQuery.cs
+│   │
+│   ├── 📁 GL/
+│   │   └── 📁 Commands/
+│   │       ├── 📄 PostGLCommand.cs
+│   │       └── 📄 ReconcileBranchCommand.cs
+│   │
+│   ├── 📁 Reports/
+│   │   └── 📁 Queries/
+│   │       ├── 📄 GetCustomerStatementQuery.cs
+│   │       └── 📄 GetTrialBalanceQuery.cs
+│   │
+│   └── 📁 Auth/
+│       └── 📁 Commands/
+│           ├── 📄 LoginCommand.cs
+│           ├── 📄 ChangePasswordCommand.cs
+│           └── 📄 ResetPasswordCommand.cs
+│
+├── 📁 Validators/                     # FluentValidation ভ্যালিডেটর
+│   ├── 📄 CreateCustomerRequestValidator.cs
+│   ├── 📄 UpdateCustomerRequestValidator.cs
+│   ├── 📄 DepositRequestValidator.cs
+│   ├── 📄 WithdrawalRequestValidator.cs
+│   ├── 📄 ApproveTransactionRequestValidator.cs
+│   └── 📄 RejectTransactionRequestValidator.cs
+│
+├── 📁 Mapping/                        # AutoMapper প্রোফাইলস
+│   ├── 📄 CustomerProfile.cs
+│   ├── 📄 TransactionProfile.cs
+│   └── 📄 AccountProfile.cs
+│
+├── 📄 DependencyInjection.cs          # DI কনফিগারেশন
+├── 📄 ValidationBehavior.cs           # MediatR ভ্যালিডেশন বিহেভিয়ার
+├── 📄 LoggingBehavior.cs              # MediatR লগিং বিহেভিয়ার
+├── 📄 CBS_MultiBranch.Application.csproj
+└── 📄 README.md
+```
+
+### **Application Layer এর কাজ:**
+- **DTOs**: UI এবং Domain এর মধ্যে ডাটা আদান-প্রদান
+- **Features**: Use Cases (Commands এবং Queries)
+- **Validators**: Request ভ্যালিডেশন
+- **Mapping**: Domain → DTO কনভার্সন
+- **Behaviors**: MediatR পাইপলাইন (ভ্যালিডেশন, লগিং)
+
+## 📁 ৩. Infrastructure Layer (ডাটাবেস এবং এক্সটার্নাল সার্ভিস)
+
+```
+CBS_MultiBranch.Infrastructure/
+├── 📁 Data/                           # ডাটাবেস কনফিগারেশন
+│   ├── 📄 ApplicationDbContext.cs     # Entity Framework DbContext
+│   ├── 📄 Configurations/             # Entity কনফিগারেশন
+│   │   ├── 📄 BranchConfiguration.cs
+│   │   ├── 📄 UserConfiguration.cs
+│   │   ├── 📄 CustomerConfiguration.cs
+│   │   ├── 📄 AccountConfiguration.cs
+│   │   ├── 📄 TransactionConfiguration.cs
+│   │   ├── 📄 CashDrawerConfiguration.cs
+│   │   ├── 📄 GLHeadConfiguration.cs
+│   │   ├── 📄 SubLedgerEntryConfiguration.cs
+│   │   ├── 📄 GLJournalConfiguration.cs
+│   │   ├── 📄 GLJournalLineConfiguration.cs
+│   │   ├── 📄 ReconciliationLogConfiguration.cs
+│   │   ├── 📄 AuditLogConfiguration.cs
+│   │   └── 📄 SystemControlConfiguration.cs
+│   │
+│   └── 📁 Migrations/                 # Entity Framework Migrations
+│       ├── 📄 20241215000000_InitialCreate.cs
+│       ├── 📄 20241215000000_InitialCreate.Designer.cs
+│       └── 📄 ApplicationDbContextModelSnapshot.cs
+│
+├── 📁 Repositories/                   # Repository ইমপ্লিমেন্টেশন
+│   ├── 📄 UnitOfWork.cs               # ইউনিট অফ ওয়ার্ক ইমপ্লিমেন্টেশন
+│   ├── 📄 TransactionRepository.cs
+│   ├── 📄 CustomerRepository.cs
+│   ├── 📄 AccountRepository.cs
+│   ├── 📄 UserRepository.cs
+│   ├── 📄 GLHeadRepository.cs
+│   ├── 📄 CashDrawerRepository.cs
+│   ├── 📄 SubLedgerRepository.cs
+│   ├── 📄 GLJournalRepository.cs
+│   └── 📄 AuditLogRepository.cs
+│
+├── 📁 Services/                       # Infrastructure সার্ভিসেস
+│   ├── 📄 TransactionService.cs       # লেনদেন সার্ভিস ইমপ্লিমেন্টেশন
+│   ├── 📄 GLPostingService.cs         # GL পোস্টিং সার্ভিস ইমপ্লিমেন্টেশন
+│   ├── 📄 ReportService.cs            # রিপোর্ট সার্ভিস ইমপ্লিমেন্টেশন
+│   └── 📄 EmailService.cs             # ইমেইল সার্ভিস (ঐচ্ছিক)
+│
+├── 📁 SeedData/                       # ডাটাবেস seed ডাটা
+│   ├── 📄 SeedData.cs                 # ইনিশিয়াল ডাটা
+│   ├── 📄 BranchesSeed.cs             # শাখা ডাটা
+│   ├── 📄 UsersSeed.cs                # ইউজার ডাটা
+│   ├── 📄 GLHeadsSeed.cs              # GL হেড ডাটা
+│   └── 📄 SystemControlsSeed.cs       # সিস্টেম কন্ট্রোল ডাটা
+│
+├── 📄 DependencyInjection.cs          # Infrastructure DI কনফিগারেশন
+├── 📄 CBS_MultiBranch.Infrastructure.csproj
+└── 📄 README.md
+```
+
+### **Infrastructure Layer এর কাজ:**
+- **Data**: Entity Framework ডাটাবেস কনফিগারেশন
+- **Repositories**: ডাটাবেস অপারেশন
+- **Services**: Infrastructure সার্ভিস ইমপ্লিমেন্টেশন
+- **SeedData**: ইনিশিয়াল ডাটা
+- **Migrations**: ডাটাবেস স্কিমা চেঞ্জ
+
+## 📁 ৪. Web/Presentation Layer (UI লেয়ার)
+
+```
+CBS_MultiBranch.Web/
+├── 📁 Controllers/                    # MVC Controllers
+│   ├── 📄 BaseController.cs           # বেস কন্ট্রোলার
+│   ├── 📄 AccountController.cs        # অথেন্টিকেশন কন্ট্রোলার
+│   ├── 📄 CheckerController.cs        # চেকার কন্ট্রোলার
+│   ├── 📄 MakerController.cs          # মেকার কন্ট্রোলার
+│   ├── 📄 AdminController.cs          # অ্যাডমিন কন্ট্রোলার
+│   ├── 📄 AuditorController.cs        # অডিটর কন্ট্রোলার
+│   └── 📄 HomeController.cs           # হোম কন্ট্রোলার
+│
+├── 📁 Views/                          # Razor Views
+│   ├── 📁 Shared/                     # শেয়ার্ড Views
+│   │   ├── 📄 _Layout.cshtml         # মেইন লেআউট
+│   │   ├── 📄 _CheckerMenu.cshtml    # চেকার মেনু
+│   │   ├── 📄 _MakerMenu.cshtml      # মেকার মেনু
+│   │   ├── 📄 _AdminMenu.cshtml      # অ্যাডমিন মেনু
+│   │   ├── 📄 _AuditorMenu.cshtml    # অডিটর মেনু
+│   │   ├── 📄 _CheckerSidebar.cshtml # চেকার সাইডবার
+│   │   ├── 📄 _MakerSidebar.cshtml   # মেকার সাইডবার
+│   │   ├── 📄 _AdminSidebar.cshtml   # অ্যাডমিন সাইডবার
+│   │   ├── 📄 _AuditorSidebar.cshtml # অডিটর সাইডবার
+│   │   ├── 📄 _LoginPartial.cshtml   # লগইন পার্শিয়াল
+│   │   └── 📄 Error.cshtml           # এরর পেজ
+│   │
+│   ├── 📁 Account/                    # অ্যাকাউন্ট Views
+│   │   ├── 📄 Login.cshtml           # লগইন পেজ
+│   │   ├── 📄 ChangePassword.cshtml  # পাসওয়ার্ড চেঞ্জ
+│   │   ├── 📄 AccessDenied.cshtml    # এক্সেস ডিনাইড
+│   │   └── 📄 LockedOut.cshtml       # লক আউট পেজ
+│   │
+│   ├── 📁 Checker/                    # চেকার Views
+│   │   ├── 📄 Dashboard.cshtml       # চেকার ড্যাশবোর্ড
+│   │   ├── 📄 CreateCustomer.cshtml  # গ্রাহক তৈরি
+│   │   ├── 📄 Deposit.cshtml         # ডিপোজিট
+│   │   ├── 📄 Withdraw.cshtml        # উইথড্র
+│   │   ├── 📄 CustomerList.cshtml    # গ্রাহক লিস্ট
+│   │   ├── 📄 TransactionList.cshtml # লেনদেন লিস্ট
+│   │   ├── 📄 GenerateStatement.cshtml # স্টেটমেন্ট জেনারেট
+│   │   └── 📄 DailyReport.cshtml     # দৈনিক রিপোর্ট
+│   │
+│   ├── 📁 Maker/                      # মেকার Views
+│   │   ├── 📄 Dashboard.cshtml       # মেকার ড্যাশবোর্ড
+│   │   ├── 📄 PendingCustomers.cshtml # পেন্ডিং গ্রাহক
+│   │   ├── 📄 PendingTransactions.cshtml # পেন্ডিং লেনদেন
+│   │   ├── 📄 ApprovedTransactions.cshtml # এপ্রুভড লেনদেন
+│   │   └── 📄 GenerateStatement.cshtml # স্টেটমেন্ট জেনারেট
+│   │
+│   ├── 📁 Admin/                      # অ্যাডমিন Views
+│   │   ├── 📄 Dashboard.cshtml       # অ্যাডমিন ড্যাশবোর্ড
+│   │   ├── 📄 GLPosting.cshtml       # GL পোস্টিং
+│   │   ├── 📄 PreGLCheck.cshtml      # প্রি-GL চেক
+│   │   ├── 📄 CustomerAccounts.cshtml # গ্রাহক একাউন্টস
+│   │   ├── 📄 UserManagement.cshtml  # ইউজার ম্যানেজমেন্ট
+│   │   ├── 📄 GenerateStatement.cshtml # স্টেটমেন্ট
+│   │   └── 📄 GenerateFinancialStatement.cshtml # ফাইনান্সিয়াল স্টেটমেন্ট
+│   │
+│   ├── 📁 Auditor/                    # অডিটর Views
+│   │   ├── 📄 Dashboard.cshtml       # অডিটর ড্যাশবোর্ড
+│   │   ├── 📄 AuditLogs.cshtml       # অডিট লগস
+│   │   ├── 📄 Reconcile.cshtml       # রিকনসাইল
+│   │   ├── 📄 ReconciliationHistory.cshtml # রিকনসাইলেশন হিস্ট্রি
+│   │   ├── 📄 GenerateTrialBalance.cshtml # ট্রায়াল ব্যালেন্স
+│   │   └── 📄 ReconciliationResult.cshtml # রিকনসাইলেশন রেজাল্ট
+│   │
+│   └── 📁 Home/                       # হোম Views
+│       ├── 📄 Index.cshtml           # হোম পেজ
+│       └── 📄 Privacy.cshtml         # প্রাইভেসি পলিসি
+│
+├── 📁 Models/                         # ViewModels
+│   ├── 📄 CheckerDashboardViewModel.cs
+│   ├── 📄 MakerDashboardViewModel.cs
+│   ├── 📄 AdminDashboardViewModel.cs
+│   ├── 📄 AuditorDashboardViewModel.cs
+│   ├── 📄 CustomerListViewModel.cs
+│   ├── 📄 TransactionListViewModel.cs
+│   ├── 📄 CustomerApprovalViewModel.cs
+│   ├── 📄 TransactionApprovalViewModel.cs
+│   ├── 📄 PreGLCheckViewModel.cs
+│   ├── 📄 CustomerAccountsViewModel.cs
+│   ├── 📄 UserManagementViewModel.cs
+│   ├── 📄 AuditLogsViewModel.cs
+│   └── 📄 ReconciliationHistoryViewModel.cs
+│
+├── 📁 Services/                       # Web সার্ভিসেস
+│   ├── 📄 StatementPdfDocument.cs    # স্টেটমেন্ট PDF
+│   ├── 📄 TrialBalancePdfDocument.cs # ট্রায়াল ব্যালেন্স PDF
+│   ├── 📄 FinancialStatementPdfDocument.cs # ফাইনান্সিয়াল স্টেটমেন্ট PDF
+│   └── 📄 ReconciliationReportPdfDocument.cs # রিকনসাইলেশন রিপোর্ট PDF
+│
+├── 📁 Middleware/                     # কাস্টম Middleware
+│   ├── 📄 UserActivityMiddleware.cs  # ইউজার অ্যাক্টিভিটি ট্র্যাকিং
+│   └── 📄 ExceptionHandlingMiddleware.cs # এক্সেপশন হ্যান্ডলিং
+│
+├── 📁 Filters/                        # Action Filters
+│   ├── 📄 GlobalExceptionFilter.cs   # গ্লোবাল এক্সেপশন ফিল্টার
+│   └── 📄 AuditActionFilter.cs       # অডিট অ্যাকশন ফিল্টার
+│
+├── 📁 wwwroot/                        # Static Files
+│   ├── 📁 css/                       # CSS Files
+│   │   ├── 📄 site.css              # মেইন CSS
+│   │   ├── 📄 dashboard.css         # ড্যাশবোর্ড CSS
+│   │   └── 📄 reports.css           # রিপোর্টস CSS
+│   │
+│   ├── 📁 js/                        # JavaScript Files
+│   │   ├── 📄 site.js               # মেইন JS
+│   │   ├── 📄 dashboard.js          # ড্যাশবোর্ড JS
+│   │   ├── 📄 validation.js         # ভ্যালিডেশন JS
+│   │   └── 📄 reports.js            # রিপোর্টস JS
+│   │
+│   ├── 📁 lib/                       # Third-party Libraries
+│   │   ├── 📁 bootstrap/
+│   │   ├── 📁 jquery/
+│   │   └── 📁 font-awesome/
+│   │
+│   └── 📁 images/                    # Images
+│       ├── 📄 logo.png              # লোগো
+│       └── 📄 favicon.ico           # Favicon
+│
+├── 📁 Areas/                          # Areas (ঐচ্ছিক)
+│   └── 📁 Admin/                     # অ্যাডমিন এরিয়া
+│
+├── 📄 Program.cs                     # এপ্লিকেশন স্টার্টআপ
+├── 📄 appsettings.json               # কনফিগারেশন
+├── 📄 appsettings.Development.json   # ডেভেলপমেন্ট কনফিগারেশন
+├── 📄 CBS_MultiBranch.Web.csproj     # Web প্রজেক্ট ফাইল
+└── 📄 README.md                      # Web লেয়ার ডকুমেন্টেশন
+```
+
+### **Web Layer এর কাজ:**
+- **Controllers**: HTTP requests হ্যান্ডলিং
+- **Views**: UI রেন্ডারিং
+- **Models**: ViewModels
+- **Services**: PDF generation, reporting
+- **Middleware**: HTTP pipeline components
+- **Static Files**: CSS, JavaScript, images
+
+## 📁 ৫. Tests (ঐচ্ছিক - যদি টেস্ট প্রোজেক্ট থাকে)
+
+```
+CBS_MultiBranch.Tests/
+├── 📁 UnitTests/                      # ইউনিট টেস্টস
+│   ├── 📁 Domain/
+│   │   ├── 📄 TransactionTests.cs
+│   │   ├── 📄 CustomerTests.cs
+│   │   └── 📄 AccountTests.cs
+│   │
+│   ├── 📁 Application/
+│   │   ├── 📄 CustomerCommandTests.cs
+│   │   ├── 📄 TransactionCommandTests.cs
+│   │   └── 📄 GLCommandTests.cs
+│   │
+│   └── 📁 Infrastructure/
+│       ├── 📄 RepositoryTests.cs
+│       └── 📄 ServiceTests.cs
+│
+├── 📁 IntegrationTests/               # ইন্টিগ্রেশন টেস্টস
+│   ├── 📄 CustomerIntegrationTests.cs
+│   ├── 📄 TransactionIntegrationTests.cs
+│   └── 📄 GLIntegrationTests.cs
+│
+├── 📁 WebTests/                       # Web টেস্টস
+│   ├── 📄 ControllerTests.cs
+│   └── 📄 PageTests.cs
+│
+├── 📄 TestData/                       # টেস্ট ডাটা
+├── 📄 CBS_MultiBranch.Tests.csproj    # টেস্ট প্রজেক্ট ফাইল
+└── 📄 README.md
+```
+
+## 📁 ৬. DevOps এবং Configuration
+
+```
+CBS_MultiBranch/
+├── 📁 .github/                        # GitHub Actions
+│   └── 📁 workflows/
+│       ├── 📄 build.yml              # বিল্ড workflow
+│       ├── 📄 test.yml               # টেস্ট workflow
+│       └── 📄 deploy.yml             # ডিপ্লয় workflow
+│
+├── 📁 docker/                         # Docker কনফিগারেশন
+│   ├── 📄 Dockerfile                 # Dockerfile
+│   ├── 📄 docker-compose.yml         # Docker Compose
+│   └── 📄 docker-compose.override.yml
+│
+├── 📁 scripts/                        # Deployment Scripts
+│   ├── 📄 setup-database.sql         # ডাটাবেস সেটআপ
+│   ├── 📄 seed-data.sql              # Seed ডাটা
+│   └── 📄 deploy.sh                  # ডিপ্লয় স্ক্রিপ্ট
+│
+├── 📁 docs/                          # ডকুমেন্টেশন
+│   ├── 📄 API_Documentation.md      # API ডকুমেন্টেশন
+│   ├── 📄 Database_Schema.md        # ডাটাবেস স্কিমা
+│   ├── 📄 User_Manual.md            # ইউজার ম্যানুয়াল
+│   └── 📄 Deployment_Guide.md       # ডিপ্লয়মেন্ট গাইড
+│
+├── 📄 .gitignore                     # Git ignore file
+├── 📄 .editorconfig                  # Code style configuration
+├── 📄 Directory.Build.props         # Common build properties
+└── 📄 NuGet.config                   # NuGet configuration
+```
+
+## 🎯 কিভাবে কাজ করে পুরো সিস্টেম?
+
+### **Workflow উদাহরণ - Deposit:**
+
+1. **Checker লগইন করে** → `AccountController.Login()`
+2. **ড্যাশবোর্ড দেখে** → `CheckerController.Dashboard()`
+3. **Deposit পেজে যায়** → `CheckerController.Deposit()`
+4. **ডাটা সাবমিট করে** → `CheckerController.Deposit()` (POST)
+   - Request validate হয় → `DepositRequestValidator`
+   - Command তৈরি হয় → `DepositCommand`
+   - Handler execute হয় → `DepositCommandHandler`
+   - Domain service কল হয় → `TransactionService.InitiateDepositAsync()`
+   - Database এ save হয় → `TransactionRepository.AddAsync()`
+   - Audit log তৈরি হয় → `AuditLogRepository.AddAsync()`
+5. **Response পায়** → Batch number সহ success message
+6. **Maker দেখতে পায়** পেন্ডিং লেনদেন
+7. **Maker approve করে** → MakerController দিয়ে
+8. **Sub-ledger update হয়** → Account balance change
+9. **Admin GL post করে** → AdminController দিয়ে
+10. **GL update হয়** → Double entry accounting
+
+### **ডাটাবেস ফ্লো:**
+```
+Checker initiates → transactions table (status: Initiated)
+Maker approves → 
+  - transactions table (status: Approved)
+  - accounts table (balance updated)
+  - sub_ledger_entries table (entry added)
+  
+Admin posts GL →
+  - gl_journals table (journal header)
+  - gl_journal_lines table (debit/credit entries)
+  - gl_heads table (balance updated)
+  - transactions table (is_gl_posted: true)
+  
+Auditor reconciles →
+  - reconciliation_logs table (check GL vs SL)
+  - trial balance check
+```
+
+### **Security ফ্লো:**
+1. **Authentication**: Cookie-based
+2. **Authorization**: Role-based (Checker, Maker, Admin, Auditor)
+3. **Branch Access**: শুধু নিজের ব্রাঞ্চে অ্যাক্সেস
+4. **Audit Trail**: সব অ্যাকশন লগ হয়
+
+### **PDF Generation ফ্লো:**
+```
+Request → Controller → Query → Report Service → PDF Document → File Download
+```
+
+## 🔧 Technology Stack:
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Presentation** | ASP.NET Core MVC, Razor Pages, Bootstrap | UI রেন্ডারিং |
+| **Application** | MediatR, AutoMapper, FluentValidation | Use Cases, Mapping, Validation |
+| **Domain** | C#, .NET 9, Clean Architecture | Business Logic, Entities |
+| **Infrastructure** | Entity Framework Core, MySQL, Repository Pattern | Database Access |
+| **Utilities** | QuestPDF, Serilog, AutoMapper | PDF, Logging, Mapping |
+| **Security** | ASP.NET Core Identity, Cookies | Authentication, Authorization |
+| **DevOps** | Docker, GitHub Actions, MySQL | Deployment, CI/CD |
+
+## 📊 Key Features:
+
+1. **Multi-branch Support**: প্রতিটি ব্রাঞ্চ আলাদা ডাটা
+2. **Double-entry Accounting**: ডেবিট/ক্রেডিট সিস্টেম
+3. **Role-based Access**: ৪টি আলাদা রোল
+4. **Maker-Checker**: ২-লেভেল অথোরাইজেশন
+5. **Audit Trail**: সবকিছু লগ হয়
+6. **Reconciliation**: GL vs SL matching
+7. **PDF Reports**: স্টেটমেন্ট, ট্রায়াল ব্যালেন্স
+8. **Transaction Atomicity**: সব ট্রানজেকশন safe
+
+## 🚀 কিভাবে রান করাবেন:
+
+```bash
+# ১. Database setup
+mysql -u root -p < scripts/setup-database.sql
+
+# ২. Build solution
+dotnet build
+
+# ৩. Apply migrations
+dotnet ef database update
+
+# ৪. Run application
+dotnet run --project CBS_MultiBranch.Web
+
+# অথবা Docker এ
+docker-compose up -d
+```
+
+এই সম্পূর্ণ স্ট্রাকচারটি প্রোডাকশন-রেডি এবং scalable। প্রতিটি লেয়ার আলাদা আলাদা responsibility নিয়ে কাজ করে, যা maintainability এবং testability বৃদ্ধি করে।
