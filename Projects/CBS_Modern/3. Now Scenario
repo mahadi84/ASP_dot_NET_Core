@@ -42,26 +42,129 @@
                          - ভ্যালিডেশন: সিস্টেম চেক করবে অ্যাকাউন্টটি `Active` কি না এবং অ্যামাউন্ট ০-এর বেশি কি না।
                          - ডাটাবেজ এন্ট্রি: `transactions` টেবিলে একটি রো তৈরি হবে (Status: `Initiated`) এবং একটি ইউনিক `Batch Number` জেনারেট হবে।
 
-                #### ধাপ-২: অনুমোদন এবং পোস্টিং (Authorization - Maker)
+                #### ধাপ-২: অনুমোদন এবং পোস্টিং (Authorization - Maker)                         
+                              
+                              ============================================================================================================
+                                                                  WORK FLOWs
+                              ============================================================================================================
+                              
+                              গ্রাহকের ব্যালেন্স Maker Approval এর সাথে সাথে আপডেট হবে, 
+                              কিন্তু GL (General Ledger) টেবিলগুলো খালি থাকবে যতক্ষণ না অ্যাডমিন দিনের শেষে ম্যানুয়ালি "Post GL Now" বাটনে ক্লিক করছেন।
+                              
+                              
+                              ধাপ ১: মেকার এপ্রুভাল (Maker Approval)
+                              যখন মেকার ট্রানজ্যাকশন এপ্রুভ করবেন, তখন আপনার কোড (বা স্টোর্ড প্রসিডিউর) শুধুমাত্র নিচের দুটি কাজ করবে:
+                                  -accounts টেবিলের balance আপডেট করবে (ফলে গ্রাহক তাৎক্ষণিক ব্যালেন্স দেখতে পাবেন)।
+                                  -sub_ledger_entries টেবিলে ডাটা ইনসার্ট করবে (যাতে কাস্টমার স্টেটমেন্ট আপডেট দেখায়)।
+                              
+                              transactions টেবিলের স্ট্যাটাস Approved করবে, কিন্তু is_gl_posted থাকবে FALSE।
+                              
+                              ধাপ ২: দিনের শেষে অ্যাডমিন অ্যাকশন (GL Now Menu)
+                              যখন অ্যাডমিন "Post GL Now" বাটনে ক্লিক করবেন, সিস্টেম একটি লুপ চালাবে:
+                                  - সে সব ট্রানজ্যাকশন খুঁজে বের করবে যেখানে status = 'Approved' এবং is_gl_posted = FALSE।
+                                  - এই ট্রানজ্যাকশনগুলোর বিপরীতে gl_journals এবং gl_journal_lines তৈরি করবে।
+                                  - সবশেষে gl_heads এর ব্যালেন্স একবারে আপডেট করবে।
+                                  - ট্রানজ্যাকশন টেবিলের is_gl_posted কে TRUE করে দেবে।
+                              
+                              
+                              ৩. SQL স্টোর্ড প্রসিডিউর (অ্যাডমিন মেনুর জন্য)
+                              এটিই আপনার সেই "GL Now" মেনুর পেছনের মূল লজিক:
+                              
+                              SQL
+                              
+                              DELIMITER //
+                              
+                              CREATE PROCEDURE sp_ProcessEndOfDayGL()
+                              BEGIN
+                                  DECLARE DONE INT DEFAULT FALSE;
+                                  DECLARE t_id INT;
+                                  DECLARE t_branch_id INT;
+                                  DECLARE t_amount DECIMAL(18,2);
+                                  DECLARE t_type VARCHAR(20);
+                                  DECLARE t_acc_id INT;
+                                  
+                                  -- ১. যে ট্রানজ্যাকশনগুলো এপ্রুভ হয়েছে কিন্তু GL-এ যায়নি সেগুলো সিলেক্ট করা
+                                  DECLARE cur CURSOR FOR 
+                                      SELECT id, branch_id, amount, txn_type, account_id 
+                                      FROM transactions 
+                                      WHERE status = 'Approved' AND is_gl_posted = FALSE;
+                                      
+                                  DECLARE CONTINUE HANDLER FOR NOT FOUND SET DONE = TRUE;
+                              
+                                  START TRANSACTION;
+                              
+                                  OPEN cur;
+                                  read_loop: LOOP
+                                      FETCH cur INTO t_id, t_branch_id, t_amount, t_type, t_acc_id;
+                                      IF DONE THEN LEAVE read_loop; END IF;
+                              
+                                      -- ২. GL Journal Header তৈরি
+                                      INSERT INTO gl_journals (txn_id, branch_id, total_debit, total_credit)
+                                      VALUES (t_id, t_branch_id, t_amount, t_amount);
+                              
+                                      -- ৩. GL Journal Lines তৈরি (ডাবল এন্ট্রি)
+                                      -- উদাহরণস্বরূপ: নগদে টাকা জমা (Cash Dr, Deposit Cr)
+                                      INSERT INTO gl_journal_lines (branch_id, txn_id, gl_code_id, debit_amount, credit_amount)
+                                      VALUES (t_branch_id, t_id, 1, t_amount, 0), -- Cash Head
+                                             (t_branch_id, t_id, 2, 0, t_amount); -- Customer Deposit Head
+                              
+                                      -- ৪. ট্রানজ্যাকশন ফ্ল্যাগ আপডেট
+                                      UPDATE transactions SET is_gl_posted = TRUE WHERE id = t_id;
+                                  END LOOP;
+                              
+                                  CLOSE cur;
+                                  COMMIT;
+                              END //
+                              
+                              DELIMITER ;
+                              
+                              
+                              ===========================================================================================================
+                                                       "Pre-GL Check" বা "Pending GL Dashboard"
+                              ===========================================================================================================
+                              
+                              অ্যাডমিনের জন্য একটি "Pre-GL Check" বা "Pending GL Dashboard" তৈরি করা অত্যন্ত জরুরি। কারণ, 
+                              অ্যাডমিন "Post GL Now" বাটনে ক্লিক করার আগে অবশ্যই নিশ্চিত হতে চাইবেন যে সারাদিনে কতটি ট্রানজ্যাকশন হয়েছে এবং কত টাকা GL-এ পোস্টিং হতে যাচ্ছে।
+                              
+                              নিচে আপনার সিস্টেমের জন্য একটি কমপ্লিট সলিউশন দেওয়া হলো:
+                              
+                              ১. অ্যাডমিন ড্যাশবোর্ড কুয়েরি (Pre-Check Report)
+                              এই কুয়েরিটি অ্যাডমিনকে দেখাবে যে বর্তমানে কতটি ট্রানজ্যাকশন অনুমোদিত অবস্থায় আছে যা এখনো GL-এ হিট করেনি।
+                              
+                              SQL
+                              
+                              -- অ্যাডমিন এই রিপোর্টটি দেখে "Post GL Now" বাটনে ক্লিক করার সিদ্ধান্ত নেবেন
+                              SELECT 
+                                  b.branch_name,
+                                  COUNT(t.id) AS total_pending_txns,
+                                  SUM(CASE WHEN t.txn_type = 'Deposit' THEN t.amount ELSE 0 END) AS total_deposits,
+                                  SUM(CASE WHEN t.txn_type = 'Withdraw' THEN t.amount ELSE 0 END) AS total_withdraws,
+                                  MAX(t.created_at) AS last_txn_time
+                              FROM transactions t
+                              JOIN branches b ON t.branch_id = b.id
+                              WHERE t.status = 'Approved' AND t.is_gl_posted = FALSE
+                              GROUP BY b.branch_name;
+                              
+                              ২. কেন এই প্রসেসটি গুরুত্বপূর্ণ? (The Engineering Edge)
+                              সফটওয়্যার ইঞ্জিনিয়ার হিসেবে আপনার বন্ধুর মতো সূক্ষ্মভাবে ভাবলে আপনি নিচের সুবিধাগুলো পাবেন:
+                                  -   Performance Optimization: সারাদিন প্রতি সেকেন্ডে GL টেবিলগুলোতে রাইট (Write) অপারেশন না হওয়ায় ডেটাবেস লকিং এর সমস্যা হবে না।
+                                  -   Verification Gap: কোনো ভুল এন্ট্রি হলে তা GL-এ যাওয়ার আগেই অ্যাডমিন বা অডিটর ট্রানজ্যাকশন লেভেলে চেক করার সুযোগ পাচ্ছেন।
+                                  -   Clean Ledger: আপনার প্রধান লেজার (General Ledger) সারাদিন পরিষ্কার থাকে এবং দিনের শেষে একবারে এন্ট্রি হওয়ায় অডিট রিপোর্ট তৈরি করা খুব সহজ হয়।
+                              
+                              ৩. সিস্টেম কন্ট্রোল ও নিরাপত্তা (Concurrency Handling)
+                              আইটি অফিসার হিসেবে একটি সম্ভাব্য ঝুঁকি হলো— যখন অ্যাডমিন GL পোস্টিং প্রসেসটি চালাচ্ছেন, ঠিক সেই মুহূর্তে যদি নতুন কোনো ট্রানজ্যাকশন এপ্রুভ হয়?
+                              
+                              এটি হ্যান্ডেল করার জন্য আপনার System Control টেবিলে একটি লক ব্যবহার করা:
+                              অ্যাডমিন যখন 'GL Now' বাটনে ক্লিক করবেন, সিস্টেম প্রথমে is_eod_running = TRUE করে দেবে।
+                              প্রসেস চলাকালীন নতুন কোনো 'Approval' ব্লক করে দেওয়া হবে অথবা সেগুলোকে পরবর্তী দিনের জন্য রাখা হবে।
+                              
 
-                          মেকার যখন এই ট্রানজ্যাকশনটি `Approve` করবেন, তখন অ্যাপ্লিকেশনে একটি Database Transaction Scope শুরু হবে। এই স্কোপের ভেতর ৪টি প্রধান কাজ একসাথে (Atomic) সম্পন্ন হবে:
-          
-                          ক) ব্যালেন্স আপডেট (Sub-ledger Update):
-                          - `accounts` টেবিলের সংশ্লিষ্ট অ্যাকাউন্টে ১০০০ টাকা যোগ হবে (`balance = balance + 1000`)।
-                          - `cash_drawers` টেবিলে ওই চেকারের ড্রয়ারে ১০০০ টাকা যোগ হবে (`current_cash = current_cash + 1000`)।
-          
-                          খ) কাস্টমার লেজার এন্ট্রি (Sub-ledger Detail):
-                          - `sub_ledger_entries` টেবিলে একটি এন্ট্রি হবে যেখানে `dr_cr_flag = 'Cr'` (Liability বাড়ছে) এবং বর্তমান `running_balance` আপডেট হবে।
-          
-                          গ) জার্নাল মাস্টার তৈরি (GL Journal Master):
-                          - `gl_journals` টেবিলে একটি রেকর্ড তৈরি হবে যেখানে `total_debit = 1000` এবং `total_credit = 1000` থাকবে। এটি নিশ্চিত করে যে ডাবল-এন্ট্রি ব্যালেন্সড আছে।
-          
-                          ঘ) ডাবল-এন্ট্রি পোস্টিং (GL Posting):
-                          `gl_journal_lines` টেবিলে দুটি এন্ট্রি হবে:
-                          1. Debit এন্ট্রি: `gl_code_id` (Cash 1001) টেবিলে ১০০০ টাকা ডেবিট হবে (Asset বাড়ছে)।
-                          2. Credit এন্ট্রি: `gl_code_id` (Customer Deposit 2001) টেবিলে ১০০০ টাকা ক্রেডিট হবে (Liability বাড়ছে)।
-          
-                          - একই সাথে `gl_heads` টেবিলের `current_balance` আপডেট হবে।
+
+
+
+
+
+.
 
 ---
 
