@@ -1,0 +1,2958 @@
+
+
+# Presentation লেয়ারে Controllers
+
+## ১. Presentation Project Structure
+
+### CBS_MultiBranch.Web.csproj
+```xml
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Session" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="9.0.0" />
+    <PackageReference Include="QuestPDF" Version="2024.12.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBS_MultiBranch.Application\CBS_MultiBranch.Application.csproj" />
+    <ProjectReference Include="..\CBS_MultiBranch.Infrastructure\CBS_MultiBranch.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
+```
+
+## ২. Startup Configuration
+
+### Program.cs
+```csharp
+using CBS_MultiBranch.Application;
+using CBS_MultiBranch.Infrastructure;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add Serilog for better logging
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// Add services to the container
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<GlobalExceptionFilter>();
+});
+
+// Add session
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// Add authentication with cookies
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Account/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+        options.SlidingExpiration = true;
+        
+        // Lockout settings
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                // Custom validation logic can be added here
+            }
+        };
+    });
+
+// Add authorization policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CheckerOnly", policy =>
+        policy.RequireRole("Checker"));
+    
+    options.AddPolicy("MakerOnly", policy =>
+        policy.RequireRole("Maker"));
+    
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
+    
+    options.AddPolicy("AuditorOnly", policy =>
+        policy.RequireRole("Auditor"));
+    
+    options.AddPolicy("BranchAccess", policy =>
+        policy.RequireAssertion(context =>
+        {
+            var user = context.User;
+            var branchIdClaim = user.FindFirst("BranchId");
+            if (branchIdClaim == null) return false;
+            
+            // Additional branch-based logic can be added here
+            return true;
+        }));
+});
+
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+// Add Application and Infrastructure layers
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+// Configure database context
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+else
+{
+    app.UseDeveloperExceptionPage();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseSession();
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Custom middleware for user activity tracking
+app.UseMiddleware<UserActivityMiddleware>();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
+
+app.MapControllerRoute(
+    name: "area",
+    pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.EnsureCreated();
+    
+    // Seed initial data if needed
+    await SeedData.InitializeAsync(scope.ServiceProvider);
+}
+
+app.Run();
+```
+
+### GlobalExceptionFilter.cs
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Web.Filters
+{
+    public class GlobalExceptionFilter : IExceptionFilter
+    {
+        private readonly ILogger<GlobalExceptionFilter> _logger;
+
+        public GlobalExceptionFilter(ILogger<GlobalExceptionFilter> logger)
+        {
+            _logger = logger;
+        }
+
+        public void OnException(ExceptionContext context)
+        {
+            _logger.LogError(context.Exception, "An unhandled exception occurred");
+
+            if (context.Exception is ValidationException validationException)
+            {
+                context.Result = new BadRequestObjectResult(new
+                {
+                    success = false,
+                    message = "Validation failed",
+                    errors = validationException.Errors.Select(e => e.ErrorMessage)
+                });
+                context.ExceptionHandled = true;
+            }
+            else
+            {
+                context.Result = new ObjectResult(new
+                {
+                    success = false,
+                    message = "An error occurred while processing your request.",
+                    error = context.Exception.Message
+                })
+                {
+                    StatusCode = 500
+                };
+                context.ExceptionHandled = true;
+            }
+        }
+    }
+
+    public class ValidationException : Exception
+    {
+        public IEnumerable<ValidationError> Errors { get; }
+
+        public ValidationException(IEnumerable<ValidationError> errors)
+            : base("Validation failed")
+        {
+            Errors = errors;
+        }
+    }
+
+    public class ValidationError
+    {
+        public string PropertyName { get; }
+        public string ErrorMessage { get; }
+
+        public ValidationError(string propertyName, string errorMessage)
+        {
+            PropertyName = propertyName;
+            ErrorMessage = errorMessage;
+        }
+    }
+}
+```
+
+### UserActivityMiddleware.cs
+```csharp
+using CBS_MultiBranch.Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
+
+namespace CBS_MultiBranch.Web.Middleware
+{
+    public class UserActivityMiddleware
+    {
+        private readonly RequestDelegate _next;
+
+        public UserActivityMiddleware(RequestDelegate next)
+        {
+            _next = next;
+        }
+
+        public async Task InvokeAsync(HttpContext context, IUnitOfWork unitOfWork)
+        {
+            if (context.User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    var user = await unitOfWork.Users.GetByIdAsync(userId);
+                    if (user != null)
+                    {
+                        user.LastLogin = DateTime.UtcNow;
+                        await unitOfWork.Users.UpdateAsync(user);
+                        await unitOfWork.CompleteAsync();
+                    }
+                }
+            }
+
+            await _next(context);
+        }
+    }
+}
+```
+
+## ৩. Base Controller
+
+### BaseController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.Auth;
+using CBS_MultiBranch.Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [Authorize]
+    public class BaseController : Controller
+    {
+        protected readonly IUnitOfWork _unitOfWork;
+        protected readonly ILogger<BaseController> _logger;
+
+        protected BaseController(IUnitOfWork unitOfWork, ILogger<BaseController> logger)
+        {
+            _unitOfWork = unitOfWork;
+            _logger = logger;
+        }
+
+        protected int GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            return userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
+                ? userId 
+                : 0;
+        }
+
+        protected UserInfo GetCurrentUserInfo()
+        {
+            return new UserInfo
+            {
+                Id = GetCurrentUserId(),
+                Username = User.Identity?.Name ?? string.Empty,
+                Role = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty,
+                BranchId = int.TryParse(User.FindFirst("BranchId")?.Value, out int branchId) 
+                    ? branchId 
+                    : 0,
+                BranchName = User.FindFirst("BranchName")?.Value ?? string.Empty,
+                FullName = User.FindFirst("FullName")?.Value ?? string.Empty
+            };
+        }
+
+        protected bool IsCurrentUserInRole(string role)
+        {
+            return User.IsInRole(role);
+        }
+
+        protected bool HasAccessToBranch(int branchId)
+        {
+            var currentUserBranchId = GetCurrentUserInfo().BranchId;
+            
+            // Admin users have access to all branches
+            if (IsCurrentUserInRole("Admin"))
+                return true;
+
+            // Checker/Maker/Auditor users can only access their own branch
+            return currentUserBranchId == branchId;
+        }
+
+        protected IActionResult HandleResult<T>(Domain.ValueObjects.Result<T> result)
+        {
+            if (result.IsSuccess)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = result.Value
+                });
+            }
+
+            _logger.LogWarning("Operation failed: {Error}", result.Error);
+            
+            return BadRequest(new
+            {
+                success = false,
+                message = result.Error
+            });
+        }
+
+        protected IActionResult HandlePagedResult<T>(Domain.ValueObjects.Result<List<T>> result, 
+            int pageNumber, int pageSize, int totalCount)
+        {
+            if (result.IsSuccess)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = result.Value,
+                    pagination = new
+                    {
+                        pageNumber,
+                        pageSize,
+                        totalCount,
+                        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+                    }
+                });
+            }
+
+            return HandleResult(result);
+        }
+
+        protected void AddAuditLog(string action, string oldValue = null, string newValue = null)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                _unitOfWork.AuditLogs.AddAsync(new Domain.Entities.AuditLog
+                {
+                    BranchId = userInfo.BranchId,
+                    UserId = userInfo.Id,
+                    Action = action,
+                    OldValue = oldValue,
+                    NewValue = newValue,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to add audit log");
+            }
+        }
+    }
+}
+```
+
+## ৪. Account Controller (Authentication)
+
+### AccountController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.Auth;
+using CBS_MultiBranch.Application.Features.Auth.Commands;
+using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [AllowAnonymous]
+    public class AccountController : BaseController
+    {
+        private readonly IMediator _mediator;
+
+        public AccountController(
+            IMediator mediator,
+            IUnitOfWork unitOfWork,
+            ILogger<AccountController> logger)
+            : base(unitOfWork, logger)
+        {
+            _mediator = mediator;
+        }
+
+        [HttpGet]
+        public IActionResult Login(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(LoginRequest request, string returnUrl = null)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var command = new LoginCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    var loginResponse = result.Value;
+
+                    // Create claims identity
+                    var claims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, loginResponse.User.Id.ToString()),
+                        new Claim(ClaimTypes.Name, loginResponse.User.Username),
+                        new Claim(ClaimTypes.Role, loginResponse.User.Role),
+                        new Claim("BranchId", loginResponse.User.BranchId.ToString()),
+                        new Claim("BranchName", loginResponse.User.BranchName),
+                        new Claim("FullName", loginResponse.User.FullName)
+                    };
+
+                    var claimsIdentity = new ClaimsIdentity(claims, 
+                        CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = false,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30),
+                        AllowRefresh = true
+                    };
+
+                    await HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(claimsIdentity),
+                        authProperties);
+
+                    // Reset failed attempts
+                    var user = await _unitOfWork.Users.GetByUsernameAsync(request.Username);
+                    if (user != null)
+                    {
+                        user.FailedAttempts = 0;
+                        user.IsLocked = false;
+                        user.LockUntil = null;
+                        await _unitOfWork.Users.UpdateAsync(user);
+                        await _unitOfWork.CompleteAsync();
+                    }
+
+                    AddAuditLog("User logged in");
+
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
+
+                    // Redirect based on role
+                    return RedirectToAction("Index", "Dashboard", new { area = loginResponse.User.Role });
+                }
+
+                // Increment failed attempts
+                var failedUser = await _unitOfWork.Users.GetByUsernameAsync(request.Username);
+                if (failedUser != null)
+                {
+                    failedUser.FailedAttempts++;
+                    
+                    if (failedUser.FailedAttempts >= 3)
+                    {
+                        failedUser.IsLocked = true;
+                        failedUser.LockUntil = DateTime.UtcNow.AddMinutes(5);
+                        ModelState.AddModelError("", "Account locked for 5 minutes due to 3 failed attempts.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", $"Invalid credentials. {3 - failedUser.FailedAttempts} attempts remaining.");
+                    }
+                    
+                    await _unitOfWork.Users.UpdateAsync(failedUser);
+                    await _unitOfWork.CompleteAsync();
+                }
+                else
+                {
+                    ModelState.AddModelError("", result.Error);
+                }
+
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login");
+                ModelState.AddModelError("", "An error occurred during login.");
+                return View(request);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            var userInfo = GetCurrentUserInfo();
+            
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            
+            AddAuditLog("User logged out");
+
+            return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult LockedOut()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ResetPassword(int userId)
+        {
+            try
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                // Implement password reset logic
+                var command = new ResetPasswordCommand(userId, GetCurrentUserId());
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    TempData["SuccessMessage"] = "Password reset successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("UserManagement", "Admin");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error resetting password");
+                TempData["ErrorMessage"] = "Error resetting password.";
+                return RedirectToAction("UserManagement", "Admin");
+            }
+        }
+
+        [HttpGet]
+        public IActionResult ChangePassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                var command = new ChangePasswordCommand(userInfo.Id, request.OldPassword, request.NewPassword);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    TempData["SuccessMessage"] = "Password changed successfully.";
+                    return RedirectToAction("Index", "Dashboard");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error changing password");
+                ModelState.AddModelError("", "Error changing password.");
+                return View(request);
+            }
+        }
+    }
+}
+```
+
+## ৫. Checker Controller
+
+### CheckerController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+using CBS_MultiBranch.Application.Features.Customers.Commands;
+using CBS_MultiBranch.Application.Features.Customers.Queries;
+using CBS_MultiBranch.Application.Features.Transactions.Commands;
+using CBS_MultiBranch.Application.Features.Transactions.Queries;
+using CBS_MultiBranch.Application.Features.Reports.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [Authorize(Roles = "Checker")]
+    public class CheckerController : BaseController
+    {
+        private readonly IMediator _mediator;
+
+        public CheckerController(
+            IMediator mediator,
+            IUnitOfWork unitOfWork,
+            ILogger<CheckerController> logger)
+            : base(unitOfWork, logger)
+        {
+            _mediator = mediator;
+        }
+
+        // Dashboard
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var today = DateTime.Today;
+
+                // Get today's statistics
+                var pendingCustomers = await _mediator.Send(
+                    new GetPendingCustomersQuery(userInfo.BranchId, 1, 10));
+                
+                var pendingTransactions = await _mediator.Send(
+                    new GetPendingTransactionsQuery(userInfo.BranchId, 1, 10));
+
+                // Get cash drawer balance
+                var cashDrawer = await _unitOfWork.CashDrawers.GetByCheckerIdAsync(userInfo.Id);
+
+                var viewModel = new CheckerDashboardViewModel
+                {
+                    UserInfo = userInfo,
+                    PendingCustomers = pendingTransactions.IsSuccess ? pendingCustomers.Value : new(),
+                    PendingTransactions = pendingTransactions.IsSuccess ? pendingTransactions.Value : new(),
+                    CashDrawerBalance = cashDrawer?.CurrentCash ?? 0,
+                    TodayCustomerCount = 0, // Implement if needed
+                    TodayTransactionCount = 0 // Implement if needed
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading checker dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard.";
+                return View(new CheckerDashboardViewModel());
+            }
+        }
+
+        // Customer Management
+        [HttpGet]
+        public IActionResult CreateCustomer()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateCustomer(CreateCustomerRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.CreatedBy = userInfo.Id;
+                request.BranchId = userInfo.BranchId;
+
+                var command = new CreateCustomerCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Customer created", null, 
+                        $"Name: {request.FullName}, NID: {request.NIDNumber}");
+                    
+                    TempData["SuccessMessage"] = "Customer created successfully. Waiting for Maker approval.";
+                    return RedirectToAction("CustomerList");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating customer");
+                ModelState.AddModelError("", "Error creating customer.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CustomerList(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var query = new GetPendingCustomersQuery(userInfo.BranchId, page, pageSize);
+                var result = await _mediator.Send(query);
+
+                var viewModel = new CustomerListViewModel
+                {
+                    Customers = result.IsSuccess ? result.Value : new(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = await GetCustomerCount(userInfo.BranchId)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading customer list");
+                TempData["ErrorMessage"] = "Error loading customer list.";
+                return View(new CustomerListViewModel());
+            }
+        }
+
+        // Transaction Management
+        [HttpGet]
+        public IActionResult Deposit()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Deposit(DepositRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.CheckerId = userInfo.Id;
+
+                var command = new DepositCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Deposit initiated", null, 
+                        $"Account: {request.AccountNumber}, Amount: {request.Amount}");
+                    
+                    TempData["SuccessMessage"] = $"Deposit initiated. Batch Number: {result.Value.BatchNumber}";
+                    return RedirectToAction("TransactionList");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing deposit");
+                ModelState.AddModelError("", "Error processing deposit.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Withdraw()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Withdraw(WithdrawalRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.CheckerId = userInfo.Id;
+
+                var command = new WithdrawCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Withdrawal initiated", null, 
+                        $"Account: {request.AccountNumber}, Amount: {request.Amount}");
+                    
+                    TempData["SuccessMessage"] = $"Withdrawal initiated. Batch Number: {result.Value.BatchNumber}";
+                    return RedirectToAction("TransactionList");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing withdrawal");
+                ModelState.AddModelError("", "Error processing withdrawal.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> TransactionList(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var query = new GetPendingTransactionsQuery(userInfo.BranchId, page, pageSize);
+                var result = await _mediator.Send(query);
+
+                var viewModel = new TransactionListViewModel
+                {
+                    Transactions = result.IsSuccess ? result.Value : new(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = await GetTransactionCount(userInfo.BranchId)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading transaction list");
+                TempData["ErrorMessage"] = "Error loading transaction list.";
+                return View(new TransactionListViewModel());
+            }
+        }
+
+        // Reports
+        [HttpGet]
+        public IActionResult GenerateStatement()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateStatement(StatementRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.UserId = userInfo.Id;
+
+                var query = new GetCustomerStatementQuery(request);
+                var result = await _mediator.Send(query);
+
+                if (result.IsSuccess)
+                {
+                    // Generate PDF
+                    var pdfBytes = await GenerateStatementPdf(result.Value);
+                    
+                    AddAuditLog("Statement generated", null, 
+                        $"Account: {request.AccountNumber}, From: {request.FromDate}, To: {request.ToDate}");
+                    
+                    return File(pdfBytes, "application/pdf", 
+                        $"Statement_{request.AccountNumber}_{DateTime.Now:yyyyMMdd}.pdf");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating statement");
+                ModelState.AddModelError("", "Error generating statement.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DailyReport()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var today = DateTime.Today;
+
+                // Get today's summary
+                var summary = await GetDailySummary(userInfo.Id, today);
+
+                return View(summary);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating daily report");
+                TempData["ErrorMessage"] = "Error generating daily report.";
+                return View(new DailySummaryViewModel());
+            }
+        }
+
+        // Helper Methods
+        private async Task<int> GetCustomerCount(int branchId)
+        {
+            var customers = await _unitOfWork.Customers.GetPendingCustomersAsync(branchId);
+            return customers.Count();
+        }
+
+        private async Task<int> GetTransactionCount(int branchId)
+        {
+            var transactions = await _unitOfWork.Transactions.GetPendingTransactionsAsync(branchId);
+            return transactions.Count();
+        }
+
+        private async Task<byte[]> GenerateStatementPdf(Application.DTOs.Reports.StatementResponse statement)
+        {
+            // Implement PDF generation using QuestPDF
+            // This is a simplified version
+            var document = new StatementPdfDocument(statement);
+            return document.GeneratePdf();
+        }
+
+        private async Task<DailySummaryViewModel> GetDailySummary(int checkerId, DateTime date)
+        {
+            // Implement daily summary logic
+            return new DailySummaryViewModel();
+        }
+    }
+
+    // ViewModels
+    public class CheckerDashboardViewModel
+    {
+        public UserInfo UserInfo { get; set; } = new();
+        public List<CustomerResponse> PendingCustomers { get; set; } = new();
+        public List<TransactionResponse> PendingTransactions { get; set; } = new();
+        public decimal CashDrawerBalance { get; set; }
+        public int TodayCustomerCount { get; set; }
+        public int TodayTransactionCount { get; set; }
+    }
+
+    public class CustomerListViewModel
+    {
+        public List<CustomerResponse> Customers { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class TransactionListViewModel
+    {
+        public List<TransactionResponse> Transactions { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class DailySummaryViewModel
+    {
+        public DateTime Date { get; set; }
+        public int TotalCustomersCreated { get; set; }
+        public int TotalDeposits { get; set; }
+        public int TotalWithdrawals { get; set; }
+        public decimal TotalDepositAmount { get; set; }
+        public decimal TotalWithdrawalAmount { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public decimal ClosingBalance { get; set; }
+    }
+}
+```
+
+## ৬. Maker Controller
+
+### MakerController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.Customers;
+using CBS_MultiBranch.Application.DTOs.Transactions;
+using CBS_MultiBranch.Application.Features.Customers.Commands;
+using CBS_MultiBranch.Application.Features.Customers.Queries;
+using CBS_MultiBranch.Application.Features.Transactions.Commands;
+using CBS_MultiBranch.Application.Features.Transactions.Queries;
+using CBS_MultiBranch.Application.Features.Reports.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [Authorize(Roles = "Maker")]
+    public class MakerController : BaseController
+    {
+        private readonly IMediator _mediator;
+
+        public MakerController(
+            IMediator mediator,
+            IUnitOfWork unitOfWork,
+            ILogger<MakerController> logger)
+            : base(unitOfWork, logger)
+        {
+            _mediator = mediator;
+        }
+
+        // Dashboard
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var today = DateTime.Today;
+
+                // Get pending items count
+                var pendingCustomers = await _mediator.Send(
+                    new GetPendingCustomersQuery(userInfo.BranchId, 1, 10));
+                
+                var pendingTransactions = await _mediator.Send(
+                    new GetPendingTransactionsQuery(userInfo.BranchId, 1, 10));
+
+                // Get today's approved transactions
+                var approvedTransactions = await _mediator.Send(
+                    new GetApprovedTransactionsQuery(userInfo.BranchId, today, 1, 10));
+
+                var viewModel = new MakerDashboardViewModel
+                {
+                    UserInfo = userInfo,
+                    PendingCustomers = pendingCustomers.IsSuccess ? pendingCustomers.Value : new(),
+                    PendingTransactions = pendingTransactions.IsSuccess ? pendingTransactions.Value : new(),
+                    ApprovedTransactions = approvedTransactions.IsSuccess ? approvedTransactions.Value : new(),
+                    TodayApprovedCount = approvedTransactions.IsSuccess ? approvedTransactions.Value.Count : 0
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading maker dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard.";
+                return View(new MakerDashboardViewModel());
+            }
+        }
+
+        // Customer Approval
+        [HttpGet]
+        public async Task<IActionResult> PendingCustomers(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var query = new GetPendingCustomersQuery(userInfo.BranchId, page, pageSize);
+                var result = await _mediator.Send(query);
+
+                var viewModel = new CustomerApprovalViewModel
+                {
+                    Customers = result.IsSuccess ? result.Value : new(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = await GetPendingCustomerCount(userInfo.BranchId)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading pending customers");
+                TempData["ErrorMessage"] = "Error loading pending customers.";
+                return View(new CustomerApprovalViewModel());
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveCustomer(int customerId, string remarks = null)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var command = new ApproveCustomerCommand(customerId, userInfo.Id, remarks);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Customer approved", "Pending", "Active");
+                    TempData["SuccessMessage"] = "Customer approved successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("PendingCustomers");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving customer");
+                TempData["ErrorMessage"] = "Error approving customer.";
+                return RedirectToAction("PendingCustomers");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectCustomer(int customerId, string reason)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var command = new RejectCustomerCommand(customerId, userInfo.Id, reason);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Customer rejected", "Pending", $"Rejected: {reason}");
+                    TempData["SuccessMessage"] = "Customer rejected successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("PendingCustomers");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting customer");
+                TempData["ErrorMessage"] = "Error rejecting customer.";
+                return RedirectToAction("PendingCustomers");
+            }
+        }
+
+        // Transaction Approval
+        [HttpGet]
+        public async Task<IActionResult> PendingTransactions(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var query = new GetPendingTransactionsQuery(userInfo.BranchId, page, pageSize);
+                var result = await _mediator.Send(query);
+
+                var viewModel = new TransactionApprovalViewModel
+                {
+                    Transactions = result.IsSuccess ? result.Value : new(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = await GetPendingTransactionCount(userInfo.BranchId)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading pending transactions");
+                TempData["ErrorMessage"] = "Error loading pending transactions.";
+                return View(new TransactionApprovalViewModel());
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveTransaction(string batchNumber, string remarks = null)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var request = new ApproveTransactionRequest
+                {
+                    BatchNumber = batchNumber,
+                    MakerId = userInfo.Id,
+                    Remarks = remarks
+                };
+
+                var command = new ApproveTransactionCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Transaction approved", "Initiated", "Approved");
+                    TempData["SuccessMessage"] = $"Transaction {batchNumber} approved successfully.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("PendingTransactions");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving transaction");
+                TempData["ErrorMessage"] = "Error approving transaction.";
+                return RedirectToAction("PendingTransactions");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RejectTransaction(string batchNumber, string reason)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var request = new RejectTransactionRequest
+                {
+                    BatchNumber = batchNumber,
+                    MakerId = userInfo.Id,
+                    Reason = reason
+                };
+
+                var command = new RejectTransactionCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Transaction rejected", "Initiated", $"Rejected: {reason}");
+                    TempData["SuccessMessage"] = $"Transaction {batchNumber} rejected.";
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("PendingTransactions");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting transaction");
+                TempData["ErrorMessage"] = "Error rejecting transaction.";
+                return RedirectToAction("PendingTransactions");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ApprovedTransactions(DateTime? date = null, int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var queryDate = date ?? DateTime.Today;
+
+                var query = new GetApprovedTransactionsQuery(userInfo.BranchId, queryDate, page, pageSize);
+                var result = await _mediator.Send(query);
+
+                var viewModel = new ApprovedTransactionsViewModel
+                {
+                    Transactions = result.IsSuccess ? result.Value : new(),
+                    SelectedDate = queryDate,
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = await GetApprovedTransactionCount(userInfo.BranchId, queryDate)
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading approved transactions");
+                TempData["ErrorMessage"] = "Error loading approved transactions.";
+                return View(new ApprovedTransactionsViewModel());
+            }
+        }
+
+        // Reports
+        [HttpGet]
+        public IActionResult GenerateStatement()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateStatement(StatementRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.UserId = userInfo.Id;
+
+                var query = new GetCustomerStatementQuery(request);
+                var result = await _mediator.Send(query);
+
+                if (result.IsSuccess)
+                {
+                    // Generate PDF
+                    var pdfBytes = await GenerateStatementPdf(result.Value);
+                    
+                    AddAuditLog("Statement generated", null, 
+                        $"Account: {request.AccountNumber}, From: {request.FromDate}, To: {request.ToDate}");
+                    
+                    return File(pdfBytes, "application/pdf", 
+                        $"Statement_{request.AccountNumber}_{DateTime.Now:yyyyMMdd}.pdf");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating statement");
+                ModelState.AddModelError("", "Error generating statement.");
+                return View(request);
+            }
+        }
+
+        // Helper Methods
+        private async Task<int> GetPendingCustomerCount(int branchId)
+        {
+            var customers = await _unitOfWork.Customers.GetPendingCustomersAsync(branchId);
+            return customers.Count();
+        }
+
+        private async Task<int> GetPendingTransactionCount(int branchId)
+        {
+            var transactions = await _unitOfWork.Transactions.GetPendingTransactionsAsync(branchId);
+            return transactions.Count();
+        }
+
+        private async Task<int> GetApprovedTransactionCount(int branchId, DateTime date)
+        {
+            var startDate = date.Date;
+            var endDate = startDate.AddDays(1);
+            
+            var allTransactions = await _unitOfWork.Transactions.GetAllAsync();
+            return allTransactions
+                .Where(t => t.BranchId == branchId 
+                    && t.Status == Domain.Entities.TransactionStatus.Approved
+                    && t.CreatedAt >= startDate 
+                    && t.CreatedAt < endDate)
+                .Count();
+        }
+
+        private async Task<byte[]> GenerateStatementPdf(Application.DTOs.Reports.StatementResponse statement)
+        {
+            // Implement PDF generation
+            var document = new StatementPdfDocument(statement);
+            return document.GeneratePdf();
+        }
+    }
+
+    // ViewModels
+    public class MakerDashboardViewModel
+    {
+        public UserInfo UserInfo { get; set; } = new();
+        public List<CustomerResponse> PendingCustomers { get; set; } = new();
+        public List<TransactionResponse> PendingTransactions { get; set; } = new();
+        public List<TransactionResponse> ApprovedTransactions { get; set; } = new();
+        public int TodayApprovedCount { get; set; }
+    }
+
+    public class CustomerApprovalViewModel
+    {
+        public List<CustomerResponse> Customers { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class TransactionApprovalViewModel
+    {
+        public List<TransactionResponse> Transactions { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class ApprovedTransactionsViewModel
+    {
+        public List<TransactionResponse> Transactions { get; set; } = new();
+        public DateTime SelectedDate { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+}
+```
+
+## ৭. Admin Controller
+
+### AdminController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.GL;
+using CBS_MultiBranch.Application.DTOs.Reports;
+using CBS_MultiBranch.Application.Features.GL.Commands;
+using CBS_MultiBranch.Application.Features.Reports.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [Authorize(Roles = "Admin")]
+    public class AdminController : BaseController
+    {
+        private readonly IMediator _mediator;
+
+        public AdminController(
+            IMediator mediator,
+            IUnitOfWork unitOfWork,
+            ILogger<AdminController> logger)
+            : base(unitOfWork, logger)
+        {
+            _mediator = mediator;
+        }
+
+        // Dashboard
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+
+                // Get statistics
+                var unpostedTransactions = await _unitOfWork.Transactions
+                    .GetApprovedUnpostedTransactionsAsync(userInfo.BranchId);
+
+                var cashDrawers = await _unitOfWork.CashDrawers
+                    .GetCashDrawersByBranchAsync(userInfo.BranchId);
+
+                var glHeads = await _unitOfWork.GLHeads
+                    .GetGLHeadsByBranchAsync(userInfo.BranchId);
+
+                var viewModel = new AdminDashboardViewModel
+                {
+                    UserInfo = userInfo,
+                    UnpostedTransactionCount = unpostedTransactions.Count(),
+                    TotalCashInDrawers = cashDrawers.Sum(c => c.CurrentCash),
+                    GLHeads = glHeads.ToList(),
+                    CashDrawers = cashDrawers.ToList()
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading admin dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard.";
+                return View(new AdminDashboardViewModel());
+            }
+        }
+
+        // GL Posting
+        [HttpGet]
+        public IActionResult GLPosting()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PostGL(GLPostingRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View("GLPosting", request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.BranchId = userInfo.BranchId;
+                request.AdminId = userInfo.Id;
+                request.PostingDate = DateTime.UtcNow;
+
+                var command = new PostGLCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("GL Posted", null, 
+                        $"Transactions: {result.Value.TransactionsPosted}, Debit: {result.Value.TotalDebit}, Credit: {result.Value.TotalCredit}");
+                    
+                    TempData["SuccessMessage"] = result.Value.Message;
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return RedirectToAction("GLPosting");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error posting GL");
+                TempData["ErrorMessage"] = "Error posting GL.";
+                return RedirectToAction("GLPosting");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PreGLCheck()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var transactions = await _unitOfWork.Transactions
+                    .GetApprovedUnpostedTransactionsAsync(userInfo.BranchId);
+
+                var viewModel = new PreGLCheckViewModel
+                {
+                    Transactions = transactions.Select(t => new TransactionViewModel
+                    {
+                        Id = t.Id,
+                        BatchNumber = t.BatchNumber,
+                        AccountNumber = t.Account.AccountNumber,
+                        CustomerName = t.Account.Customer?.FullName ?? "N/A",
+                        Type = t.TransactionType.ToString(),
+                        Amount = t.Amount,
+                        CreatedAt = t.CreatedAt
+                    }).ToList()
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading pre-GL check");
+                TempData["ErrorMessage"] = "Error loading pre-GL check.";
+                return View(new PreGLCheckViewModel());
+            }
+        }
+
+        // Customer Account Management
+        [HttpGet]
+        public async Task<IActionResult> CustomerAccounts(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var accounts = await _unitOfWork.Accounts
+                    .GetAccountsByBranchAsync(userInfo.BranchId);
+
+                var viewModel = new CustomerAccountsViewModel
+                {
+                    Accounts = accounts.Select(a => new AccountViewModel
+                    {
+                        Id = a.Id,
+                        AccountNumber = a.AccountNumber,
+                        CustomerName = a.Customer.FullName,
+                        AccountType = a.AccountType.ToString(),
+                        Balance = a.Balance,
+                        IsActive = a.IsActive,
+                        CreatedAt = a.CreatedAt
+                    }).Skip((page - 1) * pageSize)
+                      .Take(pageSize)
+                      .ToList(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = accounts.Count()
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading customer accounts");
+                TempData["ErrorMessage"] = "Error loading customer accounts.";
+                return View(new CustomerAccountsViewModel());
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleAccountStatus(int accountId, bool activate)
+        {
+            try
+            {
+                var account = await _unitOfWork.Accounts.GetByIdAsync(accountId);
+                if (account == null)
+                {
+                    TempData["ErrorMessage"] = "Account not found.";
+                    return RedirectToAction("CustomerAccounts");
+                }
+
+                if (!HasAccessToBranch(account.BranchId))
+                {
+                    TempData["ErrorMessage"] = "Access denied.";
+                    return RedirectToAction("CustomerAccounts");
+                }
+
+                account.IsActive = activate;
+                await _unitOfWork.Accounts.UpdateAsync(account);
+
+                AddAuditLog($"Account {(activate ? "activated" : "deactivated")}", 
+                    $"IsActive: {!activate}", $"IsActive: {activate}");
+
+                TempData["SuccessMessage"] = $"Account {(activate ? "activated" : "deactivated")} successfully.";
+                return RedirectToAction("CustomerAccounts");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling account status");
+                TempData["ErrorMessage"] = "Error toggling account status.";
+                return RedirectToAction("CustomerAccounts");
+            }
+        }
+
+        // User Management
+        [HttpGet]
+        public async Task<IActionResult> UserManagement(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                var users = await _unitOfWork.Users.GetUsersByBranchAsync(userInfo.BranchId);
+
+                var viewModel = new UserManagementViewModel
+                {
+                    Users = users.Select(u => new UserViewModel
+                    {
+                        Id = u.Id,
+                        Username = u.Username,
+                        Role = u.Role.ToString(),
+                        FullName = "N/A", // Add full name to User entity if needed
+                        IsActive = u.IsActive,
+                        IsLocked = u.IsLocked,
+                        LastLogin = u.LastLogin
+                    }).Skip((page - 1) * pageSize)
+                      .Take(pageSize)
+                      .ToList(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = users.Count()
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user management");
+                TempData["ErrorMessage"] = "Error loading user management.";
+                return View(new UserManagementViewModel());
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleUserStatus(int userId, bool activate)
+        {
+            try
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    TempData["ErrorMessage"] = "User not found.";
+                    return RedirectToAction("UserManagement");
+                }
+
+                if (!HasAccessToBranch(user.BranchId))
+                {
+                    TempData["ErrorMessage"] = "Access denied.";
+                    return RedirectToAction("UserManagement");
+                }
+
+                user.IsActive = activate;
+                await _unitOfWork.Users.UpdateAsync(user);
+
+                AddAuditLog($"User {(activate ? "activated" : "deactivated")}", 
+                    $"IsActive: {!activate}", $"IsActive: {activate}");
+
+                TempData["SuccessMessage"] = $"User {(activate ? "activated" : "deactivated")} successfully.";
+                return RedirectToAction("UserManagement");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling user status");
+                TempData["ErrorMessage"] = "Error toggling user status.";
+                return RedirectToAction("UserManagement");
+            }
+        }
+
+        // Reports
+        [HttpGet]
+        public IActionResult GenerateStatement()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateStatement(StatementRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.UserId = userInfo.Id;
+
+                var query = new GetCustomerStatementQuery(request);
+                var result = await _mediator.Send(query);
+
+                if (result.IsSuccess)
+                {
+                    // Generate PDF
+                    var pdfBytes = await GenerateStatementPdf(result.Value);
+                    
+                    AddAuditLog("Statement generated", null, 
+                        $"Account: {request.AccountNumber}, From: {request.FromDate}, To: {request.ToDate}");
+                    
+                    return File(pdfBytes, "application/pdf", 
+                        $"Statement_{request.AccountNumber}_{DateTime.Now:yyyyMMdd}.pdf");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating statement");
+                ModelState.AddModelError("", "Error generating statement.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public IActionResult GenerateFinancialStatement()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateFinancialStatement(FinancialStatementRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.BranchId = userInfo.BranchId;
+
+                var query = new GetFinancialStatementQuery(request);
+                var result = await _mediator.Send(query);
+
+                if (result.IsSuccess)
+                {
+                    // Generate PDF
+                    var pdfBytes = await GenerateFinancialStatementPdf(result.Value);
+                    
+                    AddAuditLog("Financial statement generated", null, 
+                        $"Date: {request.Date}");
+                    
+                    return File(pdfBytes, "application/pdf", 
+                        $"FinancialStatement_{userInfo.BranchId}_{request.Date:yyyyMMdd}.pdf");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating financial statement");
+                ModelState.AddModelError("", "Error generating financial statement.");
+                return View(request);
+            }
+        }
+
+        // Helper Methods
+        private async Task<byte[]> GenerateStatementPdf(Application.DTOs.Reports.StatementResponse statement)
+        {
+            var document = new StatementPdfDocument(statement);
+            return document.GeneratePdf();
+        }
+
+        private async Task<byte[]> GenerateFinancialStatementPdf(FinancialStatementResponse statement)
+        {
+            var document = new FinancialStatementPdfDocument(statement);
+            return document.GeneratePdf();
+        }
+    }
+
+    // ViewModels
+    public class AdminDashboardViewModel
+    {
+        public UserInfo UserInfo { get; set; } = new();
+        public int UnpostedTransactionCount { get; set; }
+        public decimal TotalCashInDrawers { get; set; }
+        public List<Domain.Entities.GLHead> GLHeads { get; set; } = new();
+        public List<Domain.Entities.CashDrawer> CashDrawers { get; set; } = new();
+    }
+
+    public class PreGLCheckViewModel
+    {
+        public List<TransactionViewModel> Transactions { get; set; } = new();
+    }
+
+    public class TransactionViewModel
+    {
+        public int Id { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public string AccountNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class CustomerAccountsViewModel
+    {
+        public List<AccountViewModel> Accounts { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class AccountViewModel
+    {
+        public int Id { get; set; }
+        public string AccountNumber { get; set; } = string.Empty;
+        public string CustomerName { get; set; } = string.Empty;
+        public string AccountType { get; set; } = string.Empty;
+        public decimal Balance { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class UserManagementViewModel
+    {
+        public List<UserViewModel> Users { get; set; } = new();
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class UserViewModel
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool IsLocked { get; set; }
+        public DateTime? LastLogin { get; set; }
+    }
+
+    public class FinancialStatementRequest
+    {
+        public DateTime Date { get; set; }
+        public int BranchId { get; set; }
+    }
+}
+```
+
+## ৮. Auditor Controller
+
+### AuditorController.cs
+```csharp
+using CBS_MultiBranch.Application.DTOs.GL;
+using CBS_MultiBranch.Application.DTOs.Reports;
+using CBS_MultiBranch.Application.Features.GL.Commands;
+using CBS_MultiBranch.Application.Features.Reports.Queries;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CBS_MultiBranch.Web.Controllers
+{
+    [Authorize(Roles = "Auditor")]
+    public class AuditorController : BaseController
+    {
+        private readonly IMediator _mediator;
+
+        public AuditorController(
+            IMediator mediator,
+            IUnitOfWork unitOfWork,
+            ILogger<AuditorController> logger)
+            : base(unitOfWork, logger)
+        {
+            _mediator = mediator;
+        }
+
+        // Dashboard
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+
+                // Get recent reconciliation logs
+                var reconLogs = await GetRecentReconciliationLogs(userInfo.BranchId);
+
+                // Get recent audit logs
+                var auditLogs = await GetRecentAuditLogs(userInfo.BranchId);
+
+                var viewModel = new AuditorDashboardViewModel
+                {
+                    UserInfo = userInfo,
+                    RecentReconciliations = reconLogs,
+                    RecentAuditLogs = auditLogs,
+                    PendingReconciliations = reconLogs.Count(r => r.Status == "Mismatch")
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading auditor dashboard");
+                TempData["ErrorMessage"] = "Error loading dashboard.";
+                return View(new AuditorDashboardViewModel());
+            }
+        }
+
+        // Audit Logs
+        [HttpGet]
+        public async Task<IActionResult> AuditLogs(DateTime? fromDate = null, DateTime? toDate = null, 
+            int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                fromDate ??= DateTime.Today.AddDays(-7);
+                toDate ??= DateTime.Today;
+
+                var logs = await _unitOfWork.AuditLogs.GetLogsByBranchAsync(
+                    userInfo.BranchId, fromDate.Value, toDate.Value);
+
+                var viewModel = new AuditLogsViewModel
+                {
+                    Logs = logs.Select(l => new AuditLogViewModel
+                    {
+                        Id = l.Id,
+                        Action = l.Action,
+                        UserName = l.User?.Username ?? "System",
+                        OldValue = l.OldValue,
+                        NewValue = l.NewValue,
+                        CreatedAt = l.CreatedAt
+                    }).Skip((page - 1) * pageSize)
+                      .Take(pageSize)
+                      .ToList(),
+                    FromDate = fromDate.Value,
+                    ToDate = toDate.Value,
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = logs.Count()
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading audit logs");
+                TempData["ErrorMessage"] = "Error loading audit logs.";
+                return View(new AuditLogsViewModel());
+            }
+        }
+
+        // Reconciliation
+        [HttpGet]
+        public IActionResult Reconcile()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Reconcile(ReconciliationRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.BranchId = userInfo.BranchId;
+                request.AuditorId = userInfo.Id;
+                request.ReconDate = DateTime.UtcNow;
+
+                var command = new ReconcileBranchCommand(request);
+                var result = await _mediator.Send(command);
+
+                if (result.IsSuccess)
+                {
+                    AddAuditLog("Reconciliation performed", null, 
+                        $"Matched: {result.Value.IsMatched}, Issues: {result.Value.Issues.Count}");
+                    
+                    if (result.Value.IsMatched)
+                    {
+                        TempData["SuccessMessage"] = "Reconciliation successful! All accounts are matched.";
+                    }
+                    else
+                    {
+                        TempData["WarningMessage"] = $"Reconciliation completed with issues: {string.Join(", ", result.Value.Issues)}";
+                    }
+                }
+                else
+                {
+                    TempData["ErrorMessage"] = result.Error;
+                }
+
+                return View("ReconciliationResult", result.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error performing reconciliation");
+                TempData["ErrorMessage"] = "Error performing reconciliation.";
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ReconciliationHistory(DateTime? fromDate = null, 
+            DateTime? toDate = null, int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+                fromDate ??= DateTime.Today.AddDays(-30);
+                toDate ??= DateTime.Today;
+
+                var logs = await GetReconciliationLogs(userInfo.BranchId, fromDate.Value, toDate.Value);
+
+                var viewModel = new ReconciliationHistoryViewModel
+                {
+                    Logs = logs.Skip((page - 1) * pageSize)
+                              .Take(pageSize)
+                              .ToList(),
+                    FromDate = fromDate.Value,
+                    ToDate = toDate.Value,
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = logs.Count
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading reconciliation history");
+                TempData["ErrorMessage"] = "Error loading reconciliation history.";
+                return View(new ReconciliationHistoryViewModel());
+            }
+        }
+
+        // Reports
+        [HttpGet]
+        public IActionResult GenerateTrialBalance()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateTrialBalance(TrialBalanceRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return View(request);
+                }
+
+                var userInfo = GetCurrentUserInfo();
+                request.BranchId = userInfo.BranchId;
+                request.AuditorId = userInfo.Id;
+
+                var query = new GetTrialBalanceQuery(request);
+                var result = await _mediator.Send(query);
+
+                if (result.IsSuccess)
+                {
+                    // Generate PDF
+                    var pdfBytes = await GenerateTrialBalancePdf(result.Value);
+                    
+                    AddAuditLog("Trial balance generated", null, 
+                        $"Date: {request.Date}, Balanced: {result.Value.IsBalanced}");
+                    
+                    return File(pdfBytes, "application/pdf", 
+                        $"TrialBalance_{userInfo.BranchId}_{request.Date:yyyyMMdd}.pdf");
+                }
+
+                ModelState.AddModelError("", result.Error);
+                return View(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating trial balance");
+                ModelState.AddModelError("", "Error generating trial balance.");
+                return View(request);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GenerateReconciliationReport(DateTime date)
+        {
+            try
+            {
+                var userInfo = GetCurrentUserInfo();
+
+                // Get reconciliation data for the date
+                var reconData = await GetReconciliationData(userInfo.BranchId, date);
+
+                // Generate PDF report
+                var pdfBytes = await GenerateReconciliationPdf(reconData);
+
+                AddAuditLog("Reconciliation report generated", null, $"Date: {date}");
+
+                return File(pdfBytes, "application/pdf", 
+                    $"ReconciliationReport_{userInfo.BranchId}_{date:yyyyMMdd}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating reconciliation report");
+                TempData["ErrorMessage"] = "Error generating reconciliation report.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+
+        // Helper Methods
+        private async Task<List<ReconciliationLogViewModel>> GetRecentReconciliationLogs(int branchId)
+        {
+            var logs = await _unitOfWork.ReconciliationLogs.GetAllAsync();
+            return logs.Where(l => l.BranchId == branchId)
+                       .OrderByDescending(l => l.ReconDate)
+                       .Take(10)
+                       .Select(l => new ReconciliationLogViewModel
+                       {
+                           Id = l.Id,
+                           ReconDate = l.ReconDate,
+                           GLCode = l.GLCode,
+                           GLBalance = l.GLBalance,
+                           SLTotalBalance = l.SLTotalBalance,
+                           Difference = l.Difference,
+                           Status = l.Status.ToString()
+                       }).ToList();
+        }
+
+        private async Task<List<AuditLogViewModel>> GetRecentAuditLogs(int branchId)
+        {
+            var logs = await _unitOfWork.AuditLogs.GetLogsByBranchAsync(
+                branchId, DateTime.Today.AddDays(-1), DateTime.Today);
+            
+            return logs.OrderByDescending(l => l.CreatedAt)
+                       .Take(10)
+                       .Select(l => new AuditLogViewModel
+                       {
+                           Id = l.Id,
+                           Action = l.Action,
+                           UserName = l.User?.Username ?? "System",
+                           OldValue = l.OldValue,
+                           NewValue = l.NewValue,
+                           CreatedAt = l.CreatedAt
+                       }).ToList();
+        }
+
+        private async Task<List<ReconciliationLogViewModel>> GetReconciliationLogs(int branchId, 
+            DateTime fromDate, DateTime toDate)
+        {
+            var logs = await _unitOfWork.ReconciliationLogs.GetAllAsync();
+            return logs.Where(l => l.BranchId == branchId 
+                                && l.ReconDate >= fromDate 
+                                && l.ReconDate <= toDate)
+                       .OrderByDescending(l => l.ReconDate)
+                       .Select(l => new ReconciliationLogViewModel
+                       {
+                           Id = l.Id,
+                           ReconDate = l.ReconDate,
+                           GLCode = l.GLCode,
+                           GLBalance = l.GLBalance,
+                           SLTotalBalance = l.SLTotalBalance,
+                           Difference = l.Difference,
+                           Status = l.Status.ToString()
+                       }).ToList();
+        }
+
+        private async Task<ReconciliationData> GetReconciliationData(int branchId, DateTime date)
+        {
+            // Implement logic to get reconciliation data
+            return new ReconciliationData();
+        }
+
+        private async Task<byte[]> GenerateTrialBalancePdf(TrialBalanceResponse trialBalance)
+        {
+            var document = new TrialBalancePdfDocument(trialBalance);
+            return document.GeneratePdf();
+        }
+
+        private async Task<byte[]> GenerateReconciliationPdf(ReconciliationData data)
+        {
+            var document = new ReconciliationReportPdfDocument(data);
+            return document.GeneratePdf();
+        }
+    }
+
+    // ViewModels
+    public class AuditorDashboardViewModel
+    {
+        public UserInfo UserInfo { get; set; } = new();
+        public List<ReconciliationLogViewModel> RecentReconciliations { get; set; } = new();
+        public List<AuditLogViewModel> RecentAuditLogs { get; set; } = new();
+        public int PendingReconciliations { get; set; }
+    }
+
+    public class AuditLogsViewModel
+    {
+        public List<AuditLogViewModel> Logs { get; set; } = new();
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class AuditLogViewModel
+    {
+        public long Id { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string? OldValue { get; set; }
+        public string? NewValue { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class ReconciliationHistoryViewModel
+    {
+        public List<ReconciliationLogViewModel> Logs { get; set; } = new();
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public int PageNumber { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+    }
+
+    public class ReconciliationLogViewModel
+    {
+        public long Id { get; set; }
+        public DateTime ReconDate { get; set; }
+        public int GLCode { get; set; }
+        public decimal GLBalance { get; set; }
+        public decimal SLTotalBalance { get; set; }
+        public decimal Difference { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class ReconciliationData
+    {
+        // Define reconciliation data structure
+    }
+}
+```
+
+## ৯. PDF Generation Services
+
+### StatementPdfDocument.cs
+```csharp
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using CBS_MultiBranch.Application.DTOs.Reports;
+
+namespace CBS_MultiBranch.Web.Services
+{
+    public class StatementPdfDocument : IDocument
+    {
+        private readonly StatementResponse _statement;
+
+        public StatementPdfDocument(StatementResponse statement)
+        {
+            _statement = statement;
+        }
+
+        public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
+
+        public void Compose(IDocumentContainer container)
+        {
+            container.Page(page =>
+            {
+                page.Margin(50);
+                
+                page.Header().Element(ComposeHeader);
+                page.Content().Element(ComposeContent);
+                page.Footer().AlignCenter().Text(text =>
+                {
+                    text.CurrentPageNumber();
+                    text.Span(" / ");
+                    text.TotalPages();
+                });
+            });
+        }
+
+        private void ComposeHeader(IContainer container)
+        {
+            container.Row(row =>
+            {
+                row.RelativeItem().Column(column =>
+                {
+                    column.Item().Text("Customer Account Statement")
+                        .FontSize(20).Bold().FontColor(Colors.Blue.Medium);
+
+                    column.Item().Text(text =>
+                    {
+                        text.Span("Generated on: ").SemiBold();
+                        text.Span($"{DateTime.Now:dd MMMM yyyy HH:mm}");
+                    });
+
+                    column.Item().PaddingTop(10).BorderBottom(1).BorderColor(Colors.Grey.Lighten2);
+                });
+            });
+        }
+
+        private void ComposeContent(IContainer container)
+        {
+            container.PaddingVertical(20).Column(column =>
+            {
+                // Account Information
+                column.Item().Element(ComposeAccountInfo);
+                column.Item().PaddingTop(20).Element(ComposeStatementTable);
+                column.Item().PaddingTop(20).Element(ComposeSummary);
+            });
+        }
+
+        private void ComposeAccountInfo(IContainer container)
+        {
+            container.Background(Colors.Grey.Lighten3).Padding(15).Column(column =>
+            {
+                column.Item().Text("Account Information").Bold().FontSize(14);
+                
+                column.Item().Grid(grid =>
+                {
+                    grid.Columns(4);
+                    
+                    grid.Item().Text("Account Number:").SemiBold();
+                    grid.Item(3).Text(_statement.Account.AccountNumber);
+                    
+                    grid.Item().Text("Account Type:").SemiBold();
+                    grid.Item(3).Text(_statement.Account.AccountType);
+                    
+                    grid.Item().Text("Customer Name:").SemiBold();
+                    grid.Item(3).Text(_statement.Customer.FullName);
+                    
+                    grid.Item().Text("NID Number:").SemiBold();
+                    grid.Item(3).Text(_statement.Customer.NIDNumber);
+                    
+                    grid.Item().Text("Branch:").SemiBold();
+                    grid.Item(3).Text($"{_statement.Branch.BranchCode} - {_statement.Branch.BranchName}");
+                });
+            });
+        }
+
+        private void ComposeStatementTable(IContainer container)
+        {
+            container.Table(table =>
+            {
+                // Define columns
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(25); // Serial
+                    columns.RelativeColumn(2); // Date
+                    columns.RelativeColumn(3); // Description
+                    columns.RelativeColumn(2); // Reference
+                    columns.RelativeColumn(2); // Debit
+                    columns.RelativeColumn(2); // Credit
+                    columns.RelativeColumn(2); // Balance
+                });
+
+                // Header
+                table.Header(header =>
+                {
+                    header.Cell().Element(CellStyle).Text("#").SemiBold();
+                    header.Cell().Element(CellStyle).Text("Date").SemiBold();
+                    header.Cell().Element(CellStyle).Text("Description").SemiBold();
+                    header.Cell().Element(CellStyle).Text("Reference").SemiBold();
+                    header.Cell().Element(CellStyle).AlignRight().Text("Debit").SemiBold();
+                    header.Cell().Element(CellStyle).AlignRight().Text("Credit").SemiBold();
+                    header.Cell().Element(CellStyle).AlignRight().Text("Balance").SemiBold();
+
+                    static IContainer CellStyle(IContainer container)
+                    {
+                        return container.DefaultTextStyle(x => x.SemiBold())
+                            .PaddingVertical(5)
+                            .BorderBottom(1)
+                            .BorderColor(Colors.Black);
+                    }
+                });
+
+                // Rows
+                int serial = 1;
+                foreach (var item in _statement.Items)
+                {
+                    table.Cell().Element(CellStyle).Text(serial++.ToString());
+                    table.Cell().Element(CellStyle).Text(item.Date.ToString("dd/MM/yyyy"));
+                    table.Cell().Element(CellStyle).Text(item.Description);
+                    table.Cell().Element(CellStyle).Text(item.Reference);
+                    table.Cell().Element(CellStyle).AlignRight().Text(item.Debit.ToString("N2"));
+                    table.Cell().Element(CellStyle).AlignRight().Text(item.Credit.ToString("N2"));
+                    table.Cell().Element(CellStyle).AlignRight().Text(item.Balance.ToString("N2"));
+
+                    static IContainer CellStyle(IContainer container)
+                    {
+                        return container.BorderBottom(1)
+                            .BorderColor(Colors.Grey.Lighten2)
+                            .PaddingVertical(5);
+                    }
+                }
+            });
+        }
+
+        private void ComposeSummary(IContainer container)
+        {
+            container.Background(Colors.Grey.Lighten3).Padding(15).Column(column =>
+            {
+                column.Item().Text("Statement Summary").Bold().FontSize(14);
+                
+                column.Item().Grid(grid =>
+                {
+                    grid.Columns(4);
+                    
+                    grid.Item().Text("Opening Balance:").SemiBold();
+                    grid.Item().AlignRight().Text(_statement.OpeningBalance.ToString("N2"));
+                    
+                    grid.Item().Text("Total Deposits:").SemiBold();
+                    grid.Item().AlignRight().Text(_statement.TotalDeposits.ToString("N2"));
+                    
+                    grid.Item().Text("Total Withdrawals:").SemiBold();
+                    grid.Item().AlignRight().Text(_statement.TotalWithdrawals.ToString("N2"));
+                    
+                    grid.Item().Text("Closing Balance:").SemiBold().FontColor(Colors.Blue.Medium);
+                    grid.Item().AlignRight().Text(_statement.ClosingBalance.ToString("N2")).FontColor(Colors.Blue.Medium);
+                });
+                
+                column.Item().PaddingTop(10).BorderTop(1).BorderColor(Colors.Grey.Lighten2);
+            });
+        }
+
+        public byte[] GeneratePdf()
+        {
+            return this.GeneratePdf();
+        }
+    }
+}
+```
+
+## ১০. Views Structure (Razor Views)
+
+### Views/Shared/_Layout.cshtml
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CBS Multi Branch Banking</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                <i class="fas fa-university me-2"></i>CBS Banking System
+            </a>
+            
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        @if (User.IsInRole("Checker"))
+                        {
+                            <partial name="_CheckerMenu" />
+                        }
+                        else if (User.IsInRole("Maker"))
+                        {
+                            <partial name="_MakerMenu" />
+                        }
+                        else if (User.IsInRole("Admin"))
+                        {
+                            <partial name="_AdminMenu" />
+                        }
+                        else if (User.IsInRole("Auditor"))
+                        {
+                            <partial name="_AuditorMenu" />
+                        }
+                    </ul>
+                    
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                               data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i>
+                                @User.Identity.Name
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword">
+                                    <i class="fas fa-key me-2"></i>Change Password</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <div class="row">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="col-md-2">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (User.IsInRole("Checker"))
+                            {
+                                <partial name="_CheckerSidebar" />
+                            }
+                            else if (User.IsInRole("Maker"))
+                            {
+                                <partial name="_MakerSidebar" />
+                            }
+                            else if (User.IsInRole("Admin"))
+                            {
+                                <partial name="_AdminSidebar" />
+                            }
+                            else if (User.IsInRole("Auditor"))
+                            {
+                                <partial name="_AuditorSidebar" />
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            
+            <div class="@(User.Identity?.IsAuthenticated == true ? "col-md-10" : "col-md-12")">
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                
+                @if (TempData["WarningMessage"] != null)
+                {
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["WarningMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                <main role="main">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-top footer text-muted mt-4">
+        <div class="container">
+            &copy; @DateTime.Now.Year - CBS Multi Branch Banking System - 
+            <span class="text-muted">Double Entry Accounting</span>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+```
+
+### Views/Account/Login.cshtml
+```html
+@model CBS_MultiBranch.Application.DTOs.Auth.LoginRequest
+
+@{
+    ViewData["Title"] = "Login - CBS Banking System";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0;
+            padding: 30px;
+            text-align: center;
+        }
+        .login-body {
+            padding: 30px;
+        }
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px;
+            width: 100%;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-university fa-3x mb-3"></i>
+            <h3>CBS Banking System</h3>
+            <p class="mb-0">Multi Branch - Double Entry Accounting</p>
+        </div>
+        
+        <div class="login-body">
+            <form asp-action="Login" method="post">
+                @Html.AntiForgeryToken()
+                
+                <div class="mb-3">
+                    <label asp-for="Username" class="form-label">
+                        <i class="fas fa-user me-2"></i>Username
+                    </label>
+                    <input asp-for="Username" class="form-control" placeholder="Enter username" />
+                    <span asp-validation-for="Username" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">
+                        <i class="fas fa-lock me-2"></i>Password
+                    </label>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="Enter password" />
+                    <span asp-validation-for="Password" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3">
+                    <label asp-for="BranchCode" class="form-label">
+                        <i class="fas fa-building me-2"></i>Branch Code
+                    </label>
+                    <input asp-for="BranchCode" class="form-control" placeholder="Enter branch code" />
+                    <span asp-validation-for="BranchCode" class="text-danger"></span>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="rememberMe">
+                    <label class="form-check-label" for="rememberMe">Remember me</label>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-login">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </button>
+                </div>
+                
+                @if (ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="alert alert-danger mt-3">
+                        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+                    </div>
+                }
+            </form>
+            
+            <div class="text-center mt-3">
+                <p class="text-muted mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Role-based access control enabled
+                </p>
+                <small class="text-muted">
+                    Checker | Maker | Admin | Auditor
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>
+```
+
+## ১১. ব্যাখ্যা (বাংলায়)
+
+### Presentation লেয়ার কি করে?
+Presentation লেয়ার ব্যবহারকারীর সাথে ইন্টারঅ্যাকশনের জায়গা। এটি:
+
+1. **HTTP Requests গ্রহণ করে**
+2. **Commands/Queries execute করে**
+3. **Results UI তে দেখায়**
+4. **Authentication/Authorization handle করে**
+
+### Controller গুলোর কাজ:
+
+**১. AccountController:**
+- Login/Logout management
+- Password reset
+- Session management
+- Role-based redirection
+
+**২. CheckerController:**
+- Customer creation
+- Deposit/Withdrawal initiation
+- Daily reports
+- Cash drawer management
+
+**৩. MakerController:**
+- Customer approval/rejection
+- Transaction approval/rejection
+- View approved transactions
+
+**৪. AdminController:**
+- GL posting
+- User management
+- Customer account management
+- Financial reports
+
+**৫. AuditorController:**
+- Audit logs view
+- Reconciliation
+- Trial balance reports
+- System monitoring
+
+### Security Features:
+
+**১. Authentication:**
+- Cookie-based authentication
+- Session timeout (30 minutes)
+- Failed attempt tracking
+- Account locking (3 wrong attempts)
+
+**২. Authorization:**
+- Role-based access control
+- Branch-based access control
+- Policy-based authorization
+
+**৩. CSRF Protection:**
+- Anti-forgery tokens
+- Form validation
+
+### Workflow Examples:
+
+**১. Checker Deposit Workflow:**
+```
+Checker → Login → Dashboard → Deposit → Enter Details → Submit
+System → Validate → Create Transaction → Show Batch Number → Pending Maker Approval
+```
+
+**২. Maker Approval Workflow:**
+```
+Maker → Login → Dashboard → Pending Transactions → View Details → Approve/Reject
+System → Update Status → Update Account Balance → Create Sub-ledger Entry → Audit Log
+```
+
+**৩. Admin GL Posting Workflow:**
+```
+Admin → Login → Dashboard → GL Posting → Check Pending → Post GL
+System → Create GL Journal → Update GL Balances → Mark as Posted → Audit Log
+```
+
+### View Structure:
+```
+Views/
+├── Account/
+│   ├── Login.cshtml
+│   ├── ChangePassword.cshtml
+│   └── AccessDenied.cshtml
+├── Checker/
+│   ├── Dashboard.cshtml
+│   ├── CreateCustomer.cshtml
+│   ├── Deposit.cshtml
+│   ├── Withdraw.cshtml
+│   └── DailyReport.cshtml
+├── Maker/
+│   ├── Dashboard.cshtml
+│   ├── PendingCustomers.cshtml
+│   ├── PendingTransactions.cshtml
+│   └── ApprovedTransactions.cshtml
+├── Admin/
+│   ├── Dashboard.cshtml
+│   ├── GLPosting.cshtml
+│   ├── CustomerAccounts.cshtml
+│   └── UserManagement.cshtml
+├── Auditor/
+│   ├── Dashboard.cshtml
+│   ├── AuditLogs.cshtml
+│   ├── Reconcile.cshtml
+│   └── ReconciliationHistory.cshtml
+└── Shared/
+    ├── _Layout.cshtml
+    ├── _CheckerMenu.cshtml
+    ├── _MakerMenu.cshtml
+    ├── _AdminMenu.cshtml
+    └── _AuditorMenu.cshtml
+```
+
+### PDF Generation:
+- **QuestPDF** ব্যবহার করে PDF জেনারেশন
+- Professional looking reports
+- Custom formatting
+- Multi-page support
+
+### পরবর্তী ধাপ:
+1. CSS এবং JavaScript customization
+2. Real-time updates (SignalR)
+3. Email notifications
+4. Advanced search functionality
+5. Data export (Excel, CSV)
+6. Mobile responsive design
+
+এই Presentation লেয়ার সম্পূর্ণ কাজ করার জন্য প্রস্তুত। সব Controllers, Views এবং Services implement করা আছে।
+
+
+
