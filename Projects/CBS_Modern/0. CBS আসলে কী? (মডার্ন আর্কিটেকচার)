@@ -3,20 +3,6 @@
 
 
 
-===============================================================================
-                 ✅ Components/Services, I've used/designed
-===============================================================================
-
-- Clear separation of roles and responsibilities
-- Correct banking terminology (Initiated, Approved, Posted)
-- Explicit double-entry accounting flow
-- Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
-- Audit- and compliance-friendly
-- PDF reports (daily + statement + trial + financial)
-- Ready for real CBS simulation
-
-
-
 ####################################################################################### 
                  ✅  CBS আসলে কী? (মডার্ন আর্কিটেকচার)
 #######################################################################################
@@ -50,7 +36,17 @@ Double Entry rule: প্রতিটা txn এ কমপক্ষে ২টা
 
 
 
+===============================================================================
+                 ✅ Components/Services, I've used/designed
+===============================================================================
 
+- Clear separation of roles and responsibilities
+- Correct banking terminology (Initiated, Approved, Posted)
+- Explicit double-entry accounting flow
+- Built-in reconciliation controls (Sub-ledger ↔ GL, cash proof, trial balance)
+- Audit- and compliance-friendly
+- PDF reports (daily + statement + trial + financial)
+- Ready for real CBS simulation
 
 
 .
