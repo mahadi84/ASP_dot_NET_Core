@@ -1,0 +1,1582 @@
+
+# ইনফ্রাস্ট্রাকচার লেয়ারে Repository ইমপ্লিমেন্টেশন
+
+## ১. Infrastructure Project Structure
+
+প্রথমে Infrastructure লেয়ারের প্রোজেক্ট স্ট্রাকচার তৈরি করি:
+
+### CBS_MultiBranch.Infrastructure.csproj
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CBS_MultiBranch.Domain\CBS_MultiBranch.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
+```
+
+## ২. Database Context (ApplicationDbContext.cs)
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using CBS_MultiBranch.Domain.Entities;
+using System.Reflection;
+
+namespace CBS_MultiBranch.Infrastructure.Data
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        // ডিবি সেটগুলি
+        public DbSet<Branch> Branches { get; set; }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Account> Accounts { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<CashDrawer> CashDrawers { get; set; }
+        public DbSet<GLHead> GLHeads { get; set; }
+        public DbSet<SubLedgerEntry> SubLedgerEntries { get; set; }
+        public DbSet<GLJournal> GLJournals { get; set; }
+        public DbSet<GLJournalLine> GLJournalLines { get; set; }
+        public DbSet<ReconciliationLog> ReconciliationLogs { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<SystemControl> SystemControls { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // Fluent API কনফিগারেশন
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+            // Branch Configuration
+            modelBuilder.Entity<Branch>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BranchCode)
+                    .IsRequired()
+                    .HasMaxLength(10);
+                entity.Property(e => e.BranchName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.VaultBalance)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+                
+                entity.HasIndex(e => e.BranchCode)
+                    .IsUnique();
+            });
+
+            // User Configuration
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Username)
+                    .IsRequired()
+                    .HasMaxLength(50);
+                entity.Property(e => e.PasswordHash)
+                    .IsRequired()
+                    .HasMaxLength(255);
+                entity.Property(e => e.Role)
+                    .HasConversion<string>()
+                    .HasMaxLength(20);
+                entity.Property(e => e.FailedAttempts)
+                    .HasDefaultValue(0);
+                entity.Property(e => e.IsLocked)
+                    .HasDefaultValue(false);
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Users)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => e.Username)
+                    .IsUnique();
+            });
+
+            // Customer Configuration
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FullName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.NIDNumber)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Pending");
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Customers)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Creator)
+                    .WithMany(u => u.CreatedCustomers)
+                    .HasForeignKey(e => e.CreatedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => e.NIDNumber)
+                    .IsUnique();
+            });
+
+            // Account Configuration
+            modelBuilder.Entity<Account>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AccountNumber)
+                    .IsRequired()
+                    .HasMaxLength(5);
+                entity.Property(e => e.AccountType)
+                    .HasConversion<string>()
+                    .HasMaxLength(10);
+                entity.Property(e => e.Balance)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Accounts)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.Accounts)
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => e.AccountNumber)
+                    .IsUnique();
+            });
+
+            // Transaction Configuration
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.BatchNumber)
+                    .IsRequired()
+                    .HasMaxLength(20);
+                entity.Property(e => e.InstrumentType)
+                    .HasConversion<string>()
+                    .HasMaxLength(10);
+                entity.Property(e => e.TransactionType)
+                    .HasConversion<string>()
+                    .HasMaxLength(10);
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(20)
+                    .HasDefaultValue("Initiated");
+                entity.Property(e => e.IsGLPosted)
+                    .HasDefaultValue(false);
+                entity.Property(e => e.VersionNo)
+                    .HasDefaultValue(1);
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.Transactions)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Account)
+                    .WithMany(a => a.Transactions)
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Checker)
+                    .WithMany(u => u.CheckerTransactions)
+                    .HasForeignKey(e => e.CheckerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Maker)
+                    .WithMany(u => u.MakerTransactions)
+                    .HasForeignKey(e => e.MakerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => e.BatchNumber)
+                    .IsUnique();
+            });
+
+            // Concurrency Control (Optimistic Locking)
+            modelBuilder.Entity<Transaction>()
+                .Property(p => p.VersionNo)
+                .IsConcurrencyToken();
+
+            // CashDrawer Configuration
+            modelBuilder.Entity<CashDrawer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CurrentCash)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                entity.Property(e => e.LastUpdated)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.CashDrawers)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Checker)
+                    .WithOne(u => u.CashDrawer)
+                    .HasForeignKey<CashDrawer>(e => e.CheckerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => e.CheckerId)
+                    .IsUnique();
+            });
+
+            // GLHead Configuration
+            modelBuilder.Entity<GLHead>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.GLCode);
+                entity.Property(e => e.GLName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.GLType)
+                    .HasConversion<string>()
+                    .HasMaxLength(20);
+                entity.Property(e => e.CurrentBalance)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany(b => b.GLHeads)
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => new { e.BranchId, e.GLCode })
+                    .IsUnique();
+            });
+
+            // SubLedgerEntry Configuration
+            modelBuilder.Entity<SubLedgerEntry>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DrCrFlag)
+                    .HasConversion<string>()
+                    .HasMaxLength(2);
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.RunningBalance)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.EntryDate)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Transaction)
+                    .WithMany(t => t.SubLedgerEntries)
+                    .HasForeignKey(e => e.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Account)
+                    .WithMany(a => a.SubLedgerEntries)
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasIndex(e => new { e.AccountId, e.EntryDate });
+            });
+
+            // GLJournal Configuration
+            modelBuilder.Entity<GLJournal>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TotalDebit)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.TotalCredit)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Transaction)
+                    .WithOne(t => t.GLJournal)
+                    .HasForeignKey<GLJournal>(e => e.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // GLJournalLine Configuration
+            modelBuilder.Entity<GLJournalLine>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DebitAmount)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                entity.Property(e => e.CreditAmount)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0.00m);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.Transaction)
+                    .WithMany()
+                    .HasForeignKey(e => e.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.GLHead)
+                    .WithMany(g => g.GLJournalLines)
+                    .HasForeignKey(e => e.GLCodeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ReconciliationLog Configuration
+            modelBuilder.Entity<ReconciliationLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ReconDate)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.GLBalance)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.SLTotalBalance)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Difference)
+                    .HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status)
+                    .HasConversion<string>()
+                    .HasMaxLength(20);
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // AuditLog Configuration
+            modelBuilder.Entity<AuditLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Action)
+                    .IsRequired()
+                    .HasMaxLength(100);
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // SystemControl Configuration
+            modelBuilder.Entity<SystemControl>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.IsGLPostingRunning)
+                    .HasDefaultValue(false);
+            });
+        }
+    }
+}
+```
+
+## ৩. UnitOfWork Implementation
+
+```csharp
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class UnitOfWork : IUnitOfWork
+    {
+        private readonly ApplicationDbContext _context;
+        private IDbContextTransaction? _transaction;
+
+        // Repository instances
+        private ITransactionRepository? _transactions;
+        private ICustomerRepository? _customers;
+        private IAccountRepository? _accounts;
+        private IUserRepository? _users;
+        private IGLHeadRepository? _glHeads;
+        private ICashDrawerRepository? _cashDrawers;
+        private ISubLedgerRepository? _subLedgers;
+        private IGLJournalRepository? _glJournals;
+        private IAuditLogRepository? _auditLogs;
+
+        public UnitOfWork(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        // Repository Properties (Lazy Loading)
+        public ITransactionRepository Transactions => 
+            _transactions ??= new TransactionRepository(_context);
+        
+        public ICustomerRepository Customers => 
+            _customers ??= new CustomerRepository(_context);
+        
+        public IAccountRepository Accounts => 
+            _accounts ??= new AccountRepository(_context);
+        
+        public IUserRepository Users => 
+            _users ??= new UserRepository(_context);
+        
+        public IGLHeadRepository GLHeads => 
+            _glHeads ??= new GLHeadRepository(_context);
+        
+        public ICashDrawerRepository CashDrawers => 
+            _cashDrawers ??= new CashDrawerRepository(_context);
+        
+        public ISubLedgerRepository SubLedgers => 
+            _subLedgers ??= new SubLedgerRepository(_context);
+        
+        public IGLJournalRepository GLJournals => 
+            _glJournals ??= new GLJournalRepository(_context);
+        
+        public IAuditLogRepository AuditLogs => 
+            _auditLogs ??= new AuditLogRepository(_context);
+
+        public async Task<int> CompleteAsync()
+        {
+            try
+            {
+                return await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // Handle concurrency conflicts
+                foreach (var entry in ex.Entries)
+                {
+                    if (entry.Entity is Transaction transaction)
+                    {
+                        // Reload the database values
+                        await entry.ReloadAsync();
+                        
+                        // Update the entity with new values
+                        transaction.VersionNo++;
+                        
+                        // Try saving again
+                        await _context.SaveChangesAsync();
+                    }
+                }
+                throw;
+            }
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            _transaction = await _context.Database.BeginTransactionAsync();
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            _transaction?.Dispose();
+            _context.Dispose();
+        }
+    }
+}
+```
+
+## ৪. Repository Implementations
+
+### TransactionRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class TransactionRepository : ITransactionRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public TransactionRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Transaction?> GetByIdAsync(int id)
+        {
+            return await _context.Transactions
+                .Include(t => t.Account)
+                .Include(t => t.Checker)
+                .Include(t => t.Maker)
+                .Include(t => t.Branch)
+                .FirstOrDefaultAsync(t => t.Id == id);
+        }
+
+        public async Task<Transaction?> GetByBatchNumberAsync(string batchNumber)
+        {
+            return await _context.Transactions
+                .Include(t => t.Account)
+                .FirstOrDefaultAsync(t => t.BatchNumber == batchNumber);
+        }
+
+        public async Task<IEnumerable<Transaction>> GetPendingTransactionsAsync(int branchId)
+        {
+            return await _context.Transactions
+                .Where(t => t.BranchId == branchId && t.Status == TransactionStatus.Initiated)
+                .Include(t => t.Account)
+                .Include(t => t.Checker)
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Transaction>> GetApprovedUnpostedTransactionsAsync(int branchId)
+        {
+            return await _context.Transactions
+                .Where(t => t.BranchId == branchId 
+                    && t.Status == TransactionStatus.Approved 
+                    && !t.IsGLPosted)
+                .Include(t => t.Account)
+                .Include(t => t.Checker)
+                .Include(t => t.Maker)
+                .OrderBy(t => t.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Transaction> AddAsync(Transaction transaction)
+        {
+            _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+            return transaction;
+        }
+
+        public async Task UpdateAsync(Transaction transaction)
+        {
+            _context.Entry(transaction).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> GetTodayTransactionCountAsync(int branchId)
+        {
+            var today = DateTime.Today;
+            return await _context.Transactions
+                .Where(t => t.BranchId == branchId 
+                    && t.CreatedAt.Date == today)
+                .CountAsync();
+        }
+    }
+}
+```
+
+### CustomerRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class CustomerRepository : ICustomerRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public CustomerRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Customer?> GetByIdAsync(int id)
+        {
+            return await _context.Customers
+                .Include(c => c.Branch)
+                .Include(c => c.Creator)
+                .Include(c => c.Accounts)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }
+
+        public async Task<Customer?> GetByNIDAsync(string nid)
+        {
+            return await _context.Customers
+                .Include(c => c.Accounts)
+                .FirstOrDefaultAsync(c => c.NIDNumber == nid);
+        }
+
+        public async Task<Customer?> GetByAccountNumberAsync(string accountNumber)
+        {
+            return await _context.Customers
+                .Include(c => c.Accounts)
+                .FirstOrDefaultAsync(c => c.Accounts.Any(a => a.AccountNumber == accountNumber));
+        }
+
+        public async Task<IEnumerable<Customer>> GetPendingCustomersAsync(int branchId)
+        {
+            return await _context.Customers
+                .Where(c => c.BranchId == branchId && c.Status == CustomerStatus.Pending)
+                .Include(c => c.Creator)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Customer> AddAsync(Customer customer)
+        {
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+            return customer;
+        }
+
+        public async Task UpdateAsync(Customer customer)
+        {
+            _context.Entry(customer).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+### AccountRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class AccountRepository : IAccountRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public AccountRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Account?> GetByIdAsync(int id)
+        {
+            return await _context.Accounts
+                .Include(a => a.Customer)
+                .Include(a => a.Branch)
+                .FirstOrDefaultAsync(a => a.Id == id);
+        }
+
+        public async Task<Account?> GetByAccountNumberAsync(string accountNumber)
+        {
+            return await _context.Accounts
+                .Include(a => a.Customer)
+                .Include(a => a.Branch)
+                .FirstOrDefaultAsync(a => a.AccountNumber == accountNumber);
+        }
+
+        public async Task<Account?> GetByCustomerIdAsync(int customerId)
+        {
+            return await _context.Accounts
+                .Include(a => a.Customer)
+                .FirstOrDefaultAsync(a => a.CustomerId == customerId);
+        }
+
+        public async Task<IEnumerable<Account>> GetAccountsByBranchAsync(int branchId)
+        {
+            return await _context.Accounts
+                .Where(a => a.BranchId == branchId && a.IsActive)
+                .Include(a => a.Customer)
+                .OrderBy(a => a.AccountNumber)
+                .ToListAsync();
+        }
+
+        public async Task<Account> AddAsync(Account account)
+        {
+            _context.Accounts.Add(account);
+            await _context.SaveChangesAsync();
+            return account;
+        }
+
+        public async Task UpdateAsync(Account account)
+        {
+            _context.Entry(account).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<decimal> GetTotalCustomerDepositsAsync(int branchId)
+        {
+            return await _context.Accounts
+                .Where(a => a.BranchId == branchId && a.IsActive)
+                .SumAsync(a => a.Balance);
+        }
+    }
+}
+```
+
+### UserRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public UserRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<User?> GetByIdAsync(int id)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .Include(u => u.CashDrawer)
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+        public async Task<User?> GetByUsernameAsync(string username)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .Include(u => u.CashDrawer)
+                .FirstOrDefaultAsync(u => u.Username == username);
+        }
+
+        public async Task<User?> GetByUsernameAndBranchAsync(string username, int branchId)
+        {
+            return await _context.Users
+                .Include(u => u.Branch)
+                .FirstOrDefaultAsync(u => u.Username == username && u.BranchId == branchId);
+        }
+
+        public async Task<IEnumerable<User>> GetUsersByBranchAsync(int branchId)
+        {
+            return await _context.Users
+                .Where(u => u.BranchId == branchId && u.IsActive)
+                .Include(u => u.Branch)
+                .OrderBy(u => u.Username)
+                .ToListAsync();
+        }
+
+        public async Task<User> AddAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+
+        public async Task UpdateAsync(User user)
+        {
+            _context.Entry(user).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> IsUsernameUniqueAsync(string username)
+        {
+            return !await _context.Users.AnyAsync(u => u.Username == username);
+        }
+    }
+}
+```
+
+### GLHeadRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class GLHeadRepository : IGLHeadRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public GLHeadRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<GLHead?> GetByIdAsync(int id)
+        {
+            return await _context.GLHeads
+                .Include(g => g.Branch)
+                .FirstOrDefaultAsync(g => g.Id == id);
+        }
+
+        public async Task<GLHead?> GetByCodeAsync(int branchId, int glCode)
+        {
+            return await _context.GLHeads
+                .FirstOrDefaultAsync(g => g.BranchId == branchId && g.GLCode == glCode);
+        }
+
+        public async Task<IEnumerable<GLHead>> GetGLHeadsByBranchAsync(int branchId)
+        {
+            return await _context.GLHeads
+                .Where(g => g.BranchId == branchId)
+                .OrderBy(g => g.GLCode)
+                .ToListAsync();
+        }
+
+        public async Task<GLHead> AddAsync(GLHead glHead)
+        {
+            _context.GLHeads.Add(glHead);
+            await _context.SaveChangesAsync();
+            return glHead;
+        }
+
+        public async Task UpdateAsync(GLHead glHead)
+        {
+            _context.Entry(glHead).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+### CashDrawerRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class CashDrawerRepository : ICashDrawerRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public CashDrawerRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<CashDrawer?> GetByCheckerIdAsync(int checkerId)
+        {
+            return await _context.CashDrawers
+                .Include(c => c.Branch)
+                .Include(c => c.Checker)
+                .FirstOrDefaultAsync(c => c.CheckerId == checkerId);
+        }
+
+        public async Task<CashDrawer?> GetByBranchAndCheckerAsync(int branchId, int checkerId)
+        {
+            return await _context.CashDrawers
+                .FirstOrDefaultAsync(c => c.BranchId == branchId && c.CheckerId == checkerId);
+        }
+
+        public async Task<IEnumerable<CashDrawer>> GetCashDrawersByBranchAsync(int branchId)
+        {
+            return await _context.CashDrawers
+                .Where(c => c.BranchId == branchId)
+                .Include(c => c.Checker)
+                .ToListAsync();
+        }
+
+        public async Task<CashDrawer> AddAsync(CashDrawer cashDrawer)
+        {
+            _context.CashDrawers.Add(cashDrawer);
+            await _context.SaveChangesAsync();
+            return cashDrawer;
+        }
+
+        public async Task UpdateAsync(CashDrawer cashDrawer)
+        {
+            _context.Entry(cashDrawer).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<decimal> GetTotalCashInDrawersAsync(int branchId)
+        {
+            return await _context.CashDrawers
+                .Where(c => c.BranchId == branchId)
+                .SumAsync(c => c.CurrentCash);
+        }
+    }
+}
+```
+
+### SubLedgerRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class SubLedgerRepository : ISubLedgerRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public SubLedgerRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IEnumerable<SubLedgerEntry>> GetEntriesByAccountAsync(
+            int accountId, DateTime fromDate, DateTime toDate)
+        {
+            return await _context.SubLedgerEntries
+                .Where(e => e.AccountId == accountId 
+                    && e.EntryDate >= fromDate 
+                    && e.EntryDate <= toDate)
+                .Include(e => e.Transaction)
+                .OrderBy(e => e.EntryDate)
+                .ToListAsync();
+        }
+
+        public async Task<SubLedgerEntry> AddAsync(SubLedgerEntry entry)
+        {
+            _context.SubLedgerEntries.Add(entry);
+            await _context.SaveChangesAsync();
+            return entry;
+        }
+
+        public async Task<decimal> GetAccountRunningBalanceAsync(int accountId)
+        {
+            var latestEntry = await _context.SubLedgerEntries
+                .Where(e => e.AccountId == accountId)
+                .OrderByDescending(e => e.EntryDate)
+                .FirstOrDefaultAsync();
+            
+            return latestEntry?.RunningBalance ?? 0;
+        }
+
+        public async Task<decimal> GetTotalSubLedgerBalanceAsync(int branchId)
+        {
+            // Get latest running balance for each account in the branch
+            var accountBalances = await _context.Accounts
+                .Where(a => a.BranchId == branchId && a.IsActive)
+                .Select(a => a.Balance)
+                .ToListAsync();
+            
+            return accountBalances.Sum();
+        }
+    }
+}
+```
+
+### GLJournalRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class GLJournalRepository : IGLJournalRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public GLJournalRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<GLJournal?> GetByTransactionIdAsync(int transactionId)
+        {
+            return await _context.GLJournals
+                .Include(j => j.GLJournalLines)
+                .ThenInclude(l => l.GLHead)
+                .FirstOrDefaultAsync(j => j.TransactionId == transactionId);
+        }
+
+        public async Task<IEnumerable<GLJournal>> GetJournalsByDateAsync(int branchId, DateTime date)
+        {
+            var startDate = date.Date;
+            var endDate = startDate.AddDays(1);
+            
+            return await _context.GLJournals
+                .Where(j => j.BranchId == branchId 
+                    && j.CreatedAt >= startDate 
+                    && j.CreatedAt < endDate)
+                .Include(j => j.GLJournalLines)
+                .ThenInclude(l => l.GLHead)
+                .OrderBy(j => j.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<GLJournal> AddAsync(GLJournal journal)
+        {
+            _context.GLJournals.Add(journal);
+            await _context.SaveChangesAsync();
+            return journal;
+        }
+
+        public async Task AddLineAsync(GLJournalLine line)
+        {
+            _context.GLJournalLines.Add(line);
+            await _context.SaveChangesAsync();
+        }
+    }
+}
+```
+
+### AuditLogRepository.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace CBS_MultiBranch.Infrastructure.Repositories
+{
+    public class AuditLogRepository : IAuditLogRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public AuditLogRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task AddAsync(AuditLog auditLog)
+        {
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IEnumerable<AuditLog>> GetLogsByBranchAsync(
+            int branchId, DateTime fromDate, DateTime toDate)
+        {
+            return await _context.AuditLogs
+                .Where(l => l.BranchId == branchId 
+                    && l.CreatedAt >= fromDate 
+                    && l.CreatedAt <= toDate)
+                .Include(l => l.User)
+                .OrderByDescending(l => l.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<AuditLog>> GetLogsByUserAsync(
+            int userId, DateTime fromDate, DateTime toDate)
+        {
+            return await _context.AuditLogs
+                .Where(l => l.UserId == userId 
+                    && l.CreatedAt >= fromDate 
+                    && l.CreatedAt <= toDate)
+                .Include(l => l.User)
+                .OrderByDescending(l => l.CreatedAt)
+                .ToListAsync();
+        }
+    }
+}
+```
+
+## ৫. Service Implementations
+
+### TransactionService.cs
+```csharp
+using CBS_MultiBranch.Domain.Entities;
+using CBS_MultiBranch.Domain.Events;
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Domain.Services;
+using CBS_MultiBranch.Domain.ValueObjects;
+
+namespace CBS_MultiBranch.Infrastructure.Services
+{
+    public class TransactionService : ITransactionService
+    {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuditLogRepository _auditLogRepository;
+
+        public TransactionService(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+            _auditLogRepository = unitOfWork.AuditLogs;
+        }
+
+        public async Task<Result<Transaction>> InitiateDepositAsync(
+            int accountId, decimal amount, int checkerId, string instrumentNumber = "")
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Get account and checker
+                var account = await _unitOfWork.Accounts.GetByIdAsync(accountId);
+                var checker = await _unitOfWork.Users.GetByIdAsync(checkerId);
+                
+                if (account == null)
+                    return Result<Transaction>.Failure("Account not found");
+                
+                if (checker == null)
+                    return Result<Transaction>.Failure("Checker not found");
+                
+                // Validate deposit rules
+                var errors = TransactionRules.ValidateDeposit(
+                    account.IsActive, amount, 100000, 1000000, 500000);
+                
+                if (errors.Any())
+                    return Result<Transaction>.Failure(string.Join(", ", errors));
+
+                // Generate batch number
+                var todayCount = await _unitOfWork.Transactions.GetTodayTransactionCountAsync(account.BranchId);
+                var batchNumber = BatchNumberGenerator.GenerateBatchNumber(
+                    account.BranchId, DateTime.Now, todayCount + 1);
+
+                // Create transaction
+                var transaction = new Transaction
+                {
+                    BranchId = account.BranchId,
+                    BatchNumber = batchNumber,
+                    AccountId = accountId,
+                    InstrumentType = InstrumentType.Cash,
+                    InstrumentNumber = instrumentNumber,
+                    TransactionType = TransactionType.Deposit,
+                    Amount = amount,
+                    Status = TransactionStatus.Initiated,
+                    CheckerId = checkerId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Transactions.AddAsync(transaction);
+
+                // Create audit log
+                await _auditLogRepository.AddAsync(new AuditLog
+                {
+                    BranchId = account.BranchId,
+                    UserId = checkerId,
+                    Action = $"Deposit initiated: {batchNumber}",
+                    OldValue = null,
+                    NewValue = $"Amount: {amount}, Account: {account.AccountNumber}"
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Raise domain event
+                DomainEvents.Raise(new TransactionInitiatedEvent(
+                    transaction.Id, batchNumber, amount, "Deposit"));
+
+                return Result<Transaction>.Success(transaction);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result<Transaction>.Failure($"Error initiating deposit: {ex.Message}");
+            }
+        }
+
+        public async Task<Result<Transaction>> InitiateWithdrawalAsync(
+            int accountId, decimal amount, int checkerId, string instrumentNumber = "")
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Get account, checker and cash drawer
+                var account = await _unitOfWork.Accounts.GetByIdAsync(accountId);
+                var checker = await _unitOfWork.Users.GetByIdAsync(checkerId);
+                var cashDrawer = await _unitOfWork.CashDrawers.GetByCheckerIdAsync(checkerId);
+                
+                if (account == null)
+                    return Result<Transaction>.Failure("Account not found");
+                
+                if (checker == null)
+                    return Result<Transaction>.Failure("Checker not found");
+                
+                if (cashDrawer == null)
+                    return Result<Transaction>.Failure("Cash drawer not found for checker");
+
+                // Validate withdrawal rules
+                var errors = TransactionRules.ValidateWithdrawal(
+                    account.IsActive, 
+                    account.Balance, 
+                    amount, 
+                    100000, // teller limit
+                    1000000, // branch limit
+                    500000, // per txn limit
+                    cashDrawer.CurrentCash);
+
+                if (errors.Any())
+                    return Result<Transaction>.Failure(string.Join(", ", errors));
+
+                // Generate batch number
+                var todayCount = await _unitOfWork.Transactions.GetTodayTransactionCountAsync(account.BranchId);
+                var batchNumber = BatchNumberGenerator.GenerateBatchNumber(
+                    account.BranchId, DateTime.Now, todayCount + 1);
+
+                // Create transaction
+                var transaction = new Transaction
+                {
+                    BranchId = account.BranchId,
+                    BatchNumber = batchNumber,
+                    AccountId = accountId,
+                    InstrumentType = InstrumentType.Cash,
+                    InstrumentNumber = instrumentNumber,
+                    TransactionType = TransactionType.Withdraw,
+                    Amount = amount,
+                    Status = TransactionStatus.Initiated,
+                    CheckerId = checkerId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _unitOfWork.Transactions.AddAsync(transaction);
+
+                // Create audit log
+                await _auditLogRepository.AddAsync(new AuditLog
+                {
+                    BranchId = account.BranchId,
+                    UserId = checkerId,
+                    Action = $"Withdrawal initiated: {batchNumber}",
+                    OldValue = null,
+                    NewValue = $"Amount: {amount}, Account: {account.AccountNumber}"
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Raise domain event
+                DomainEvents.Raise(new TransactionInitiatedEvent(
+                    transaction.Id, batchNumber, amount, "Withdraw"));
+
+                return Result<Transaction>.Success(transaction);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result<Transaction>.Failure($"Error initiating withdrawal: {ex.Message}");
+            }
+        }
+
+        public async Task<Result<bool>> ApproveTransactionAsync(
+            int transactionId, int makerId, string? remarks = null)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var transaction = await _unitOfWork.Transactions.GetByIdAsync(transactionId);
+                var maker = await _unitOfWork.Users.GetByIdAsync(makerId);
+                
+                if (transaction == null)
+                    return Result<bool>.Failure("Transaction not found");
+                
+                if (maker == null || maker.Role != UserRole.Maker)
+                    return Result<bool>.Failure("Only Maker can approve transactions");
+
+                // Update transaction
+                transaction.Status = TransactionStatus.Approved;
+                transaction.MakerId = makerId;
+                transaction.Remarks = remarks;
+                transaction.VersionNo++;
+
+                await _unitOfWork.Transactions.UpdateAsync(transaction);
+
+                // Update account balance based on transaction type
+                var account = await _unitOfWork.Accounts.GetByIdAsync(transaction.AccountId);
+                if (account != null)
+                {
+                    if (transaction.TransactionType == TransactionType.Deposit)
+                    {
+                        account.Balance += transaction.Amount;
+                    }
+                    else if (transaction.TransactionType == TransactionType.Withdraw)
+                    {
+                        account.Balance -= transaction.Amount;
+                        
+                        // Update cash drawer
+                        var cashDrawer = await _unitOfWork.CashDrawers.GetByCheckerIdAsync(transaction.CheckerId);
+                        if (cashDrawer != null)
+                        {
+                            cashDrawer.CurrentCash -= transaction.Amount;
+                            cashDrawer.LastUpdated = DateTime.UtcNow;
+                            await _unitOfWork.CashDrawers.UpdateAsync(cashDrawer);
+                        }
+                    }
+                    
+                    await _unitOfWork.Accounts.UpdateAsync(account);
+
+                    // Create sub-ledger entry
+                    var runningBalance = await _unitOfWork.SubLedgers.GetAccountRunningBalanceAsync(account.Id);
+                    var newRunningBalance = transaction.TransactionType == TransactionType.Deposit 
+                        ? runningBalance + transaction.Amount 
+                        : runningBalance - transaction.Amount;
+
+                    var subLedgerEntry = new SubLedgerEntry
+                    {
+                        BranchId = transaction.BranchId,
+                        TransactionId = transaction.Id,
+                        AccountId = account.Id,
+                        DrCrFlag = transaction.TransactionType == TransactionType.Deposit ? DrCrFlag.Cr : DrCrFlag.Dr,
+                        Amount = transaction.Amount,
+                        RunningBalance = newRunningBalance,
+                        EntryDate = DateTime.UtcNow
+                    };
+
+                    await _unitOfWork.SubLedgers.AddAsync(subLedgerEntry);
+                }
+
+                // Create audit log
+                await _auditLogRepository.AddAsync(new AuditLog
+                {
+                    BranchId = transaction.BranchId,
+                    UserId = makerId,
+                    Action = $"Transaction approved: {transaction.BatchNumber}",
+                    OldValue = $"Status: {TransactionStatus.Initiated}",
+                    NewValue = $"Status: {TransactionStatus.Approved}, Maker: {maker.Username}"
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Raise domain event
+                DomainEvents.Raise(new TransactionApprovedEvent(transaction.Id, makerId));
+
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result<bool>.Failure($"Error approving transaction: {ex.Message}");
+            }
+        }
+
+        public async Task<Result<bool>> RejectTransactionAsync(
+            int transactionId, int makerId, string reason)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var transaction = await _unitOfWork.Transactions.GetByIdAsync(transactionId);
+                var maker = await _unitOfWork.Users.GetByIdAsync(makerId);
+                
+                if (transaction == null)
+                    return Result<bool>.Failure("Transaction not found");
+                
+                if (maker == null || maker.Role != UserRole.Maker)
+                    return Result<bool>.Failure("Only Maker can reject transactions");
+
+                // Update transaction
+                transaction.Status = TransactionStatus.Rejected;
+                transaction.MakerId = makerId;
+                transaction.Remarks = reason;
+                transaction.VersionNo++;
+
+                await _unitOfWork.Transactions.UpdateAsync(transaction);
+
+                // Create audit log
+                await _auditLogRepository.AddAsync(new AuditLog
+                {
+                    BranchId = transaction.BranchId,
+                    UserId = makerId,
+                    Action = $"Transaction rejected: {transaction.BatchNumber}",
+                    OldValue = $"Status: {TransactionStatus.Initiated}",
+                    NewValue = $"Status: {TransactionStatus.Rejected}, Reason: {reason}"
+                });
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Raise domain event
+                DomainEvents.Raise(new TransactionRejectedEvent(transaction.Id, makerId, reason));
+
+                return Result<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result<bool>.Failure($"Error rejecting transaction: {ex.Message}");
+            }
+        }
+    }
+
+    // Domain Events Static Class
+    public static class DomainEvents
+    {
+        public static event Action<DomainEvent>? DomainEventOccurred;
+
+        public static void Raise(DomainEvent domainEvent)
+        {
+            DomainEventOccurred?.Invoke(domainEvent);
+        }
+    }
+}
+```
+
+## ৬. Dependency Injection Configuration
+
+```csharp
+using CBS_MultiBranch.Domain.Interfaces;
+using CBS_MultiBranch.Domain.Services;
+using CBS_MultiBranch.Infrastructure.Data;
+using CBS_MultiBranch.Infrastructure.Repositories;
+using CBS_MultiBranch.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace CBS_MultiBranch.Infrastructure
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddInfrastructure(
+            this IServiceCollection services, IConfiguration configuration)
+        {
+            // Database Configuration
+            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseMySql(connectionString, 
+                    ServerVersion.AutoDetect(connectionString),
+                    options => options.EnableRetryOnFailure()));
+
+            // Unit of Work
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            // Services
+            services.AddScoped<ITransactionService, TransactionService>();
+            services.AddScoped<IGLPostingService, GLPostingService>();
+            services.AddScoped<IReportService, ReportService>();
+
+            return services;
+        }
+    }
+}
+```
+
+## ৭. Migration Configuration
+
+```csharp
+// CBS_MultiBranch.Infrastructure/Migrations/InitialCreate.cs
+// Use EF Core Migrations commands:
+// dotnet ef migrations add InitialCreate
+// dotnet ef database update
+```
+
+## ৮. ব্যাখ্যা (বাংলায়)
+
+### ইনফ্রাস্ট্রাকচার লেয়ার কি করে?
+এই লেয়ার ডাটাবেসের সাথে যোগাযোগ করে। এটি Domain লেয়ারের বিমূর্ততা (abstractions) বাস্তবায়ন করে।
+
+### প্রধান উপাদানসমূহ:
+
+**১. ApplicationDbContext:**
+- Entity Framework Core এর DbContext
+- সব টেবিলের কনফিগারেশন
+- রিলেশনশিপ এবং ইনডেক্স ডিফাইন
+- কনকারেন্সি কন্ট্রোল (VersionNo)
+
+**২. UnitOfWork:**
+- সব Repository গুলোকে একসাথে ম্যানেজ করে
+- Transaction ব্যবস্থাপনা (Begin, Commit, Rollback)
+- Database অপারেশনগুলো atomic রাখে
+
+**৩. Repository Implementations:**
+- প্রতিটি Repository ইন্টারফেসের concrete implementation
+- Database queries (LINQ to SQL)
+- Include() দিয়ে related ডাটা লোড করা
+
+**৪. Service Implementations:**
+- Business logic বাস্তবায়ন
+- Transaction validation
+- Domain events raise করা
+- Audit logs রাখা
+
+**৫. Dependency Injection:**
+- সব সার্ভিস রেজিস্ট্রেশন
+- Database connection কনফিগারেশন
+
+### কিভাবে কাজ করে?
+
+1. **Checker** Deposit করতে চাইলে:
+   - TransactionService.InitiateDepositAsync() কল হয়
+   - Validation rules চেক হয়
+   - Batch number generate হয়
+   - Transaction টেবিলে রেকর্ড সেভ হয়
+   - Audit log তৈরি হয়
+
+2. **Maker** Approve করতে চাইলে:
+   - TransactionService.ApproveTransactionAsync() কল হয়
+   - Account balance update হয়
+   - Sub-ledger entry তৈরি হয়
+   - Cash drawer update হয় (withdrawal ক্ষেত্রে)
+
+3. **Atomicity নিশ্চিত করা:**
+   ```csharp
+   await _unitOfWork.BeginTransactionAsync();
+   try
+   {
+       // সব ডাটাবেস অপারেশন
+       await _unitOfWork.CommitTransactionAsync();
+   }
+   catch
+   {
+       await _unitOfWork.RollbackTransactionAsync();
+   }
+   ```
+
+### গুরুত্বপূর্ণ পয়েন্ট:
+
+1. **Repository Pattern**: ডাটা অ্যাক্সেস লজিক ক্যাপসুলেট করা
+2. **Unit of Work**: Transaction management
+3. **Dependency Injection**: Loose coupling
+4. **Entity Framework Core**: ORM হিসেবে
+5. **Concurrency Control**: VersionNo দিয়ে race condition প্রতিরোধ
+
+### পরবর্তী ধাপ:
+1. Application লেয়ারে Use Cases/Handlers
+2. Presentation লেয়ারে Controllers
+3. Authentication এবং Authorization
+4. PDF report generation
+
+এই Infrastructure লেয়ারটি সম্পূর্ণ কাজ করার জন্য প্রস্তুত। MySQL এর সাথে কাজ করবে এবং সব Business rules implement করেছে।
+
+
+
+
+.
