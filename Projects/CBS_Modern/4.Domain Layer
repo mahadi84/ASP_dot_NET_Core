@@ -1,5 +1,898 @@
 
 
+
+
+
+
+
+============================================================================
+                  DOMAIN LAYER 1- DeepSeek
+============================================================================
+
+# ডোমেন লেয়ার এর এন্টিটি এবং লজিক
+
+## ১. Domain Entities (Entity ফাইলগুলো)
+
+### Branch.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class Branch
+    {
+        public int Id { get; set; }
+        public string BranchCode { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public decimal VaultBalance { get; set; }
+        public bool IsActive { get; set; } = true;
+        
+        // Navigation Properties
+        public ICollection<User> Users { get; set; } = new List<User>();
+        public ICollection<Customer> Customers { get; set; } = new List<Customer>();
+        public ICollection<GLHead> GLHeads { get; set; } = new List<GLHead>();
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        public ICollection<CashDrawer> CashDrawers { get; set; } = new List<CashDrawer>();
+    }
+}
+```
+
+### User.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class User
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public UserRole Role { get; set; }
+        public int BranchId { get; set; }
+        public int FailedAttempts { get; set; }
+        public DateTime? LockUntil { get; set; }
+        public bool IsLocked { get; set; }
+        public bool IsActive { get; set; } = true;
+        public DateTime? LastLogin { get; set; }
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public ICollection<Customer> CreatedCustomers { get; set; } = new List<Customer>();
+        public ICollection<Transaction> CheckerTransactions { get; set; } = new List<Transaction>();
+        public ICollection<Transaction> MakerTransactions { get; set; } = new List<Transaction>();
+        public CashDrawer? CashDrawer { get; set; }
+    }
+    
+    public enum UserRole
+    {
+        Admin,
+        Maker,
+        Checker,
+        Auditor
+    }
+}
+```
+
+### Customer.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class Customer
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string NIDNumber { get; set; } = string.Empty;
+        public CustomerStatus Status { get; set; } = CustomerStatus.Pending;
+        public int? CreatedBy { get; set; }
+        public int? ApprovedBy { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public User? Creator { get; set; }
+        public ICollection<Account> Accounts { get; set; } = new List<Account>();
+    }
+    
+    public enum CustomerStatus
+    {
+        Pending,
+        Active,
+        Rejected
+    }
+}
+```
+
+### Account.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class Account
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int CustomerId { get; set; }
+        public string AccountNumber { get; set; } = string.Empty;
+        public AccountType AccountType { get; set; }
+        public decimal Balance { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsActive { get; set; } = true;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public Customer Customer { get; set; } = null!;
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        public ICollection<SubLedgerEntry> SubLedgerEntries { get; set; } = new List<SubLedgerEntry>();
+    }
+    
+    public enum AccountType
+    {
+        Savings = 111,
+        Current = 222
+    }
+}
+```
+
+### Transaction.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class Transaction
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public int AccountId { get; set; }
+        public InstrumentType InstrumentType { get; set; }
+        public string? InstrumentNumber { get; set; }
+        public TransactionType TransactionType { get; set; }
+        public decimal Amount { get; set; }
+        public TransactionStatus Status { get; set; } = TransactionStatus.Initiated;
+        public bool IsGLPosted { get; set; }
+        public int CheckerId { get; set; }
+        public int? MakerId { get; set; }
+        public string? Remarks { get; set; }
+        public int VersionNo { get; set; } = 1;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public Account Account { get; set; } = null!;
+        public User Checker { get; set; } = null!;
+        public User? Maker { get; set; }
+        public ICollection<SubLedgerEntry> SubLedgerEntries { get; set; } = new List<SubLedgerEntry>();
+        public GLJournal? GLJournal { get; set; }
+    }
+    
+    public enum InstrumentType
+    {
+        Cash,
+        Cheque
+    }
+    
+    public enum TransactionType
+    {
+        Deposit,
+        Withdraw
+    }
+    
+    public enum TransactionStatus
+    {
+        Initiated,
+        Approved,
+        Rejected
+    }
+}
+```
+
+### CashDrawer.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class CashDrawer
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int CheckerId { get; set; }
+        public decimal CurrentCash { get; set; }
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public User Checker { get; set; } = null!;
+    }
+}
+```
+
+### GLHead.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class GLHead
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int GLCode { get; set; }
+        public string GLName { get; set; } = string.Empty;
+        public GLType GLType { get; set; }
+        public decimal CurrentBalance { get; set; }
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public ICollection<GLJournalLine> GLJournalLines { get; set; } = new List<GLJournalLine>();
+    }
+    
+    public enum GLType
+    {
+        Asset,
+        Liability,
+        Equity,
+        Income,
+        Expense
+    }
+}
+```
+
+### SubLedgerEntry.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class SubLedgerEntry
+    {
+        public long Id { get; set; }
+        public int BranchId { get; set; }
+        public int TransactionId { get; set; }
+        public int AccountId { get; set; }
+        public DrCrFlag DrCrFlag { get; set; }
+        public decimal Amount { get; set; }
+        public decimal RunningBalance { get; set; }
+        public DateTime EntryDate { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public Transaction Transaction { get; set; } = null!;
+        public Account Account { get; set; } = null!;
+    }
+    
+    public enum DrCrFlag
+    {
+        Dr,
+        Cr
+    }
+}
+```
+
+### GLJournal.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class GLJournal
+    {
+        public long Id { get; set; }
+        public int TransactionId { get; set; }
+        public int BranchId { get; set; }
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public string? Narration { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Transaction Transaction { get; set; } = null!;
+        public Branch Branch { get; set; } = null!;
+        public ICollection<GLJournalLine> GLJournalLines { get; set; } = new List<GLJournalLine>();
+    }
+}
+```
+
+### GLJournalLine.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class GLJournalLine
+    {
+        public long Id { get; set; }
+        public int BranchId { get; set; }
+        public int TransactionId { get; set; }
+        public int GLCodeId { get; set; }
+        public decimal DebitAmount { get; set; }
+        public decimal CreditAmount { get; set; }
+        public string? Narration { get; set; }
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public Transaction Transaction { get; set; } = null!;
+        public GLHead GLHead { get; set; } = null!;
+    }
+}
+```
+
+### ReconciliationLog.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class ReconciliationLog
+    {
+        public long Id { get; set; }
+        public int BranchId { get; set; }
+        public DateTime ReconDate { get; set; }
+        public int GLCode { get; set; }
+        public decimal GLBalance { get; set; }
+        public decimal SLTotalBalance { get; set; }
+        public decimal Difference { get; set; }
+        public ReconStatus Status { get; set; }
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+    }
+    
+    public enum ReconStatus
+    {
+        Matched,
+        Mismatch
+    }
+}
+```
+
+### AuditLog.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class AuditLog
+    {
+        public long Id { get; set; }
+        public int BranchId { get; set; }
+        public int? UserId { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string? OldValue { get; set; }
+        public string? NewValue { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public Branch Branch { get; set; } = null!;
+        public User? User { get; set; }
+    }
+}
+```
+
+### SystemControl.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Entities
+{
+    public class SystemControl
+    {
+        public int Id { get; set; }
+        public bool IsGLPostingRunning { get; set; }
+        public DateOnly? LastEODDate { get; set; }
+    }
+}
+```
+
+## ২. Domain Value Objects (মান অবজেক্ট)
+
+### Result.cs - Global Carrier Result Pattern
+```csharp
+namespace CBS_MultiBranch.Domain.ValueObjects
+{
+    public class Result<T>
+    {
+        public bool IsSuccess { get; }
+        public T? Value { get; }
+        public string Error { get; }
+        public int ErrorCode { get; }
+
+        private Result(bool isSuccess, T? value, string error, int errorCode)
+        {
+            IsSuccess = isSuccess;
+            Value = value;
+            Error = error;
+            ErrorCode = errorCode;
+        }
+
+        public static Result<T> Success(T value) => new(true, value, string.Empty, 0);
+        public static Result<T> Failure(string error, int errorCode = 400) => new(false, default, error, errorCode);
+    }
+}
+```
+
+### ValidationRules.cs - ব্যবসায়িক নিয়মের ভ্যালিডেশন
+```csharp
+namespace CBS_MultiBranch.Domain.ValueObjects
+{
+    public static class TransactionRules
+    {
+        // Deposit Validation Rules
+        public static List<string> ValidateDeposit(bool isAccountActive, decimal amount, 
+            decimal tellerLimit, decimal branchLimit, decimal perTransactionLimit)
+        {
+            var errors = new List<string>();
+            
+            if (!isAccountActive)
+                errors.Add("Account is not active");
+            
+            if (amount <= 0)
+                errors.Add("Amount must be greater than zero");
+            
+            if (amount > perTransactionLimit)
+                errors.Add($"Amount exceeds per transaction limit of {perTransactionLimit}");
+            
+            if (amount > tellerLimit)
+                errors.Add($"Amount exceeds teller limit of {tellerLimit}");
+            
+            if (amount > branchLimit)
+                errors.Add($"Amount exceeds branch limit of {branchLimit}");
+            
+            return errors;
+        }
+
+        // Withdrawal Validation Rules
+        public static List<string> ValidateWithdrawal(bool isAccountActive, decimal availableBalance, 
+            decimal withdrawalAmount, decimal tellerLimit, decimal branchLimit, 
+            decimal perTransactionLimit, decimal cashDrawerBalance)
+        {
+            var errors = new List<string>();
+            
+            if (!isAccountActive)
+                errors.Add("Account is not active");
+            
+            if (withdrawalAmount > availableBalance)
+                errors.Add("Insufficient balance");
+            
+            if (withdrawalAmount > perTransactionLimit)
+                errors.Add($"Amount exceeds per transaction limit of {perTransactionLimit}");
+            
+            if (withdrawalAmount > tellerLimit)
+                errors.Add($"Amount exceeds teller limit of {tellerLimit}");
+            
+            if (withdrawalAmount > branchLimit)
+                errors.Add($"Amount exceeds branch limit of {branchLimit}");
+            
+            if (withdrawalAmount > cashDrawerBalance)
+                errors.Add("Cash drawer has insufficient cash. Vault transfer required");
+            
+            return errors;
+        }
+    }
+
+    public static class AccountNumberGenerator
+    {
+        public static string GenerateAccountNumber(int branchId, int customerId)
+        {
+            // Branch (2) + Customer Sequence (3) = 5 digits
+            var branchPart = branchId.ToString().PadLeft(2, '0');
+            var customerPart = customerId.ToString().PadLeft(3, '0');
+            return $"{branchPart}{customerPart}";
+        }
+    }
+
+    public static class BatchNumberGenerator
+    {
+        public static string GenerateBatchNumber(int branchId, DateTime date, int sequence)
+        {
+            // Format: BR001-20241215-001
+            var branchPart = $"BR{branchId.ToString().PadLeft(3, '0')}";
+            var datePart = date.ToString("yyyyMMdd");
+            var seqPart = sequence.ToString().PadLeft(3, '0');
+            return $"{branchPart}-{datePart}-{seqPart}";
+        }
+    }
+}
+```
+
+## ৩. Domain Events (ডোমেইন ইভেন্ট)
+
+### DomainEvent.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Events
+{
+    public abstract class DomainEvent
+    {
+        public DateTime OccurredOn { get; } = DateTime.UtcNow;
+        public string EventType { get; }
+        
+        protected DomainEvent(string eventType)
+        {
+            EventType = eventType;
+        }
+    }
+
+    // Transaction Events
+    public class TransactionInitiatedEvent : DomainEvent
+    {
+        public int TransactionId { get; }
+        public string BatchNumber { get; }
+        public decimal Amount { get; }
+        public string TransactionType { get; }
+        
+        public TransactionInitiatedEvent(int transactionId, string batchNumber, 
+            decimal amount, string transactionType) 
+            : base("TransactionInitiated")
+        {
+            TransactionId = transactionId;
+            BatchNumber = batchNumber;
+            Amount = amount;
+            TransactionType = transactionType;
+        }
+    }
+
+    public class TransactionApprovedEvent : DomainEvent
+    {
+        public int TransactionId { get; }
+        public int MakerId { get; }
+        
+        public TransactionApprovedEvent(int transactionId, int makerId) 
+            : base("TransactionApproved")
+        {
+            TransactionId = transactionId;
+            MakerId = makerId;
+        }
+    }
+
+    public class TransactionRejectedEvent : DomainEvent
+    {
+        public int TransactionId { get; }
+        public int MakerId { get; }
+        public string Reason { get; }
+        
+        public TransactionRejectedEvent(int transactionId, int makerId, string reason) 
+            : base("TransactionRejected")
+        {
+            TransactionId = transactionId;
+            MakerId = makerId;
+            Reason = reason;
+        }
+    }
+
+    // Customer Events
+    public class CustomerCreatedEvent : DomainEvent
+    {
+        public int CustomerId { get; }
+        public int CheckerId { get; }
+        
+        public CustomerCreatedEvent(int customerId, int checkerId) 
+            : base("CustomerCreated")
+        {
+            CustomerId = customerId;
+            CheckerId = checkerId;
+        }
+    }
+
+    public class CustomerApprovedEvent : DomainEvent
+    {
+        public int CustomerId { get; }
+        public int MakerId { get; }
+        
+        public CustomerApprovedEvent(int customerId, int makerId) 
+            : base("CustomerApproved")
+        {
+            CustomerId = customerId;
+            MakerId = makerId;
+        }
+    }
+
+    // GL Posting Events
+    public class GLPostedEvent : DomainEvent
+    {
+        public int TransactionId { get; }
+        public decimal DebitTotal { get; }
+        public decimal CreditTotal { get; }
+        
+        public GLPostedEvent(int transactionId, decimal debitTotal, decimal creditTotal) 
+            : base("GLPosted")
+        {
+            TransactionId = transactionId;
+            DebitTotal = debitTotal;
+            CreditTotal = creditTotal;
+        }
+    }
+}
+```
+
+## ৪. Domain Services (ডোমেইন সার্ভিস)
+
+### ITransactionService.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Services
+{
+    public interface ITransactionService
+    {
+        Task<Result<Transaction>> InitiateDepositAsync(
+            int accountId, 
+            decimal amount, 
+            int checkerId, 
+            string instrumentNumber = "");
+            
+        Task<Result<Transaction>> InitiateWithdrawalAsync(
+            int accountId, 
+            decimal amount, 
+            int checkerId, 
+            string instrumentNumber = "");
+            
+        Task<Result<bool>> ApproveTransactionAsync(
+            int transactionId, 
+            int makerId, 
+            string? remarks = null);
+            
+        Task<Result<bool>> RejectTransactionAsync(
+            int transactionId, 
+            int makerId, 
+            string reason);
+    }
+}
+```
+
+### IGLPostingService.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Services
+{
+    public interface IGLPostingService
+    {
+        Task<Result<bool>> PostGLForTransactionAsync(int transactionId, int adminId);
+        Task<Result<bool>> PostGLForBranchAsync(int branchId, int adminId);
+        Task<Result<decimal>> GetBranchTrialBalanceAsync(int branchId, DateTime date);
+        Task<Result<ReconciliationResult>> ReconcileBranchAsync(int branchId, DateTime date);
+    }
+    
+    public class ReconciliationResult
+    {
+        public decimal GLBalance2001 { get; set; } // Customer Deposits
+        public decimal SLTotalCustomers { get; set; }
+        public decimal GLBalance1001 { get; set; } // Cash
+        public decimal SLTotalCashDrawers { get; set; }
+        public bool IsMatched { get; set; }
+        public List<string> Mismatches { get; set; } = new();
+    }
+}
+```
+
+### IReportService.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Services
+{
+    public interface IReportService
+    {
+        Task<Result<CustomerStatement>> GenerateCustomerStatementAsync(
+            int accountId, 
+            DateTime fromDate, 
+            DateTime toDate);
+            
+        Task<Result<TrialBalanceReport>> GenerateTrialBalanceAsync(
+            int branchId, 
+            DateTime date);
+            
+        Task<Result<FinancialStatement>> GenerateFinancialStatementAsync(
+            int branchId, 
+            DateTime date);
+    }
+    
+    public class CustomerStatement
+    {
+        public Account Account { get; set; } = null!;
+        public List<StatementLine> Lines { get; set; } = new();
+        public decimal OpeningBalance { get; set; }
+        public decimal ClosingBalance { get; set; }
+    }
+    
+    public class StatementLine
+    {
+        public DateTime Date { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public decimal Balance { get; set; }
+    }
+    
+    public class TrialBalanceReport
+    {
+        public DateTime Date { get; set; }
+        public List<TrialBalanceLine> Lines { get; set; } = new();
+        public decimal TotalDebit { get; set; }
+        public decimal TotalCredit { get; set; }
+        public bool IsBalanced { get; set; }
+    }
+    
+    public class TrialBalanceLine
+    {
+        public string GLCode { get; set; } = string.Empty;
+        public string GLName { get; set; } = string.Empty;
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+    }
+    
+    public class FinancialStatement
+    {
+        public DateTime Date { get; set; }
+        public List<AssetLine> Assets { get; set; } = new();
+        public List<LiabilityLine> Liabilities { get; set; } = new();
+        public decimal TotalAssets { get; set; }
+        public decimal TotalLiabilities { get; set; }
+        public decimal Equity { get; set; }
+    }
+    
+    public class AssetLine
+    {
+        public string Account { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+    
+    public class LiabilityLine
+    {
+        public string Account { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+    }
+}
+```
+
+## ৫. Interfaces (Repository ইন্টারফেস)
+
+### IUnitOfWork.cs
+```csharp
+namespace CBS_MultiBranch.Domain.Interfaces
+{
+    public interface IUnitOfWork : IDisposable
+    {
+        ITransactionRepository Transactions { get; }
+        ICustomerRepository Customers { get; }
+        IAccountRepository Accounts { get; }
+        IUserRepository Users { get; }
+        IGLHeadRepository GLHeads { get; }
+        ICashDrawerRepository CashDrawers { get; }
+        ISubLedgerRepository SubLedgers { get; }
+        IGLJournalRepository GLJournals { get; }
+        IAuditLogRepository AuditLogs { get; }
+        
+        Task<int> CompleteAsync();
+        Task BeginTransactionAsync();
+        Task CommitTransactionAsync();
+        Task RollbackTransactionAsync();
+    }
+}
+```
+
+### IRepository Interfaces
+```csharp
+namespace CBS_MultiBranch.Domain.Interfaces
+{
+    public interface ITransactionRepository
+    {
+        Task<Transaction?> GetByIdAsync(int id);
+        Task<Transaction?> GetByBatchNumberAsync(string batchNumber);
+        Task<IEnumerable<Transaction>> GetPendingTransactionsAsync(int branchId);
+        Task<IEnumerable<Transaction>> GetApprovedUnpostedTransactionsAsync(int branchId);
+        Task<Transaction> AddAsync(Transaction transaction);
+        Task UpdateAsync(Transaction transaction);
+        Task<int> GetTodayTransactionCountAsync(int branchId);
+    }
+
+    public interface ICustomerRepository
+    {
+        Task<Customer?> GetByIdAsync(int id);
+        Task<Customer?> GetByNIDAsync(string nid);
+        Task<Customer?> GetByAccountNumberAsync(string accountNumber);
+        Task<IEnumerable<Customer>> GetPendingCustomersAsync(int branchId);
+        Task<Customer> AddAsync(Customer customer);
+        Task UpdateAsync(Customer customer);
+    }
+
+    public interface IAccountRepository
+    {
+        Task<Account?> GetByIdAsync(int id);
+        Task<Account?> GetByAccountNumberAsync(string accountNumber);
+        Task<Account?> GetByCustomerIdAsync(int customerId);
+        Task<IEnumerable<Account>> GetAccountsByBranchAsync(int branchId);
+        Task<Account> AddAsync(Account account);
+        Task UpdateAsync(Account account);
+        Task<decimal> GetTotalCustomerDepositsAsync(int branchId);
+    }
+
+    public interface IUserRepository
+    {
+        Task<User?> GetByIdAsync(int id);
+        Task<User?> GetByUsernameAsync(string username);
+        Task<User?> GetByUsernameAndBranchAsync(string username, int branchId);
+        Task<IEnumerable<User>> GetUsersByBranchAsync(int branchId);
+        Task<User> AddAsync(User user);
+        Task UpdateAsync(User user);
+        Task<bool> IsUsernameUniqueAsync(string username);
+    }
+
+    public interface IGLHeadRepository
+    {
+        Task<GLHead?> GetByIdAsync(int id);
+        Task<GLHead?> GetByCodeAsync(int branchId, int glCode);
+        Task<IEnumerable<GLHead>> GetGLHeadsByBranchAsync(int branchId);
+        Task<GLHead> AddAsync(GLHead glHead);
+        Task UpdateAsync(GLHead glHead);
+    }
+
+    public interface ICashDrawerRepository
+    {
+        Task<CashDrawer?> GetByCheckerIdAsync(int checkerId);
+        Task<CashDrawer?> GetByBranchAndCheckerAsync(int branchId, int checkerId);
+        Task<IEnumerable<CashDrawer>> GetCashDrawersByBranchAsync(int branchId);
+        Task<CashDrawer> AddAsync(CashDrawer cashDrawer);
+        Task UpdateAsync(CashDrawer cashDrawer);
+        Task<decimal> GetTotalCashInDrawersAsync(int branchId);
+    }
+
+    public interface ISubLedgerRepository
+    {
+        Task<IEnumerable<SubLedgerEntry>> GetEntriesByAccountAsync(int accountId, DateTime fromDate, DateTime toDate);
+        Task<SubLedgerEntry> AddAsync(SubLedgerEntry entry);
+        Task<decimal> GetAccountRunningBalanceAsync(int accountId);
+        Task<decimal> GetTotalSubLedgerBalanceAsync(int branchId);
+    }
+
+    public interface IGLJournalRepository
+    {
+        Task<GLJournal?> GetByTransactionIdAsync(int transactionId);
+        Task<IEnumerable<GLJournal>> GetJournalsByDateAsync(int branchId, DateTime date);
+        Task<GLJournal> AddAsync(GLJournal journal);
+        Task AddLineAsync(GLJournalLine line);
+    }
+
+    public interface IAuditLogRepository
+    {
+        Task AddAsync(AuditLog auditLog);
+        Task<IEnumerable<AuditLog>> GetLogsByBranchAsync(int branchId, DateTime fromDate, DateTime toDate);
+        Task<IEnumerable<AuditLog>> GetLogsByUserAsync(int userId, DateTime fromDate, DateTime toDate);
+    }
+}
+```
+
+## ৬. ব্যাখ্যা (বাংলায়)
+
+### ডোমেন লেয়ার কি?
+ডোমেন লেয়ার হল আপনার ব্যাংকিং সিস্টেমের হার্ট বা কোর। এখানে সকল ব্যবসায়িক নিয়ম (Business Rules), লজিক এবং এন্টিটিগুলো থাকে। এটি ডাটাবেস বা UI থেকে সম্পূর্ণ স্বাধীন।
+
+### কেন এই ডিজাইন?
+1. **ক্লিন আর্কিটেকচার**: প্রতিটি লেয়ার আলাদা, পরিবর্তন সহজ
+2. **মেইনটেইনেবল**: নতুন ফিচার যোগ করা সহজ
+3. **টেস্টেবল**: ইউনিট টেস্ট লেখা সহজ
+4. **স্কেলেবল**: মাল্টি-ব্রাঞ্চ সাপোর্ট
+
+### কিভাবে কাজ করে?
+1. **এন্টিটিগুলো** ডাটাবেস টেবিলের প্রতিনিধিত্ব করে
+2. **Value Objects** ব্যবসায়িক নিয়ম এবং ভ্যালিডেশন ধারণ করে
+3. **Domain Events** সিস্টেমে ঘটনা ট্র্যাক করে
+4. **Services** জটিল লজিক হ্যান্ডল করে
+5. **Interfaces** ডাটা অ্যাক্সেসের জন্য কন্ট্র্যাক্ট নির্ধারণ করে
+
+### গুরুত্বপূর্ণ পয়েন্ট:
+1. **Result<T> প্যাটার্ন**: সব অ্যাকশনের জন্য কমন সাফল্য/ব্যর্থতা রেসপন্স
+2. **Transaction Rules**: ডিপোজিট/উইথড্রয়ের সকল ভ্যালিডেশন
+3. **Domain Events**: অডিট ট্রেইল এবং নোটিফিকেশনের জন্য
+4. **Repository Pattern**: ডাটা অ্যাক্সেস আবদ্ধ রাখে
+
+### পরবর্তী ধাপ:
+1. ইনফ্রাস্ট্রাকচার লেয়ারে Repository ইমপ্লিমেন্টেশন
+2. অ্যাপ্লিকেশন লেয়ারে Use Cases/Handlers
+3. প্রেজেন্টেশন লেয়ারে Controllers এবং Views
+4. Database Context এবং Migrations
+
+এই ডোমেন লেয়ারটি কপি-পেস্ট করে সরাসরি ব্যবহার করতে পারেন। প্রতিটি ক্লাস এবং ইন্টারফেস সম্পূর্ণ এবং কাজ করার উপযোগী।
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+============================================================================
+                  DOMIAN LAYER 1 gmini
+============================================================================
+
  Domain Layer হবে আপনার সিস্টেমের প্রাণ। 
  টি ডাটাবেস টেবিল থেকে আলাদাভাবে কাজ করবে এবং ব্যাংকিংয়ের সকল কঠোর নিয়ম (Business Rules) নিশ্চিত করবে।
 
