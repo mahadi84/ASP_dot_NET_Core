@@ -5,23 +5,41 @@
 
 Here is my Multi-Branch Core Banking System with:
 
-01. Modules (14)
-02. Key Architectural Components(5) and 
-03. Module Interdependencies(3)
+01. Module Interdependencies(3)
+03. Modules (14)
+03. Key Architectural Components(5) and 
 
 
----------------
 
-## Total: 14 Core Modules
+########################################################################
+                    Module Interdependencies:
+########################################################################
+
+1. Transaction Flow: Checker → Maker → Sub-Ledger → General Ledger → Reconciliation
+2. User Hierarchy: HoSuperAdmin → BrAdmin → Maker → Checker → Customer
+3. Data Flow: Frontend → Business Logic → Database → Reporting → Audit
+
+
+
+
+
+########################################################################
+                  Total: 14 Core Modules
+########################################################################
+
+
 
 ### 1. User Management Module
 - User creation, editing, activation/deactivation
+- Prevent duplicate email entry for user
+- Hash password with Bycript
 - Password reset functionality
 - Failed login attempt management (3 wrong attempts → 5-minute lock)
 - Branch-wise user assignment
 
 ### 2. Customer Management Module
 - New customer registration (by Checker)
+- Prevent duplicate email entry for Customer
 - Customer approval/rejection (by Maker)
 - Customer activation/deactivation (by BrAdmin)
 - KYC information management
@@ -138,13 +156,6 @@ Here is my Multi-Branch Core Banking System with:
 
 ---
 
-########################################################################
-                    Module Interdependencies:
-########################################################################
-
-1. Transaction Flow: Checker → Maker → Sub-Ledger → General Ledger → Reconciliation
-2. User Hierarchy: HoSuperAdmin → BrAdmin → Maker → Checker → Customer
-3. Data Flow: Frontend → Business Logic → Database → Reporting → Audit
 
 
 
