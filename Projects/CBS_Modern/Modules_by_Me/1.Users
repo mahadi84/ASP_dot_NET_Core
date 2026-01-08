@@ -2,27 +2,41 @@ Date: 8 January 2026
 
 
 → Domain Layer
-  → User model with role(Checker, Maker,BrAdmin,HoSuperAdmin)
-  → Central message, show success / failed
+     → User model with role(Checker, Maker,BrAdmin,HoSuperAdmin)
+     → Central message, show success / failed
 
 → Application-Layer
-  → Interface
-   → Create
-   → Update
-   → Inactive
-   • No delete
+    → Interface
+         → Create
+         → Update
+         → Inactive
+             • No delete
 
 → Infrastructure-Layer
-  → Implement of IC, IV, IT
-  → DB-conn.
-  → EF installation here
+    → Implement of IC, IV, IT
+    → DB-conn.
+    → EF installation(DB,Tools, PDF)
 
 → Presentation-Layer
-  → ViewModel
-  → UserController
-  → View
-   → Create
-   → Show all (Update | Active | Inactive) → Search+Pagination
+    → ViewModel
+    → UserController
+    → View
+       → Create
+       → Show all (Update | Active | Inactive) → Search+Pagination
 
 
 -----------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+.
