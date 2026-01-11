@@ -1,5 +1,11 @@
 Date: 8 January 2026
 
+HoSuperAdmin: User create, Password Reset, Lock/Unloack, Active/Inactive for all branches.
+BranchAdmin: Branch Users Lock/Unloack only, GL Posting permited(end of the day)
+Checker: Customer Create, and Deposit/withdrawl posting as pending for customer
+Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approver
+
+
 
 → Domain Layer
      → User model with role(Checker, Maker,BrAdmin,HoSuperAdmin)
