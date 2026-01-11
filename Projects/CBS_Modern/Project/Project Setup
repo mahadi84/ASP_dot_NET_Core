@@ -61,7 +61,7 @@ dotnet new webapi   -n CBS.Web
 
 এখন সব project-কে solution-এ add করি: 
 যাতে CBS\CBS.sln, Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
-cd ..  ##main folder
+cd ..   # Go back to the main folder (CBS)
 
 dotnet sln CBS.sln add src\CBS.Domain\CBS.Domain.csproj
 dotnet sln CBS.sln add src\CBS.Application\CBS.Application.csproj
