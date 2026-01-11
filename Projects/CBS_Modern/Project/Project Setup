@@ -90,33 +90,33 @@ dotnet add src\CBS.Web reference src\CBS.Infrastructure
 `src` ফোল্ডারের ভিতর থেকে রান:
 cd D:\AsPdOtNeT\DotNet\CBS
 
-# Domain structure
-mkdir src\CBS.Domain\Entities  #folder Create
-@' ... '@ > src\CBS.Domain\Entities\BaseEntity.cs  #empty file create
+# Domain structure (folder+File Create)
+mkdir src\CBS.Domain\Entities  
+@' ... '@ > src\CBS.Domain\Entities\BaseEntity.cs  
 
 # Application structure
 mkdir src\CBS.Application\Interfaces
 mkdir src\CBS.Application\Services
 
-@' ... '@ > src\CBS.Application\Interfaces\FileName.cs  #empty file create
-@' ... '@ > src\CBS.Application\Services\FileName.cs  #empty file create
+@' ... '@ > src\CBS.Application\Interfaces\FileName.cs  
+@' ... '@ > src\CBS.Application\Services\FileName.cs  
 
 
 # Infrastructure structure
 mkdir src\CBS.Infrastructure\Persistence
 mkdir src\CBS.Infrastructure\Repositories
 
-@' ... '@ > src\CBS.Infrastructure\Persistence\FileName.cs  #empty file create
-@' ... '@ > src\CBS.Infrastructure\Repositories\FileName.cs  # empty file create
+@' ... '@ > src\CBS.Infrastructure\Persistence\FileName.cs  
+@' ... '@ > src\CBS.Infrastructure\Repositories\FileName.cs  
 
 # Web structure
 mkdir src\CBS.Web\Controllers
 mkdir src\CBS.Web\Models
 mkdir src\CBS.Web\Views
 
-@' ... '@ > src\CBS.Web\Controllers\FileController.cs  #empty file create
-@' ... '@ > src\CBS.Web\Models\ModelName.cs  #empty file create
-@' ... '@ > src\CBS.Web\Views\ModelName.cs  #empty file create
+@' ... '@ > src\CBS.Web\Controllers\FileController.cs 
+@' ... '@ > src\CBS.Web\Models\ModelName.cs  
+@' ... '@ > src\CBS.Web\Views\ModelName.cs 
 
 
 ---
