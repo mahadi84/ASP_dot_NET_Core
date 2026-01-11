@@ -6,7 +6,7 @@ Checker: Customer Create, and Deposit/withdrawl posting as pending for customer
 Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approver
 
 → Domain Layer(Entities and logics) 
-→ Application-Layer(neccesary Interface,Class and Logics)
+→ Application-Layer(Neccesary Interface, Class and Logics)
 → Infrastructure-Layer(Neccesary Classes, Entity Framwork)
 → Presentation-Layer(ViewModel, Controller, Views)
 
