@@ -58,13 +58,13 @@ dotnet new webapi   -n CBS.Web
 
 
 এখন সব project-কে solution-এ add করি: 
-যাতে CBS/CBS.sln, Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
+যাতে CBS\CBS.sln, Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
 cd ..  ##main folder
 
-dotnet sln CBS.sln add src/CBS.Domain\CBS.Domain.csproj
-dotnet sln CBS.sln add src/CBS.Application\CBS.Application.csproj
-dotnet sln CBS.sln add src/CBS.Infrastructure\CBS.Infrastructure.csproj
-dotnet sln CBS.sln add src/CBS.Web\CBS.Web.csproj
+dotnet sln CBS.sln add src\CBS.Domain\CBS.Domain.csproj
+dotnet sln CBS.sln add src\CBS.Application\CBS.Application.csproj
+dotnet sln CBS.sln add src\CBS.Infrastructure\CBS.Infrastructure.csproj
+dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 
 ---
@@ -72,12 +72,12 @@ dotnet sln CBS.sln add src/CBS.Web\CBS.Web.csproj
 ## 🔗 2. Project Reference
 # Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
 
-dotnet add src/CBS.Application reference src/CBS.Domain  # "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
-dotnet add src/CBS.Infrastructure reference src/CBS.Domain
-dotnet add src/CBS.Infrastructure reference src/CBS.Application
-dotnet add src/CBS.Web reference src/CBS.Domain
-dotnet add src/CBS.Web reference src/CBS.Application
-dotnet add src/CBS.Web reference src/CBS.Infrastructure
+dotnet add src\CBS.Application reference src\CBS.Domain  # "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
+dotnet add src\CBS.Infrastructure reference src\CBS.Domain
+dotnet add src\CBS.Infrastructure reference src\CBS.Application
+dotnet add src\CBS.Web reference src\CBS.Domain
+dotnet add src\CBS.Web reference src\CBS.Application
+dotnet add src\CBS.Web reference src\CBS.Infrastructure
 
 
 
@@ -87,32 +87,32 @@ dotnet add src/CBS.Web reference src/CBS.Infrastructure
 cd D:\AsPdOtNeT\DotNet\CBS
 
 # Domain structure
-mkdir src/CBS.Domain\Entities  #folder Create
-@' ... '@ > src/CBS.Domain\Entities\BaseEntity.cs  #empty file create
+mkdir src\CBS.Domain\Entities  #folder Create
+@' ... '@ > src\CBS.Domain\Entities\BaseEntity.cs  #empty file create
 
 # Application structure
-mkdir src/CBS.Application\Interfaces
-mkdir src/CBS.Application\Services
+mkdir src\CBS.Application\Interfaces
+mkdir src\CBS.Application\Services
 
-@' ... '@ > src/CBS.Application\Interfaces\FileName.cs  #empty file create
-@' ... '@ > src/CBS.Application\Services\FileName.cs  #empty file create
+@' ... '@ > src\CBS.Application\Interfaces\FileName.cs  #empty file create
+@' ... '@ > src\CBS.Application\Services\FileName.cs  #empty file create
 
 
 # Infrastructure structure
-mkdir src/CBS.Infrastructure\Persistence
-mkdir src/CBS.Infrastructure\Repositories
+mkdir src\CBS.Infrastructure\Persistence
+mkdir src\CBS.Infrastructure\Repositories
 
-@' ... '@ > src/CBS.Infrastructure\Persistence\FileName.cs  #empty file create
-@' ... '@ > src/CBS.Infrastructure\Repositories\FileName.cs  # empty file create
+@' ... '@ > src\CBS.Infrastructure\Persistence\FileName.cs  #empty file create
+@' ... '@ > src\CBS.Infrastructure\Repositories\FileName.cs  # empty file create
 
 # Web structure
-mkdir src/CBS.Web\Controllers
-mkdir src/CBS.Web\Models
-mkdir src/CBS.Web\Views
+mkdir src\CBS.Web\Controllers
+mkdir src\CBS.Web\Models
+mkdir src\CBS.Web\Views
 
-@' ... '@ > src/CBS.Web\Controllers\FileController.cs  #empty file create
-@' ... '@ > src/CBS.Web\Models\ModelName.cs  #empty file create
-@' ... '@ > src/CBS.Web\Views\ModelName.cs  #empty file create
+@' ... '@ > src\CBS.Web\Controllers\FileController.cs  #empty file create
+@' ... '@ > src\CBS.Web\Models\ModelName.cs  #empty file create
+@' ... '@ > src\CBS.Web\Views\ModelName.cs  #empty file create
 
 
 ---
@@ -121,12 +121,12 @@ mkdir src/CBS.Web\Views
 
 ## 4 NuGet Packages
 
-dotnet add src/CBS.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0      # MySQL ডাটাবেসের সাথে কানেক্ট করার জন্য এটি একটি জনপ্রিয় ডাটাবেস প্রোভাইডার।
-dotnet add src/CBS.Infrastructure package Microsoft.EntityFrameworkCore.Tools --version 9.0.0    # মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-dotnet add src/CBS.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
-dotnet add src/CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
-dotnet add src/CBS.Infrastructure package BCrypt.Net-Next                                        # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
-dotnet add src/CBS.Infrastructure package QuestPDF                                               # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
+dotnet add src\CBS.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0      # MySQL ডাটাবেসের সাথে কানেক্ট করার জন্য এটি একটি জনপ্রিয় ডাটাবেস প্রোভাইডার।
+dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Tools --version 9.0.0    # মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
+dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
+dotnet add src\CBS.Infrastructure package BCrypt.Net-Next                                        # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
+dotnet add src\CBS.Infrastructure package QuestPDF                                               # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
 
 
 
