@@ -63,10 +63,10 @@ dotnet new webapi   -n CBS.Web
 যাতে CBS\CBS.sln, Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
 cd ..  ##main folder
 
-dotnet sln src\CBS.sln add src\CBS.Domain\CBS.Domain.csproj
-dotnet sln src\CBS.sln add src\CBS.Application\CBS.Application.csproj
-dotnet sln src\CBS.sln add src\CBS.Infrastructure\CBS.Infrastructure.csproj
-dotnet sln src\CBS.sln add src\CBS.Web\CBS.Web.csproj
+dotnet sln CBS.sln add src\CBS.Domain\CBS.Domain.csproj
+dotnet sln CBS.sln add src\CBS.Application\CBS.Application.csproj
+dotnet sln CBS.sln add src\CBS.Infrastructure\CBS.Infrastructure.csproj
+dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 
 ---
