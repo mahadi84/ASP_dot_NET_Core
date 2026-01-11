@@ -27,3 +27,35 @@ Customer must be under a branch.
     → View
        → Create Customer Form,
        → Show all (Update | Active | Inactive) → Search+Pagination
+
+
+
+--------
+
+-- ১. এই টেবিলে ব্যাংকের প্রতিটি শাখার মৌলিক তথ্য এবং প্রধান ভল্টের ব্যালেন্স সংরক্ষিত থাকে।
+-- এটি হেড অফিসকে প্রতিটি শাখার নগদ টাকার প্রবাহ (Liquidity) পর্যবেক্ষণ করতে সাহায্য করে।
+-- সিস্টেমের প্রতিটি লেনদেন বা ইউজারের সাথে একটি নির্দিষ্ট শাখার আইডি যুক্ত করার জন্য এটি প্রধান রেফারেন্স।
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+
+
+-- ৪. গ্রাহকের নাম, এনআইডি এবং কেওয়াইসি (KYC) সম্পর্কিত তথ্য এই টেবিলে সংরক্ষিত থাকে।
+-- নতুন কাস্টমার এন্ট্রি করার পর মেকার অনুমোদন না করা পর্যন্ত তার স্ট্যাটাস 'Pending' থাকে।
+-- গ্রাহকের বৈধতা নিশ্চিত করতে এবং আইনি পরিপালন (Compliance) বজায় রাখতে এই টেবিলটি প্রয়োজন।
+CREATE TABLE customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    nid_number VARCHAR(20) UNIQUE NOT NULL,
+    status ENUM('Pending', 'Active', 'Rejected') DEFAULT 'Pending',
+    created_by INT,
+    approved_by INT,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
