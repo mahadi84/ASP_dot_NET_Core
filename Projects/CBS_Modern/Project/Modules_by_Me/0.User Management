@@ -31,7 +31,8 @@ Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approv
     → Implement of Audit_Log
     → View
        → Create, Login
-       → Show all (Update | Active | Inactive) → Search+Pagination
+       → Show all (Update | Active | Inactive| Password Reset) → Search+Pagination
+       → Update User, Password Reset
 
 
 -----------------------------------------------
