@@ -59,3 +59,668 @@ CREATE TABLE customers (
     FOREIGN KEY (branch_id) REFERENCES branches(id),
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
+
+
+######################################################################################################
+### Overview
+
+You want to build a **Customer Management Module** within the **Banking System** that ensures customers are linked to specific branches, have unique **NID numbers**, and go through an approval process managed by **Maker** and **Checker** roles. The module will track customer data such as name, NID, and status (e.g., Pending, Active, Rejected). Below is the detailed design for **Domain**, **Application**, **Infrastructure**, and **Presentation layers** of the system, along with the necessary database schema.
+
+---
+
+### 1) **Domain Layer** (Entities and Business Logic)
+
+#### 1.1) **Customer Entity**
+
+The `Customer` entity represents a customer in the banking system. It holds information like the customer’s **name**, **NID number**, **status**, and **linked branch**.
+
+```csharp
+namespace CBS.Domain.Customers.Entities
+{
+    public class Customer
+    {
+        public int Id { get; private set; }
+        public int BranchId { get; private set; }
+        public string FullName { get; private set; }
+        public string NIDNumber { get; private set; }
+        public CustomerStatus Status { get; private set; }
+        public int CreatedBy { get; private set; }
+        public int? ApprovedBy { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+
+        private Customer() { } // EF Core constructor
+
+        public Customer(string fullName, string nidNumber, int branchId, int createdBy)
+        {
+            SetFullName(fullName);
+            SetNIDNumber(nidNumber);
+            BranchId = branchId;
+            Status = CustomerStatus.Pending;
+            CreatedBy = createdBy;
+            CreatedAt = DateTime.UtcNow;
+        }
+
+        public void SetFullName(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName) || fullName.Length < 3)
+                throw new ArgumentException("Full Name must be at least 3 characters.");
+            FullName = fullName;
+        }
+
+        public void SetNIDNumber(string nidNumber)
+        {
+            if (string.IsNullOrWhiteSpace(nidNumber) || nidNumber.Length != 20)
+                throw new ArgumentException("NID number must be a valid 20-digit string.");
+            NIDNumber = nidNumber;
+        }
+
+        public void Approve(int approvedBy)
+        {
+            if (Status != CustomerStatus.Pending)
+                throw new InvalidOperationException("Only pending customers can be approved.");
+            Status = CustomerStatus.Active;
+            ApprovedBy = approvedBy;
+        }
+
+        public void Reject(int approvedBy)
+        {
+            if (Status != CustomerStatus.Pending)
+                throw new InvalidOperationException("Only pending customers can be rejected.");
+            Status = CustomerStatus.Rejected;
+            ApprovedBy = approvedBy;
+        }
+    }
+
+    public enum CustomerStatus
+    {
+        Pending,
+        Active,
+        Rejected
+    }
+}
+```
+
+#### 1.2) **Audit Log Entity**
+
+Every action on a `Customer` entity (e.g., **Approve**, **Reject**, **Create**) should be tracked using an **AuditLog**.
+
+```csharp
+namespace CBS.Domain.Audits.Entities
+{
+    public class AuditLog
+    {
+        public long Id { get; private set; }
+        public int BranchId { get; private set; }
+        public int? UserId { get; private set; }
+        public string Action { get; private set; }
+        public string? OldValue { get; private set; }
+        public string? NewValue { get; private set; }
+        public DateTime CreatedAt { get; private set; }
+
+        public AuditLog(int branchId, int? userId, string action, string? oldValue, string? newValue, DateTime createdAtUtc)
+        {
+            BranchId = branchId;
+            UserId = userId;
+            Action = action;
+            OldValue = oldValue;
+            NewValue = newValue;
+            CreatedAt = createdAtUtc;
+        }
+    }
+}
+```
+
+---
+
+### 2) **Application Layer** (Services and Business Logic)
+
+#### 2.1) **CreateCustomer Command**
+
+A command for creating a new customer. This will validate the customer’s name and NID number, and then persist the customer to the database.
+
+```csharp
+namespace CBS.Application.Customers.Commands
+{
+    public class CreateCustomer
+    {
+        public string FullName { get; }
+        public string NIDNumber { get; }
+        public int BranchId { get; }
+
+        public CreateCustomer(string fullName, string nidNumber, int branchId)
+        {
+            FullName = fullName;
+            NIDNumber = nidNumber;
+            BranchId = branchId;
+        }
+    }
+}
+```
+
+#### 2.2) **Customer Service**
+
+This service class handles all customer-related operations, including creating a new customer, approving/rejecting a customer, and generating audit logs.
+
+```csharp
+using CBS.Application.Customers.Commands;
+using CBS.Application.Customers.DTOs;
+using CBS.Domain.Customers.Entities;
+using CBS.Domain.Audits.Repositories;
+using CBS.Domain.Customers.Repositories;
+using CBS.Domain.Users.Repositories;
+using CBS.Domain.Common;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace CBS.Application.Customers.Services
+{
+    public class CustomerService
+    {
+        private readonly ICustomerRepository _customerRepository;
+        private readonly IAuditLogRepository _auditLogRepository;
+        private readonly IClock _clock;
+
+        public CustomerService(ICustomerRepository customerRepository, IAuditLogRepository auditLogRepository, IClock clock)
+        {
+            _customerRepository = customerRepository;
+            _auditLogRepository = auditLogRepository;
+            _clock = clock;
+        }
+
+        public async Task<Result<CustomerDto>> CreateCustomerAsync(CreateCustomer command, int actorUserId, CancellationToken ct)
+        {
+            var customer = new Customer(command.FullName, command.NIDNumber, command.BranchId, actorUserId);
+
+            await _customerRepository.AddAsync(customer, ct);
+            await _customerRepository.SaveChangesAsync(ct);
+
+            // Create audit log for customer creation
+            var auditLog = new AuditLog(command.BranchId, actorUserId, "Customer Created", null, customer.FullName, _clock.UtcNow);
+            await _auditLogRepository.AddAsync(auditLog, ct);
+            await _auditLogRepository.SaveChangesAsync(ct);
+
+            var customerDto = new CustomerDto(customer.Id, customer.FullName, customer.NIDNumber, customer.Status, customer.CreatedBy, customer.ApprovedBy, customer.CreatedAt);
+            return Result<CustomerDto>.Success(customerDto, "Customer successfully created.");
+        }
+
+        public async Task<Result<CustomerDto>> ApproveCustomerAsync(int customerId, int approvedBy, CancellationToken ct)
+        {
+            var customer = await _customerRepository.GetByIdAsync(customerId, ct);
+            if (customer == null)
+                return Result<CustomerDto>.Fail("Customer not found.", "USER_NOT_FOUND");
+
+            customer.Approve(approvedBy);
+            await _customerRepository.SaveChangesAsync(ct);
+
+            var auditLog = new AuditLog(customer.BranchId, approvedBy, "Customer Approved", "Pending", "Active", _clock.UtcNow);
+            await _auditLogRepository.AddAsync(auditLog, ct);
+            await _auditLogRepository.SaveChangesAsync(ct);
+
+            var customerDto = new CustomerDto(customer.Id, customer.FullName, customer.NIDNumber, customer.Status, customer.CreatedBy, customer.ApprovedBy, customer.CreatedAt);
+            return Result<CustomerDto>.Success(customerDto, "Customer approved.");
+        }
+
+        public async Task<Result<CustomerDto>> RejectCustomerAsync(int customerId, int approvedBy, CancellationToken ct)
+        {
+            var customer = await _customerRepository.GetByIdAsync(customerId, ct);
+            if (customer == null)
+                return Result<CustomerDto>.Fail("Customer not found.", "USER_NOT_FOUND");
+
+            customer.Reject(approvedBy);
+            await _customerRepository.SaveChangesAsync(ct);
+
+            var auditLog = new AuditLog(customer.BranchId, approvedBy, "Customer Rejected", "Pending", "Rejected", _clock.UtcNow);
+            await _auditLogRepository.AddAsync(auditLog, ct);
+            await _auditLogRepository.SaveChangesAsync(ct);
+
+            var customerDto = new CustomerDto(customer.Id, customer.FullName, customer.NIDNumber, customer.Status, customer.CreatedBy, customer.ApprovedBy, customer.CreatedAt);
+            return Result<CustomerDto>.Success(customerDto, "Customer rejected.");
+        }
+    }
+}
+```
+
+#### 2.3) **CustomerDto**
+
+This Data Transfer Object (DTO) is used to return customer information in a way that’s optimized for front-end use.
+
+```csharp
+namespace CBS.Application.Customers.DTOs
+{
+    public class CustomerDto
+    {
+        public int Id { get; }
+        public string FullName { get; }
+        public string NIDNumber { get; }
+        public CustomerStatus Status { get; }
+        public int CreatedBy { get; }
+        public int? ApprovedBy { get; }
+        public DateTime CreatedAt { get; }
+
+        public CustomerDto(int id, string fullName, string nidNumber, CustomerStatus status, int createdBy, int? approvedBy, DateTime createdAt)
+        {
+            Id = id;
+            FullName = fullName;
+            NIDNumber = nidNumber;
+            Status = status;
+            CreatedBy = createdBy;
+            ApprovedBy = approvedBy;
+            CreatedAt = createdAt;
+        }
+    }
+}
+```
+
+---
+
+### 3) **Infrastructure Layer** (Implementing Repositories)
+
+#### 3.1) **ICustomerRepository** (Interface)
+
+```csharp
+namespace CBS.Domain.Customers.Repositories
+{
+    public interface ICustomerRepository
+    {
+        Task<Customer?> GetByIdAsync(int id, CancellationToken ct);
+        Task<bool> NIDExistsAsync(string nidNumber, CancellationToken ct);
+        Task AddAsync(Customer customer, CancellationToken ct);
+        Task SaveChangesAsync(CancellationToken ct);
+    }
+}
+```
+
+#### 3.2) **CustomerRepository** (Implementation)
+
+```csharp
+namespace CBS.Infrastructure.Customers.Repositories
+{
+    public class CustomerRepository : ICustomerRepository
+    {
+        private readonly CbsDbContext _dbContext;
+
+        public CustomerRepository(CbsDbContext dbContext)
+        {
+            _dbContext = dbContext;
+        }
+
+        public async Task<Customer?> GetByIdAsync(int id, CancellationToken ct) =>
+            await _dbContext.Customers.FindAsync(new object[] { id }, ct);
+
+        public async Task<bool> NIDExistsAsync(string nidNumber, CancellationToken ct) =>
+            await _dbContext.Customers.AnyAsync(c => c.NIDNumber == nidNumber, ct);
+
+        public async Task AddAsync(Customer customer, CancellationToken ct) =>
+            await _dbContext.Customers.AddAsync(customer, ct);
+
+        public Task SaveChangesAsync(CancellationToken ct) =>
+            _dbContext.SaveChangesAsync(ct);
+    }
+}
+```
+
+---
+
+### 4) **Presentation Layer** (User Interface)
+
+#### 4.1) **CustomerController** (CRUD Actions)
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using CBS.Application.Customers.Commands;
+using CBS.Application.Customers.DTOs;
+using CBS.Application.Customers.Services;
+
+namespace CBS.Web.Controllers
+{
+    [Authorize]
+    public class CustomerController : Controller
+    {
+        private readonly CustomerService _customerService;
+
+        public CustomerController(CustomerService customerService)
+        {
+            _customerService = customerService;
+        }
+
+        // Create Customer
+        [HttpPost]
+        public async Task<IActionResult> Create(CreateCustomer command, CancellationToken ct)
+        {
+            var result = await _customerService.CreateCustomerAsync(command, User.FindFirstValue(ClaimTypes.NameIdentifier), ct);
+            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Approve Customer
+        [HttpPost]
+        public async Task<IActionResult> Approve(int id, CancellationToken ct)
+        {
+            var result = await _customerService.ApproveCustomerAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier), ct);
+            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        // Reject Customer
+        [HttpPost]
+        public async Task<IActionResult> Reject(int id, CancellationToken ct)
+        {
+            var result = await _customerService.RejectCustomerAsync(id, User.FindFirstValue(ClaimTypes.NameIdentifier), ct);
+            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public IActionResult Index() => View();
+    }
+}
+```
+
+
+
+
+
+################################################################################
+                        Customer Views
+################################################################################
+
+
+
+
+##### 0) **Customer Index View**
+
+This page lists customers with actions for approval, rejection, and search pagination.
+
+```html
+@model PagedResult<CustomerDto>
+
+<div class="container mt-4">
+    <h3 class="mb-4">Customer Management</h3>
+
+    @* Global Success/Error Messages *@
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form method="get" class="d-flex gap-2">
+        <input type="text" name="q" class="form-control" placeholder="Search by full name" value="@Request.Query["q"]" />
+        <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>NID Number</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var customer in Model.Items)
+        {
+            <tr>
+                <td>@customer.FullName</td>
+                <td>@customer.NIDNumber</td>
+                <td>@customer.Status</td>
+                <td>
+                    <form method="post" asp-controller="Customer" asp-action="Approve">
+                        <input type="hidden" name="id" value="@customer.Id" />
+                        <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                    </form>
+                    <form method="post" asp-controller="Customer" asp-action="Reject">
+                        <input type="hidden" name="id" value="@customer.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+```
+
+
+Apologies for the confusion earlier. Below are the full **views** you requested for the **Customer Management** module, including **Create Customer**, **Show All Customers**, **Update Customer**, and **Pagination with Search**.
+
+I'll provide the necessary views for each section, along with explanations:
+
+### 1) **Create Customer Form** (`Create.cshtml`)
+
+This form allows the creation of a new customer under a branch. This view will be displayed as a modal or a page, depending on how you choose to implement it in your controller.
+
+```html
+@using CBS.Application.Customers.Commands
+@model CreateCustomer
+
+<div class="container mt-4">
+    <h3 class="mb-4">Create Customer</h3>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form method="post" asp-controller="Customer" asp-action="Create">
+        @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Full Name</label>
+                <input name="FullName" class="form-control" required minlength="3" maxlength="100" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">NID Number</label>
+                <input name="NIDNumber" class="form-control" required minlength="10" maxlength="20" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Branch</label>
+                <select name="BranchId" class="form-select" required>
+                    <option value="1">Branch 1</option>
+                    <option value="2">Branch 2</option>
+                    <option value="3">Branch 3</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success">Create Customer</button>
+        </div>
+    </form>
+</div>
+```
+
+---
+
+### 2) **Show All Customers** with **Pagination** and **Search** (`Index.cshtml`)
+
+This view displays all customers in a table format with options to **Approve** and **Reject** them, as well as **search** and **paginate**.
+
+```html
+@model PagedResult<CustomerDto>
+
+<div class="container mt-4">
+    <h3 class="mb-4">Customer Management</h3>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form method="get" class="d-flex gap-2">
+        <input type="text" name="q" class="form-control" placeholder="Search by name or NID" value="@Request.Query["q"]" />
+        <button class="btn btn-primary" type="submit">Search</button>
+    </form>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>Full Name</th>
+                <th>NID Number</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var customer in Model.Items)
+        {
+            <tr>
+                <td>@customer.FullName</td>
+                <td>@customer.NIDNumber</td>
+                <td>@customer.Status</td>
+                <td>
+                    @if (customer.Status == "Pending")
+                    {
+                        <form method="post" asp-controller="Customer" asp-action="Approve" class="d-inline">
+                            <input type="hidden" name="id" value="@customer.Id" />
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        <form method="post" asp-controller="Customer" asp-action="Reject" class="d-inline">
+                            <input type="hidden" name="id" value="@customer.Id" />
+                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <span class="badge bg-@(customer.Status == "Active" ? "success" : "danger")">@customer.Status</span>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.Page - 1)">Previous</a>
+            </li>
+            @for (int i = 1; i <= Math.Ceiling((double)Model.TotalCount / Model.PageSize); i++)
+            {
+                <li class="page-item @(Model.Page == i ? "active" : "")">
+                    <a class="page-link" href="?page=@i">@i</a>
+                </li>
+            }
+            <li class="page-item @(Model.Page == Model.TotalCount / Model.PageSize ? "disabled" : "")">
+                <a class="page-link" href="?page=@(Model.Page + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+```
+
+---
+
+### 3) **Update Customer Modal** (`Update.cshtml`)
+
+This modal allows you to update the customer's information.
+
+```html
+<!-- Update Customer Modal -->
+<div class="modal fade" id="updateCustomerModal" tabindex="-1" aria-labelledby="updateCustomerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-controller="Customer" asp-action="Update">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="updateCustomerModalLabel">Update Customer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="updateCustomerId" />
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input name="FullName" id="updateFullName" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">NID Number</label>
+                        <input name="NIDNumber" id="updateNIDNumber" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Branch</label>
+                        <input name="BranchId" id="updateBranchId" class="form-control" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+```
+
+---
+
+### 4) **Reset Customer Password Modal** (`ResetPassword.cshtml`)
+
+```html
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-controller="Customer" asp-action="ResetPassword">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="resetPasswordModalLabel">Reset Customer Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="resetPasswordCustomerId" />
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <input name="NewPassword" class="form-control" required minlength="6" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+```
+
+---
+
+### Conclusion
+
+Here are all the **views** you need for the **Customer Management** module, including:
+
+* **Create Customer Form**
+* **Show All Customers with Search and Pagination**
+* **Update Customer Modal**
+* **Reset Password Modal**
+* **Approve/Reject Customer Actions**
+
+The **pagination** logic ensures that large lists of customers can be navigated easily. The **RBAC (Role-based access control)** logic ensures that only the correct users (e.g., **Maker**, **Checker**, **HoSuperAdmin**) can perform specific actions like approving or rejecting a customer.
+
+Let me know if you need further adjustments or other features!
+
