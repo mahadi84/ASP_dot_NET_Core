@@ -45,11 +45,13 @@ cd D:\AsPdOtNeT\DotNet
 mkdir CBS
 cd CBS
 
+dotnet new sln -n CBS
+
+
 mkdir src
 cd src
 
 
-dotnet new sln -n CBS
 
 dotnet new classlib -n CBS.Domain
 dotnet new classlib -n CBS.Application
