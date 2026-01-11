@@ -74,7 +74,7 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 ## 🔗 2. Project Reference
 # Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
 
-dotnet add src\CBS.Application reference src\CBS.Domain  # "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
+dotnet add src\CBS.Application reference src\CBS.Domain    ## "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
 dotnet add src\CBS.Infrastructure reference src\CBS.Domain
 dotnet add src\CBS.Infrastructure reference src\CBS.Application
 dotnet add src\CBS.Web reference src\CBS.Domain
