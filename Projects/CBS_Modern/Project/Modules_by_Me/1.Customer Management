@@ -1,1 +1,29 @@
 
+Customer Management:
+
+Customer must be under a branch.
+-Unique NID number
+
+
+→ Domain Layer
+     → User Entities with Business Logic for user and Audit_log
+
+→ Application-Layer
+    → Common global message, show success / failed
+    → Code for  Audit_Log
+    → Interface and DTO for
+         → Create
+         → Update
+         → Inactive
+
+→ Infrastructure-Layer
+    → Implement of Interfaces from Application-Layer and Audit_Log
+    → DB-conn.
+
+→ Presentation-Layer
+    → ViewModel
+    → CustomerController for CRUD
+    → Implement of Audit_Log
+    → View
+       → Create Customer Form,
+       → Show all (Update | Active | Inactive) → Search+Pagination
