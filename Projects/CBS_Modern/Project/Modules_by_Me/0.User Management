@@ -5,33 +5,32 @@ BranchAdmin: Branch Users Lock/Unloack only, GL Posting permited(end of the day)
 Checker: Customer Create, and Deposit/withdrawl posting as pending for customer
 Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approver
 
-→ Domain Layer(Entities and logics) 
-→ Application-Layer(Neccesary Interface, Class and Logics)
-→ Infrastructure-Layer(Neccesary Classes, Entity Framwork)
-→ Presentation-Layer(ViewModel, Controller, Views)
 
 
 → Domain Layer
-     → User model with role(Checker, Maker,BrAdmin,HoSuperAdmin)
-     → Central message, show success / failed
+     → User Entities with role(Checker, Maker,BrAdmin,HoSuperAdmin), Business Logic for user and Audit_log
 
 → Application-Layer
-    → Interface
+    → Common global message, show success / failed
+    → Services(password hash with bcrypt and reset, duplicate user check)
+    → Code for  Audit_Log
+    → Interface and DTO for
          → Create
          → Update
          → Inactive
-             • No delete
+             • soft delete
 
 → Infrastructure-Layer
-    → Implement of IC, IV, IT
+    → Implement of Interfaces from Application-Layer and Audit_Log
     → DB-conn.
     → EF installation(DB,Tools, PDF)
 
 → Presentation-Layer
     → ViewModel
-    → UserController
+    → UserController with CRUD and RBAC
+    → Implement of Audit_Log
     → View
-       → Create
+       → Create, Login
        → Show all (Update | Active | Inactive) → Search+Pagination
 
 
