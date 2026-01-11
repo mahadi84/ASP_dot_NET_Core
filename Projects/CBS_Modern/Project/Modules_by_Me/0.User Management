@@ -12,7 +12,7 @@ Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approv
 
 → Application-Layer
     → Common global message, show success / failed
-    → Services(password hash with bcrypt and reset, duplicate user check)
+    → Services(password hash with bcrypt and reset, 3time wrong password lock user for 5minutes, duplicate user check)
     → Code for  Audit_Log
     → Interface and DTO for
          → Create
