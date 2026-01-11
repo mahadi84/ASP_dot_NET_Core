@@ -1,0 +1,59 @@
+
+
+# 1) Project Create (Step-by-step)
+
+## 1.1 Solution + Projects
+
+```bash
+mkdir CBS
+cd CBS
+
+dotnet new sln -n CBS   # একটি .sln (solution file) ফাইল তৈরি করছে যা সব প্রজেক্টকে একসাথে ধরে রাখবে।
+mkdir src       # সোর্স কোড রাখার জন্য 'src' ফোল্ডার তৈরি করছে।
+cd src            
+
+
+# ৪টি আলাদা প্রজেক্ট (Layers)/Clean Architecture তৈরি 
+dotnet new classlib -n CBS.Domain            # এখানে Entities/Business Rules থাকবে।
+dotnet new classlib -n CBS.Application       # এখানে Business Logic, Interfaces, Services, Rules, Use-Cases থাকবে।
+dotnet new classlib -n CBS.Infrastructure    # এখানে Database connection এবং বাইরের সার্ভিসের কানেকশন(EF Core, PDF, Auth) থাকবে।
+dotnet new mvc -n CBS.Web                    # এখান Controllers / Views থাকবে। 
+
+
+
+# সলিউশনে প্রজেক্টগুলো যুক্ত করা
+# dotnet sln add ... কমান্ডগুলো প্রতিটি আলাদা প্রজেক্টকে আপনার মূল সলিউশন ফাইলের (CBS/CBS.sln) সাথে লিংক করে দিচ্ছে 
+# যাতে আপনি Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
+
+cd ..       #change directory .. কমান্ডটির মানে হলো বর্তমান ফোল্ডার থেকে এক ধাপ পেছনে বা এক স্তর ওপরে (CBS Folder)যাওয়া।
+dotnet sln add src/CBS.Domain/CBS.Domain.csproj
+dotnet sln add src/CBS.Application/CBS.Application.csproj
+dotnet sln add src/CBS.Infrastructure/CBS.Infrastructure.csproj
+dotnet sln add src/CBS.Web/CBS.Web.csproj
+
+
+# Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
+dotnet add src/CBS.Application reference src/CBS.Domain    # "Application লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
+dotnet add src/CBS.Infrastructure reference src/CBS.Domain
+dotnet add src/CBS.Infrastructure reference src/CBS.Application
+dotnet add src/CBS.Web reference src/CBS.Domain
+dotnet add src/CBS.Web reference src/CBS.Application
+dotnet add src/CBS.Web reference src/CBS.Infrastructure
+```
+
+## 1.2 NuGet Packages
+
+```bash
+dotnet add src/CBS.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0      # MySQL ডাটাবেসের সাথে কানেক্ট করার জন্য এটি একটি জনপ্রিয় ডাটাবেস প্রোভাইডার।
+dotnet add src/CBS.Infrastructure package Microsoft.EntityFrameworkCore.Tools --version 9.0.0    # মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+dotnet add src/CBS.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
+dotnet add src/CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
+dotnet add src/CBS.Infrastructure package BCrypt.Net-Next                                        # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
+dotnet add src/CBS.Infrastructure package QuestPDF                                               # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
+
+
+
+
+
+
+.
