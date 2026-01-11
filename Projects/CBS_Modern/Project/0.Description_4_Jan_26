@@ -7,11 +7,11 @@ Transaction Entry (Checker)
         ↓
 Authorization (Maker)
         ↓
-Sub-Ledger Posting
+Sub-Ledger Posting (SL=For cusotmer statement double-entry-accounting)
         ↓
-General Ledger (GL) Posting
+General Ledger (GL) Posting (GL=For Branch Balance)
         ↓
-Reconciliation & Controls (Sub-ledger ↔ GL, Cash Proof, Trial Balance)
+Reconciliation & Controls (Sub-ledger ↔ GL, Cash Proof, Trial Balance)(Reconciliation = Check whether any mismatch between debit-crdit)
 ```
 
 ---
