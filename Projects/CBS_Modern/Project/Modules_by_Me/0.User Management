@@ -37,6 +37,48 @@ Maker:  User Lock/Unloack for his branch, and Deposit/withdrawl   posting-approv
 
 -----------------------------------------------
 
+-- ১. এই টেবিলে ব্যাংকের প্রতিটি শাখার মৌলিক তথ্য এবং প্রধান ভল্টের ব্যালেন্স সংরক্ষিত থাকে।
+-- এটি হেড অফিসকে প্রতিটি শাখার নগদ টাকার প্রবাহ (Liquidity) পর্যবেক্ষণ করতে সাহায্য করে।
+-- সিস্টেমের প্রতিটি লেনদেন বা ইউজারের সাথে একটি নির্দিষ্ট শাখার আইডি যুক্ত করার জন্য এটি প্রধান রেফারেন্স।
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- ২. এখানে ব্যাংকের সকল কর্মকর্তাদের ইউজার আইডি, পাসওয়ার্ড এবং তাদের রোল (Role) সংরক্ষিত থাকে।
+-- এটি নিশ্চিত করে যে শুধুমাত্র অনুমোদিত ইউজাররা নির্দিষ্ট শাখায় লগইন এবং লেনদেন করতে পারছেন।
+-- সিকিউরিটি নিশ্চিত করতে ভুল লগইন এটেম্পট এবং অ্যাকাউন্ট লকিং সংক্রান্ত তথ্যও এখানে থাকে।
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('HoSuperAdmin', 'BrAdmin','Auditor', 'Maker', 'Checker') NOT NULL,
+    branch_id INT NOT NULL,
+    failed_attempts INT DEFAULT 0,
+    lock_until TIMESTAMP NULL,
+    is_locked BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP NULL,
+    FOREIGN KEY (branch_id) REFERENCES branches(id)
+);
+
+-- ১২. সিস্টেমের প্রতিটি গুরুত্বপূর্ণ পরিবর্তনের ইতিহাস (আগের মান এবং পরের মান) এখানে থাকে।
+-- এটি জালিয়াতি রোধ করতে এবং কোনো ভুল সংশোধনের জন্য অডিটরদের সাহায্য করে।
+-- কে, কখন এবং কোন শাখা থেকে ডাটা পরিবর্তন করেছে তা এখান থেকে ট্র্যাক করা যায়।
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    user_id INT,
+    action VARCHAR(100),
+    old_value VARCHAR(100),
+    new_value VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
 
 
 
