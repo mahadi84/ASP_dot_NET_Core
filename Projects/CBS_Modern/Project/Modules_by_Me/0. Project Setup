@@ -26,9 +26,9 @@ CBS
     │
     └─ CBS.Web
         └─ Controllers
-            └─ CustomerController.cs
+        |    └─ CustomerController.cs
         └─ Models
-            └─ ViewModel.cs
+        |    └─ ViewModel.cs
         └─ Views
             └─ User
                 └─ User.cshtml
