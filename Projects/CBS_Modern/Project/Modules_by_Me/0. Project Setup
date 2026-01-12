@@ -53,6 +53,7 @@ mkdir src
 cd src
 
 
+## creates  C# Class Library for a project, serves as a reusable container for your core business logic and entities.
 
 dotnet new classlib -n CBS.Domain
 dotnet new classlib -n CBS.Application
