@@ -47,7 +47,7 @@ mkdir CBS
 cd CBS
 
 
-##Solution file named CBS.sln,a master container to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
+##Solution file named CBS.sln,a master CONTAINER to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
 dotnet new sln -n CBS
 
 
@@ -55,7 +55,7 @@ mkdir src
 cd src
 
 
-## creates  C# Class Library for a project, serves as a reusable container for your core business logic and entities.
+## creates  C# Class Library(create .csproj file) for A PROJECT, serves as a reusable container for your core business logic and entities.
 
 dotnet new classlib -n CBS.Domain
 dotnet new classlib -n CBS.Application
