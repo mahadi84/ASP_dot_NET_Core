@@ -141,6 +141,7 @@ public record UpdateBranchDTO(int Id, string BranchCode, string BranchName);
 // Application/Interfaces/IBranchService.cs
 public interface IBranchService
 {
+       //CreateBranchDTO ডেটা ট্রান্সফার এবং IBranchService ব্যবসায়িক লজিক আলাদা করে, যা কোডটিকে আরো পরিষ্কার, মেইনটেইনেবল, এবং টেস্টেবল করে তোলে।
     Task<Result<int>> CreateAsync(CreateBranchDTO dto, int userId);
     Task<Result<bool>> UpdateAsync(UpdateBranchDTO dto, int userId);
     Task<Result<bool>> ToggleStatusAsync(int id, int userId);
