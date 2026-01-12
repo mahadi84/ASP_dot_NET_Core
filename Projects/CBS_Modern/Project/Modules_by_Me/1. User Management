@@ -83,7 +83,8 @@ CREATE TABLE audit_logs (
 
 ###########################################################################################################################
 
-ধন্যবাদ আপনার project specification শেয়ার করার জন্য। আমি আপনাকে **Clean Architecture** অনুসরণ করে `User Management`-এর জন্য Domain Layer থেকে Presentation Layer পর্যন্ত পুরো কোড সহকারে একটি solution দিচ্ছি, যাতে **Role-based Access Control (RBAC)**, **Audit Log** এবং **Concurrency** সহ সব business logic আছে।
+ **Clean Architecture** অনুসরণ করে `User Management`-এর জন্য Domain Layer থেকে Presentation Layer পর্যন্ত পুরো কোড সহকারে একটি solution দিচ্ছি, 
+যাতে **Role-based Access Control (RBAC)**, **Audit Log** এবং **Concurrency** সহ সব business logic আছে।
 
 এখানে আমি **HoSuperAdmin, BrAdmin, Maker, Checker** রোল অনুযায়ী **User Management** মডিউল গঠন করেছি।
 
