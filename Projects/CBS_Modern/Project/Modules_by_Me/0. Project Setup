@@ -9,7 +9,8 @@ CBS
  └─ src
     ├─ CBS.Domain
     │   └─ Entities
-    │       └─ Customer.cs
+    │       └─ User.cs
+    |       └─ Customer.cs
     │
     ├─ CBS.Application
     │   ├─ Interfaces
