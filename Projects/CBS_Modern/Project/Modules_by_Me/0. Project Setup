@@ -46,6 +46,8 @@ cd D:\AsPdOtNeT\DotNet
 mkdir CBS
 cd CBS
 
+
+##Solution file named CBS.sln,a master container to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
 dotnet new sln -n CBS
 
 
@@ -61,8 +63,7 @@ dotnet new classlib -n CBS.Infrastructure
 dotnet new webapi   -n CBS.Web
 
 
-এখন সব project-কে solution-এ add করি: 
-যাতে CBS\CBS.sln, Visual Studio ওপেন করলে সব একসাথে দেখতে পান।
+## এখন সব project-কে solution-এ add করি: 
 
 cd ..   # Go back to the main folder (CBS)
 
@@ -74,9 +75,7 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 ---
 
-## 🔗 2. Project Reference
-# Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
-
+## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
  ## "Application/Infa/Web/Domain লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
 
 dotnet add src\CBS.Application reference src\CBS.Domain   
