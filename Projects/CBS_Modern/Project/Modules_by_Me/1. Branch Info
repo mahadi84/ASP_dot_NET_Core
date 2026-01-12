@@ -3,13 +3,27 @@ Why this module first?
 This module is not dependent to any..
 
 
- TABLE branches (
+ CREATE  TABLE branches (
     id INT AUTO_INCREMENT PRIMARY KEY,
     branch_code VARCHAR(10) UNIQUE NOT NULL,
     branch_name VARCHAR(100) NOT NULL,
     vault_balance DECIMAL(18, 2) DEFAULT 0.00,
     is_active BOOLEAN DEFAULT TRUE
 );
+
+
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    user_id INT,
+    action VARCHAR(100),
+    old_value VARCHAR(100),
+    new_value VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 
 
 
@@ -43,4 +57,5 @@ This module is not dependent to any..
 
 
 
-       .
+
+.
