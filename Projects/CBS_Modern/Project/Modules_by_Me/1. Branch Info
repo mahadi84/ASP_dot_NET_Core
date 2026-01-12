@@ -57,7 +57,7 @@ CREATE TABLE audit_logs (
 
 
 ######################################################################## 
-                                CODE
+                                Domain Layer
 ######################################################################## 
 
 namespace CBS.Domain.Common
@@ -123,3 +123,157 @@ public class Branch
     public void Deactivate() => IsActive = false; // Soft Delete
     public void Activate() => IsActive = true;
 }
+
+
+
+######################################################################## 
+                         Application Layer
+######################################################################## 
+
+এখানে আমরা DTO এবং Interface রাখবো। আপনার তৈরি করা Result<T> ক্লাসটি এখানে রেসপন্স হিসেবে ব্যবহার করা হবে।
+C#
+
+// Application/DTOs/BranchDTOs.cs
+public record CreateBranchDTO(string BranchCode, string BranchName, decimal InitialBalance);
+public record UpdateBranchDTO(int Id, string BranchCode, string BranchName);
+
+
+// Application/Interfaces/IBranchService.cs
+public interface IBranchService
+{
+    Task<Result<int>> CreateAsync(CreateBranchDTO dto, int userId);
+    Task<Result<bool>> UpdateAsync(UpdateBranchDTO dto, int userId);
+    Task<Result<bool>> ToggleStatusAsync(int id, int userId);
+    Task<(IEnumerable<Branch> Items, int TotalCount)> GetPagedAsync(string search, int page, int size);
+}
+
+
+
+// Application/Interfaces/IAuditService.cs
+public interface IAuditService
+{
+    Task LogAsync(int branchId, int? userId, string action, string oldVal, string newVal);
+}
+
+
+#########################################################################
+                    Infrastructure Layer
+#########################################################################
+
+// Infrastructure/Services/BranchService.cs
+public class BranchService : IBranchService
+{
+    private readonly ApplicationDbContext _context;
+    private readonly IAuditService _audit;
+
+    public BranchService(ApplicationDbContext context, IAuditService audit)
+    {
+        _context = context;
+        _audit = audit;
+    }
+
+    // CREATE
+    public async Task<Result<int>> CreateAsync(CreateBranchDTO dto, int userId)
+    {
+        var branch = new Branch();
+        branch.UpdateInfo(dto.BranchCode, dto.BranchName); // ডোমেইন মেথড ব্যবহার
+
+        _context.Branches.Add(branch);
+        await _context.SaveChangesAsync();
+
+        await _audit.LogAsync(branch.Id, userId, "INSERT", "", $"Code: {branch.BranchCode}, Name: {branch.BranchName}");
+
+        return Result<int>.Success(branch.Id, "Branch created successfully!");
+    }
+
+    // UPDATE
+    public async Task<Result<bool>> UpdateAsync(UpdateBranchDTO dto, int userId)
+    {
+        var branch = await _context.Branches.FindAsync(dto.Id);
+        if (branch == null) return Result<bool>.Failure("Branch not found!");
+
+        string oldValues = $"Name: {branch.BranchName}";
+        branch.UpdateInfo(dto.BranchCode, dto.BranchName);
+
+        await _context.SaveChangesAsync();
+        await _audit.LogAsync(branch.Id, userId, "UPDATE", oldValues, $"Name: {dto.BranchName}");
+
+        return Result<bool>.Success(true, "Branch updated successfully!");
+    }
+
+    // SOFT DELETE / INACTIVE
+    public async Task<Result<bool>> ToggleStatusAsync(int id, int userId)
+    {
+        var branch = await _context.Branches.FindAsync(id);
+        if (branch == null) return Result<bool>.Failure("Branch not found!");
+
+        string action = branch.IsActive ? "DEACTIVATE" : "ACTIVATE";
+        if (branch.IsActive) branch.Deactivate(); else branch.Activate();
+
+        await _context.SaveChangesAsync();
+        await _audit.LogAsync(id, userId, action, (!branch.IsActive).ToString(), branch.IsActive.ToString());
+
+        return Result<bool>.Success(true, $"Branch {action} successfully!");
+    }
+
+    // SEARCH & PAGINATION
+    public async Task<(IEnumerable<Branch> Items, int TotalCount)> GetPagedAsync(string search, int page, int size)
+    {
+        var query = _context.Branches.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(b => b.BranchName.Contains(search) || b.BranchCode.Contains(search));
+        }
+
+        int totalCount = await query.CountAsync();
+        var items = await query.OrderByDescending(b => b.Id)
+                               .Skip((page - 1) * size)
+                               .Take(size)
+                               .ToListAsync();
+
+        return (items, totalCount);
+    }
+}
+
+
+---------
+
+// Infrastructure/Services/AuditLogService.cs
+public class AuditLogService : IAuditService
+{
+    private readonly ApplicationDbContext _context;
+
+    public AuditLogService(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task LogAsync(int branchId, int? userId, string action, string oldVal, string newVal)
+    {
+        var log = new AuditLog
+        {
+            BranchId = branchId,
+            UserId = userId,
+            Action = action,
+            OldValue = oldVal,
+            NewValue = newVal,
+            CreatedAt = DateTime.Now
+        };
+
+        _context.AuditLogs.Add(log);
+        await _context.SaveChangesAsync();
+    }
+}
+
+------------
+
+Dependency Injection (Program.cs)
+সবশেষে, এই সার্ভিসগুলোকে .NET Container-এ রেজিস্টার করতে হবে।
+// Presentation/Program.cs
+builder.Services.AddScoped<IAuditService, AuditLogService>();
+builder.Services.AddScoped<IBranchService, BranchService>();
+
+
+
+
