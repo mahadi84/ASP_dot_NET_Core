@@ -1,0 +1,46 @@
+
+Why this module first?
+This module is not dependent to any..
+
+
+ TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+
+
+→ Domain Layer
+     → Branch Entities with Business Logic for user and Audit_log
+
+→ Application-Layer
+    → Common global message, show success / failed
+    → Add  Audit_Log
+    → Interface and DTO for
+         → Create
+         → Update
+         → Inactive
+             • soft delete
+
+→ Infrastructure-Layer
+    → Implement of Interfaces from Application-Layer and Audit_Log
+    → DB-conn.
+    → EF installation(DB,Tools, PDF)
+
+→ Presentation-Layer
+    → ViewModel
+    → BranchController with CRUD and RBAC
+    → Implement of Audit_Log
+    → View
+       → Create, Login
+       → Show all (Update | Active | Inactive) → Search+Pagination
+       → Update Branch info
+
+
+
+
+
+       .
