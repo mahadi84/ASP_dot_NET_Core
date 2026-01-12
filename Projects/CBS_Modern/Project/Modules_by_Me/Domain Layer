@@ -5,12 +5,7 @@ using System;
 using System.Collections.Generic;
 
 namespace CBS.Domain.Entities
-{
-    // Custom Exception for Business Rule Violations
-    public class DomainException : Exception
-    {
-        public DomainException(string message) : base(message) { }
-    }
+
 
     // 1. Branch Entity
     public class Branch
@@ -145,7 +140,7 @@ namespace CBS.Domain.Entities
         public void PostToGl() => IsGlPosted = true;
     }
 
-}
+
 
 
 
