@@ -1,0 +1,190 @@
+
+Entities and Business Logic:
+
+using System;
+using System.Collections.Generic;
+
+namespace CBS.Domain.Entities
+{
+    // Custom Exception for Business Rule Violations
+    public class DomainException : Exception
+    {
+        public DomainException(string message) : base(message) { }
+    }
+
+    // 1. Branch Entity
+    public class Branch
+    {
+        public int Id { get; set; }
+        public string BranchCode { get; set; } = string.Empty;
+        public string BranchName { get; set; } = string.Empty;
+        public decimal VaultBalance { get; private set; }
+        public bool IsActive { get; set; } = true;
+
+        public void UpdateVaultBalance(decimal amount, bool isDeposit)
+        {
+            if (isDeposit) VaultBalance += amount;
+            else
+            {
+                if (VaultBalance < amount) throw new DomainException("Insufficient Vault Balance!");
+                VaultBalance -= amount;
+            }
+        }
+    }
+
+    // 2. User Entity
+    public class User
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Role { get; set; } = "Maker"; // HoSuperAdmin, BrAdmin, etc.
+        public int BranchId { get; set; }
+        public int FailedAttempts { get; private set; }
+        public bool IsLocked { get; private set; }
+
+        public void RecordFailedLogin()
+        {
+            FailedAttempts++;
+            if (FailedAttempts >= 3) IsLocked = true;
+        }
+
+        public void ResetLogin()
+        {
+            FailedAttempts = 0;
+            IsLocked = false;
+        }
+    }
+
+    // 3. GL Head Entity
+    public class GLHead
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int GLCode { get; set; }
+        public string GLName { get; set; } = string.Empty;
+        public string GLType { get; set; } = "Asset"; // Asset, Liability, etc.
+        public decimal CurrentBalance { get; private set; }
+
+        public void UpdateBalance(decimal amount, bool isDebit)
+        {
+            // Simple double-entry logic
+            if (GLType == "Asset" || GLType == "Expense")
+                CurrentBalance = isDebit ? CurrentBalance + amount : CurrentBalance - amount;
+            else
+                CurrentBalance = isDebit ? CurrentBalance - amount : CurrentBalance + amount;
+        }
+    }
+
+    // 4. Customer Entity
+    public class Customer
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string NidNumber { get; set; } = string.Empty;
+        public string Status { get; private set; } = "Pending"; // Pending, Active, Rejected
+
+        public void Approve()
+        {
+            if (string.IsNullOrEmpty(NidNumber)) throw new DomainException("NID is required for approval.");
+            Status = "Active";
+        }
+    }
+
+    // 5. Account Entity
+    public class Account
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int CustomerId { get; set; }
+        public string AccountNumber { get; set; } = string.Empty;
+        public decimal Balance { get; private set; }
+
+        public void ApplyTransaction(decimal amount, string type)
+        {
+            if (type == "Withdraw")
+            {
+                if (Balance < amount) throw new DomainException("Insufficient Account Balance!");
+                Balance -= amount;
+            }
+            else Balance += amount;
+        }
+    }
+
+    // 6. Cash Drawer Entity
+    public class CashDrawer
+    {
+        public int Id { get; set; }
+        public int BranchId { get; set; }
+        public int CheckerId { get; set; }
+        public decimal CurrentCash { get; private set; }
+
+        public void UpdateCash(decimal amount, string type)
+        {
+            if (type == "Withdraw")
+            {
+                if (CurrentCash < amount) throw new DomainException("Insufficient Cash in Drawer!");
+                CurrentCash -= amount;
+            }
+            else CurrentCash += amount;
+        }
+    }
+
+    // 7. Transaction Entity
+    public class Transaction
+    {
+        public int Id { get; set; }
+        public string BatchNumber { get; set; } = string.Empty;
+        public int AccountId { get; set; }
+        public decimal Amount { get; set; }
+        public string Status { get; private set; } = "Initiated"; // Initiated, Approved
+        public bool IsGlPosted { get; private set; }
+
+        public void Approve() => Status = "Approved";
+        public void PostToGl() => IsGlPosted = true;
+    }
+
+}
+
+
+
+// ৯. GL Journal Entity (Simple Record)
+public class GLJournal
+{
+    public long Id { get; set; }
+    public int TransactionId { get; set; }
+    public int BranchId { get; set; }
+    public decimal TotalDebit { get; set; }
+    public decimal TotalCredit { get; set; }
+    public string Narration { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+}
+
+// ১২. Audit Log Entity (Simple Record)
+public class AuditLog
+{
+    public long Id { get; set; }
+    public int BranchId { get; set; }
+    public int? UserId { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string OldValue { get; set; } = string.Empty;
+    public string NewValue { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
