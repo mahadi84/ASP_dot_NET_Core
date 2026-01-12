@@ -176,6 +176,15 @@ public class BranchService : IBranchService
     // CREATE
     public async Task<Result<int>> CreateAsync(CreateBranchDTO dto, int userId)
     {
+
+      // Check if the branch code already exists
+          var existingBranch = await _context.Branches
+                                             .FirstOrDefaultAsync(b => b.BranchCode == dto.BranchCode);
+          if (existingBranch != null)
+          {
+              return Result<int>.Failure("Branch code already exists.");
+          }
+
         var branch = new Branch();
         branch.UpdateInfo(dto.BranchCode, dto.BranchName); // ডোমেইন মেথড ব্যবহার
 
@@ -190,6 +199,18 @@ public class BranchService : IBranchService
     // UPDATE
     public async Task<Result<bool>> UpdateAsync(UpdateBranchDTO dto, int userId)
     {
+
+        // প্রথমে চেক করুন যে ব্রাঞ্চ কোডটি ডুপ্লিকেট কিনা (যদি একই ব্রাঞ্চের কোড পরিবর্তন করা হচ্ছে)
+         var existingBranch = await _context.Branches
+                                             .Where(b => b.BranchCode == dto.BranchCode && b.Id != dto.Id)
+                                             .FirstOrDefaultAsync();
+     
+         // যদি ব্রাঞ্চ কোডটি ইতিমধ্যেই অন্য কোনো ব্রাঞ্চে থাকে, তাহলে ত্রুটি বার্তা দিন
+         if (existingBranch != null)
+         {
+             return Result<bool>.Failure("Branch code already exists.");
+         }
+      
         var branch = await _context.Branches.FindAsync(dto.Id);
         if (branch == null) return Result<bool>.Failure("Branch not found!");
 
