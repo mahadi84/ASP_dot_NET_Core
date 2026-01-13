@@ -10,9 +10,9 @@
 রেকর্ড হলো এমন এক ধরনের ক্লাস যা ডেটা ধরে রাখার জন্য তৈরি। এর বিশেষত্ব হলো এটি Immutable (তৈরির পর পরিবর্তন করা যায় না)।
 বর্তমানে .NET প্রজেক্টগুলোতে Record-কে DTO হিসেবে ব্যবহার করা সবচেয়ে আধুনিক এবং জনপ্রিয় পদ্ধতি।
 - ব্যবহার: যখন আপনি নিশ্চিত করতে চান যে ডেটা একবার তৈরি হওয়ার পর আর কেউ ভুল করে তা পরিবর্তন করতে পারবে না।
-    internal class BranchDTO{
-    public record BranchCreateDTO(string BranchName, string BranchCode, string VaultBalance);
-    }
+    
+public record BranchCreateDTO(string BranchName, string BranchCode, string VaultBalance);
+
 
 ### ২. DTO (Data Transfer Object): "যোগাযোগের মাধ্যম_Carrier_Pattern"
 DTO কোনো ডাটাবেস টেবিল নয়, এটি শুধু এক জায়গা থেকে অন্য জায়গায় ডেটা নেওয়ার জন্য ব্যবহৃত একটি প্যাটার্ন।
