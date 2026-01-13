@@ -1,4 +1,12 @@
 
+What is CLASS, constructor, New?
+
+🧠 Analogy (সহজ উপমা)
+class = বাড়ির নকশা
+constructor = দরজা
+new = বাড়ি বানানো
+👉 নকশার ভেতরে বসে আবার বাড়ি বানানো যায় না 😄
+
 
 
 ###################### CRUD ###################
@@ -351,6 +359,21 @@ asp-action="ShowAll"         //Directs the request to the ShowAll() method withi
 
 
 ############ Model ##############
+
+Model কী?
+Model হলো অ্যাপ্লিকেশনের সেই অংশ যা
+👉 ডেটা ধারণ করে / data container
+👉 ডেটার নিয়ম (validation) ধরে রাখে / data validation container
+👉 Business logic-এর ভিত্তি হিসেবে কাজ করে
+
+সহজভাবে: Model = Data + Rules
+
+Business Logic-এর অংশ হয়:
+	Clean Architecture অনুযায়ী,
+		-ViewModel → input/output
+		-Domain Model → আসল business rules
+
+
 
 [Required(ErrorMessage = "Username is required.")]
 [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters long.")]
