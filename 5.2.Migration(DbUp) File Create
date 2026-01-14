@@ -1,0 +1,92 @@
+
+পিওর SQL স্ক্রিপ্ট ব্যবহার করে মাইগ্রেশন করার জন্য DbUp একটি চমৎকার লাইব্রেরি। 
+এটি অনেক সহজ কারণ আপনাকে আলাদা করে 
+কোনো C# লজিক লিখতে হয় না, শুধু আপনার পছন্দের SQL কুয়েরিগুলো `.sql` ফাইলে লিখে রাখলেই হয়।
+
+নিচে .NET 9-এ DbUp সেটআপ করার নিয়ম দেওয়া হলো:
+
+---
+
+### ১. প্যাকেজ ইনস্টল করা
+dotnet add package dbup-mysql
+
+### ২. SQL স্ক্রিপ্ট তৈরি করা
+
+আপনার প্রজেক্টে `Scripts` নামে একটি ফোল্ডার তৈরি করুন। 
+সেখানে আপনার প্রথম মাইগ্রেশন ফাইলটি তৈরি করুন, 
+যেমন: `0001_CreateBranchTable.sql`।
+
+0001_CreateBranchTable.sql:
+
+```sql
+CREATE TABLE IF NOT EXISTS Branches (
+    Id INT AUTO_INCREMENT PRIMARY KEY,
+    BranchName VARCHAR(100) NOT NULL,
+    BranchCode VARCHAR(20) NOT NULL UNIQUE,
+    CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+> জরুরি: ফাইলটির Properties-এ গিয়ে Build Action হিসেবে Embedded Resource সিলেক্ট করে দিন। এটি না করলে DbUp ফাইলটি খুঁজে পাবে না।
+OR 
+>আপনি যদি VS Code ব্যবহার করেন বা অনেকগুলো ফাইল একসাথে করতে চান, তবে আপনার প্রোজেক্টের .csproj ফাইলটি ওপেন করুন এবং সেখানে নিচের কোডটুকু যোগ করে দিন:
+
+<ItemGroup>
+  <EmbeddedResource Include="Scripts\*.sql" />
+</ItemGroup>
+
+*** এখানে Scripts\*.sql মানে হলো আপনার Scripts ফোল্ডারের ভেতরে যতগুলো .sql ফাইল আছে, 
+সবগুলোকে সে Embedded Resource হিসেবে গণ্য করবে। এতে করে আপনাকে প্রতিবার ম্যানুয়ালি প্রপার্টিজ বদলাতে হবে না।
+
+
+---
+
+### ৩. মাইগ্রেশন রান করা (`Program.cs`)
+
+আপনার অ্যাপ্লিকেশন চালু হওয়ার সময় DbUp চেক করবে নতুন কোনো স্ক্রিপ্ট আছে কি না। থাকলে সে সেটি রান করবে।
+
+```csharp
+using DbUp;
+using System.Reflection;
+
+
+
+// DbUp মাইগ্রেশন ইঞ্জিন কনফিগার করা
+var upgrader = DeployChanges.To
+    .MySqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+    .LogToConsole()
+    .Build();
+
+// ডাটাবেস আপডেট চেক এবং রান
+if (upgrader.IsUpgradeRequired())
+{
+    var result = upgrader.PerformUpgrade();
+
+    if (!result.Successful)
+    {
+        Console.WriteLine("মাইগ্রেশন ব্যর্থ হয়েছে: " + result.Error);
+    }
+    else
+    {
+        Console.WriteLine("মাইগ্রেশন সফলভাবে সম্পন্ন হয়েছে!");
+    }
+}
+
+
+
+
+### DbUp কেন ড্যাপার ইউজারদের প্রথম পছন্দ?
+* Schema Versions Table: DbUp নিজে থেকেই আপনার ডাটাবেসে `SchemaVersions` নামে একটি টেবিল তৈরি করে। সেখানে সে ট্র্যাক রাখে কোন কোন `.sql` ফাইল ইতিমধ্যে রান হয়েছে। ফলে একই ফাইল বারবার রান হয় না।
+* Simple SQL: আপনাকে নতুন কোনো লজিক শিখতে হয় না, সরাসরি ডাটাবেসের SQL কপি-পেস্ট করলেই কাজ হয়ে যায়।
+* Transparency: আপনি ঠিক কী পরিবর্তন করছেন তা সরাসরি SQL কোড দেখে বোঝা যায়।
+
+---
+
+### প্রো-টিপ (Pro-Tip):
+ফাইলের নাম সবসময় নাম্বার দিয়ে শুরু করবেন (যেমন: `0001_...`, `0002_...`) যাতে DbUp বুঝতে পারে কোনটির পর কোনটি রান করতে হবে।
+
+
+
+
+
+.
