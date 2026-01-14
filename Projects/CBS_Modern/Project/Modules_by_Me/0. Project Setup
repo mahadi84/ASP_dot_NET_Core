@@ -141,7 +141,7 @@ mkdir src\CBS.Web\Views
 dotnet add src\CBS.Infrastructure package Dapper              # For Dapper
 dotnet add src\CBS.Infrastructure package MySqlConnector      # For MySQL Conection 
 
-dotnet add src\CBS.Infrastructure package dbup-mysql          # To Create Migration File
+dotnet add src\CBS.Infrastructure package dbup-mysql          # To Create Migration File for MySQL database
 
 dotnet add src\CBS.Infrastructure package BCrypt.Net-Next     # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
 dotnet add src\CBS.Infrastructure package QuestPDF            # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
