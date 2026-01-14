@@ -59,7 +59,25 @@ public class BranchService
 
 }
 
+======================== CRUD ============================
 
+using var connection = await _dataSource.OpenConnectionAsync();
+
+var sql = "INSERT INTO Branches (BranchName, BranchCode) VALUES (@BranchName, @BranchCode)";    
+    // ড্যাপার অটোমেটিক অবজেক্ট থেকে প্রপার্টিগুলো ম্যাপিং করে নেবে (@ চিহ্নের মাধ্যমে)
+    await connection.ExecuteAsync(sql, branch);
+
+var sql = "SELECT id as Id, branch_name as BranchName, branch_code as BranchCode FROM Branches";
+    return await connection.QueryAsync<Branch>(sql);
+
+var sql = "SELECT id as Id, branch_name as BranchName, branch_code as BranchCode FROM Branches WHERE Id = @Id";
+    return await connection.QueryFirstOrDefaultAsync<Branch>(sql, new { Id = id });
+
+var sql = "UPDATE Branches SET BranchName = @BranchName, BranchCode = @BranchCode WHERE Id = @Id";    
+    await connection.ExecuteAsync(sql, branch);
+
+var sql = "DELETE FROM Branches WHERE Id = @Id";
+    await connection.ExecuteAsync(sql, new { Id = id });
 
 
 
