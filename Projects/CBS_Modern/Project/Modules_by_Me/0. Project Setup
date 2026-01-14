@@ -98,45 +98,7 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
           dotnet list reference      # রেফারেন্স লিস্ট দেখুন
 
 
-## 📁 3. ভিতরের Folder Structure and File বানাবো (PowerShell দিয়ে)
-
-`src` ফোল্ডারের ভিতর থেকে রান:
-cd D:\AsPdOtNeT\DotNet\CBS
-
-# Domain structure (folder+File Create)
-mkdir src\CBS.Domain\Entities  
-@' ... '@ > src\CBS.Domain\Entities\BaseEntity.cs  
-
-# Application structure
-mkdir src\CBS.Application\Interfaces
-mkdir src\CBS.Application\Services
-
-@' ... '@ > src\CBS.Application\Interfaces\FileName.cs  
-@' ... '@ > src\CBS.Application\Services\FileName.cs  
-
-
-# Infrastructure structure
-mkdir src\CBS.Infrastructure\Persistence
-mkdir src\CBS.Infrastructure\Repositories
-
-@' ... '@ > src\CBS.Infrastructure\Persistence\FileName.cs  
-@' ... '@ > src\CBS.Infrastructure\Repositories\FileName.cs  
-
-# Web structure
-mkdir src\CBS.Web\Controllers
-mkdir src\CBS.Web\Models
-mkdir src\CBS.Web\Views
-
-@' ... '@ > src\CBS.Web\Controllers\FileController.cs 
-@' ... '@ > src\CBS.Web\Models\ModelName.cs  
-@' ... '@ > src\CBS.Web\Views\ModelName.cs 
-
-
----
-
-
-
-## 4 NuGet Packages
+## 📁 3. NuGet Packages
 
 dotnet add src\CBS.Infrastructure package Dapper              # For Dapper
 dotnet add src\CBS.Infrastructure package MySqlConnector      # For MySQL Conection 
@@ -155,7 +117,7 @@ dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.
 
 
 
-### 5 appsettings.json:
+### 4. appsettings.json:
 
 {
   "ConnectionStrings": {
@@ -164,7 +126,7 @@ dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.
 }
 
 
-### 6 Route Configuration (Program.cs) .NET 9- Dependency Injection:
+### 5. Route Configuration (Program.cs) .NET 9- Dependency Injection:
 
 // কানেকশন স্ট্রিংটি রিড করা
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -198,7 +160,7 @@ if (upgrader.IsUpgradeRequired())
 
 
 
-### 7. Use of Dapper
+### 6. Use of Dapper
 
 using Dapper;           // Dapper অবশ্যই ইমপোর্ট করতে হবে
 using MySqlConnector;   // MySqlDataSource এর জন্য
