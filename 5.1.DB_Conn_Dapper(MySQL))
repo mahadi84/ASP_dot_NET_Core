@@ -23,7 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // MySqlDataSource ব্যবহার করা .NET 8/9 এর জন্য সবচেয়ে আধুনিক এবং পারফরম্যান্ট উপায়
-builder.Services.AddMySqlDataSource(connectionString!);
+builder.Services.AddMySqlDataSource(connectionString);
 
 
 
