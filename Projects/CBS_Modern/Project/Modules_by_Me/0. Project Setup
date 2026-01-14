@@ -127,38 +127,69 @@ dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.
 
 
 ### 5. MySQL connect and Migration File create(Program.cs)
+** This is for "Clean Architecture"
+  as Dependancy Installed in Infrastructre layer and Injection in  Web Route(Program.cs)
 
-using DbUp;
-using MySqlConnector;
+Create File_01:
+---------------
+          namespace CBS.Infrastructure.AddToRoute;
+          public static class DependencyInjection
+          {
+              public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+              {
+                  var connectionString = configuration.GetConnectionString("DefaultConnection");
+                  // মাইগ্রেশন রান করা
+                  DatabaseMigrator.Migrate(connectionString!);
+                  // অন্যান্য সার্ভিস (Dapper, Repositories)
+                  services.AddMySqlDataSource(connectionString!);
+                  //services.AddScoped<IBranchRepository, BranchRepository>();
+                  return services;
+              }
+          
+          }
 
---
+Create File_02:
+---------------
+        namespace CBS.Infrastructure.Migration;
+        public static class DatabaseMigrator
+        {
+            public static void Migrate(string connectionString)
+            {
+                // গুরুত্বপূর্ণ: এখানে Assembly.GetExecutingAssembly() ব্যবহার করায় 
+                // এটি Infrastructure লেয়ারের Embedded Scripts গুলো খুঁজে পাবে।
+                var upgrader = DeployChanges.To
+                    .MySqlDatabase(connectionString)
+                    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+                    .LogToConsole()
+                    .Build();
+        
+                if (upgrader.IsUpgradeRequired())
+                {
+                    var result = upgrader.PerformUpgrade();
+                    if (!result.Successful)
+                    {
+                        throw new Exception($"Database Migration Failed: {result.Error}");
+                    }            
+                }
+            }
+        }
 
-// কানেকশন স্ট্রিংটি রিড করা
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-// MySqlDataSource for Dapper ব্যবহার করা .NET 8/9 এর জন্য সবচেয়ে আধুনিক এবং পারফরম্যান্ট উপায়
-builder.Services.AddMySqlDataSource(connectionString!);
 
-// DbUp মাইগ্রেশন ইঞ্জিন কনফিগার করা
-var upgrader = DeployChanges.To
-    .MySqlDatabase(connectionString)
-    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
-    .LogToConsole()
-    .Build();
+Add below lines to Program.cs
+-----------------------------
+   using CBS.Infrastructure.AddToRoute;
+   // Dependancy Injection from CBS.Infrastructure.AddToRoute for MySQL and Migration
+   builder.Services.AddInfrastructure(builder.Configuration);
 
-// ডাটাবেস আপডেট চেক এবং রান
-if (upgrader.IsUpgradeRequired())
-{
-    var result = upgrader.PerformUpgrade();
 
-    if (!result.Successful)
-    {
-        Console.WriteLine("মাইগ্রেশন ব্যর্থ হয়েছে: " + result.Error);
-    }
-    else
-    {
-        Console.WriteLine("মাইগ্রেশন সফলভাবে সম্পন্ন হয়েছে!");
-    }
-}
+Run this CMDs and check Wheather Table is created:
+--------------------------------------------------
+dotnet clean
+dotnet build
+dotnet run --project src/CBS.Web
+
+
+
 
 
 
