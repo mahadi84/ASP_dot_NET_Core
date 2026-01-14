@@ -92,7 +92,7 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 
 
-          ## 2.1 Dependency-Reference  চেক করা: 
+          ## 2.4 Dependency-Reference  চেক করা: 
           PowerShell
           cd src/CBS.Infrastructure  # প্রথমে ওই প্রোজেক্টের ফোল্ডারে ঢুকুন
           dotnet list reference      # রেফারেন্স লিস্ট দেখুন
