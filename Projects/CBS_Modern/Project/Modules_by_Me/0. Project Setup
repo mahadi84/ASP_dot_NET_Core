@@ -129,12 +129,89 @@ mkdir src\CBS.Web\Views
 
 ## 4 NuGet Packages
 
+dotnet add src\CBS.Infrastructure package Dapper              # For Dapper
+dotnet add src\CBS.Infrastructure package MySqlConnector      # For MySQL Conection 
+dotnet add src\CBS.Infrastructure package dbup-mysql          # To Create Migration File
+dotnet add src\CBS.Infrastructure package BCrypt.Net-Next     # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
+dotnet add src\CBS.Infrastructure package QuestPDF            # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
+
+
 dotnet add src\CBS.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --version 9.0.0      # MySQL ডাটাবেসের সাথে কানেক্ট করার জন্য এটি একটি জনপ্রিয় ডাটাবেস প্রোভাইডার।
 dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Tools --version 9.0.0    # মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
 dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
-dotnet add src\CBS.Infrastructure package BCrypt.Net-Next                                        # ইউজারদের পাসওয়ার্ড Hash করার জন্য । যাতে ডাটাবেস হ্যাক হলেও কেউ আসল পাসওয়ার্ড না পায়।
-dotnet add src\CBS.Infrastructure package QuestPDF                                               # এই লাইব্রেরিটি অ্যাপ্লিকেশন থেকে PDF রিপোর্ট বা ইনভয়েস তৈরি করার জন্য ব্যবহৃত হয়।
+
+
+
+
+### 5 appsettings.json:
+
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=MyDb;User=root;Password=your_password;"
+  }
+}
+
+
+### 6 Route Configuration (Program.cs) .NET 9- Dependency Injection:
+
+// কানেকশন স্ট্রিংটি রিড করা
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// MySqlDataSource for Dapper ব্যবহার করা .NET 8/9 এর জন্য সবচেয়ে আধুনিক এবং পারফরম্যান্ট উপায়
+builder.Services.AddMySqlDataSource(connectionString);
+
+// DbUp মাইগ্রেশন ইঞ্জিন কনফিগার করা
+var upgrader = DeployChanges.To
+    .MySqlDatabase(connectionString)
+    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+    .LogToConsole()
+    .Build();
+
+// ডাটাবেস আপডেট চেক এবং রান
+if (upgrader.IsUpgradeRequired())
+{
+    var result = upgrader.PerformUpgrade();
+
+    if (!result.Successful)
+    {
+        Console.WriteLine("মাইগ্রেশন ব্যর্থ হয়েছে: " + result.Error);
+    }
+    else
+    {
+        Console.WriteLine("মাইগ্রেশন সফলভাবে সম্পন্ন হয়েছে!");
+    }
+}
+
+
+
+
+
+
+### 7. Use of Dapper
+
+using Dapper;           // Dapper অবশ্যই ইমপোর্ট করতে হবে
+using MySqlConnector;   // MySqlDataSource এর জন্য
+
+public class BranchService
+{
+    private readonly MySqlDataSource _dataSource; // DataSource ইনজেক্ট করা হয়েছে
+    // কনস্ট্রাক্টরে MySqlDataSource যুক্ত করা হয়েছে
+    public BranchService(MySqlDataSource dataSource)
+    {
+      _dataSource = dataSource;
+    }
+
+    public async Task<Result<int>> CreateBranchAsyn(BranchCreateDTO bdto, int UserID)
+    {
+        // ১. Dapper ব্যবহার করে Branch Code চেক করা
+        const string sql = "SELECT COUNT(1) FROM Branches WHERE BranchCode = @BranchCode";        
+        //Open database connection as we use "using var" no need to close it
+        using var connection = await _dataSource.OpenConnectionAsync();
+       // ExecuteScalarAsync দিয়ে খুব দ্রুত রেজাল্ট আনা যায়
+        // new { BranchCode = bdto.BranchCode }: এখানে Dapper কে বলা হচ্ছে যে SQL এর @BranchCode প্যারামিটারে আমাদের DTO থেকে আসা আসল ভ্যালুটা বসিয়ে দিতে। এটি একটি Anonymous Object।
+        var count = await connection.ExecuteScalarAsync<int>(sql, new { BranchCode = bdto.BranchCode });
+}
+
 
 
 
