@@ -125,7 +125,12 @@ dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.
 }
 
 
-### 5. Route Configuration (Program.cs) .NET 9- Dependency Injection:
+### 5. MySQL connect and Migration File create(Program.cs)
+
+using DbUp;
+using MySqlConnector;
+
+--
 
 // কানেকশন স্ট্রিংটি রিড করা
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
