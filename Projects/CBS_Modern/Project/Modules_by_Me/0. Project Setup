@@ -75,13 +75,14 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 ---
 
-## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
+## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer (inner) Connection তৈরি করে।
+          
+      Web->Infrastructure->Application->Domain
  
      # 2.১. Application শুধু Domain-কে চিনবে (Entities & Interfaces)
      dotnet add src\CBS.Application reference src\CBS.Domain
      
-     # 2.২. Infrastructure শুধু Domain-কে চিনবে (Entities সেভ করার জন্য)
-     # এবং Infrastructure 'Application' কেও চিনবে শুধু ইন্টারফেস ইমপ্লিমেন্ট করার জন্য
+     # 2.২. Infrastructure, Domain-কে চিনবে (Entities সেভ করার জন্য)  এবং  'Application' কেও চিনবে শুধু ইন্টারফেস ইমপ্লিমেন্ট করার জন্য
      dotnet add src\CBS.Infrastructure reference src\CBS.Domain
      dotnet add src\CBS.Infrastructure reference src\CBS.Application
      
@@ -89,8 +90,6 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
      dotnet add src\CBS.Web reference src\CBS.Domain
      dotnet add src\CBS.Web reference src\CBS.Application
      dotnet add src\CBS.Web reference src\CBS.Infrastructure
-
-
 
           ## 2.4 Dependency-Reference  চেক করা: 
           PowerShell
@@ -113,7 +112,6 @@ dotnet add src\CBS.Infrastructure package Pomelo.EntityFrameworkCore.MySql  --ve
 dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Tools --version 9.0.0    # মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
 dotnet add src\CBS.Infrastructure package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # এই প্যাকেজটি ডাটাবেস Migrations এবং স্ক্যাফোল্ডিং (Scaffolding) করার জন্য প্রয়োজনীয় টুলস প্রদান করে।
 dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.0.0              # মাইগ্রেশন ফাইলগুলো জেনারেট করার জন্য ব্যবহৃত হয়।
-
 
 
 
@@ -154,8 +152,6 @@ if (upgrader.IsUpgradeRequired())
         Console.WriteLine("মাইগ্রেশন সফলভাবে সম্পন্ন হয়েছে!");
     }
 }
-
-
 
 
 
