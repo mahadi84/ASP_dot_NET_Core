@@ -6,6 +6,7 @@ dotnet add package Dapper
 dotnet add package MySqlConnector
 
 
+
 ### 2. Connection String (appsettings.json)
 
 {
@@ -14,18 +15,15 @@ dotnet add package MySqlConnector
   }
 }
 
-### 3. Route Configuration (Program.cs)
-.NET 9- Dependency Injection:
 
 
-var builder = WebApplication.CreateBuilder(args);
+### 3. Route Configuration (Program.cs) .NET 9- Dependency Injection:
 
 // কানেকশন স্ট্রিংটি রিড করা
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // MySqlDataSource ব্যবহার করা .NET 8/9 এর জন্য সবচেয়ে আধুনিক এবং পারফরম্যান্ট উপায়
 builder.Services.AddMySqlDataSource(connectionString);
-
 
 
 
@@ -41,7 +39,7 @@ public class BranchService
     // কনস্ট্রাক্টরে MySqlDataSource যুক্ত করা হয়েছে
     public BranchService(MySqlDataSource dataSource)
     {
-        _dataSource = dataSource;
+      _dataSource = dataSource;
     }
 
     public async Task<Result<int>> CreateBranchAsyn(BranchCreateDTO bdto, int UserID)
@@ -53,18 +51,22 @@ public class BranchService
         using var connection = await _dataSource.OpenConnectionAsync();
         
         // ExecuteScalarAsync দিয়ে খুব দ্রুত রেজাল্ট আনা যায়
+        // new { BranchCode = bdto.BranchCode }: এখানে Dapper কে বলা হচ্ছে যে SQL এর @BranchCode প্যারামিটারে আমাদের DTO থেকে আসা আসল ভ্যালুটা বসিয়ে দিতে। এটি একটি Anonymous Object।
         var count = await connection.ExecuteScalarAsync<int>(sql, new { BranchCode = bdto.BranchCode });
 
         if (count > 0)  { return Result<int>.Failure("Branch code already exists"); }
-
     }
 
 }
 
 
+
+
+
 #####################################################
                 What and Why?
 #####################################################
+
 
 মেথড,কখন ব্যবহার করবেন?,উদাহরণ
 
@@ -72,6 +74,9 @@ ExecuteScalarAsync-------শুধু একটি ভ্যালুর জন�
 QueryAsync--------------একাধিক রো বা লিস্টের জন্য।-------------------SELECT * FROM Branches
 QuerySingleAsync--------ঠিক একটি রো আসবে নিশ্চিত হলে।-------------SELECT * FROM Branches WHERE Id = 5
 ExecuteAsync,-----------"ডাটা ইনসার্ট, আপডেট বা ডিলিট করতে।"-------,UPDATE Branches SET Name = @Name
+
+
+
 ===================================================== 
    new MySqlConnection() vs MySqlDataSource
 ===================================================== 
