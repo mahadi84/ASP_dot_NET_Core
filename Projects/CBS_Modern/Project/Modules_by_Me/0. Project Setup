@@ -46,12 +46,6 @@ cd D:\AsPdOtNeT\DotNet
 mkdir CBS
 cd CBS
 
-
-## Solution file named CBS.sln,a master CONTAINER(Architecture of Whole house)
-## to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
-dotnet new sln -n CBS
-
-
 mkdir src
 cd src
 
@@ -65,10 +59,16 @@ dotnet new classlib -n CBS.Infrastructure
 dotnet new webapi   -n CBS.Web
 
 
+
+## Solution file named CBS.sln,a master CONTAINER(Architecture of Whole house)
+## to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
+
+dotnet new sln -n CBS
+
+
 ## এখন সব project-কে solution-এ add করি: 
 
 cd ..   # Go back to the main folder (CBS)
-
 dotnet sln CBS.sln add src\CBS.Domain\CBS.Domain.csproj
 dotnet sln CBS.sln add src\CBS.Application\CBS.Application.csproj
 dotnet sln CBS.sln add src\CBS.Infrastructure\CBS.Infrastructure.csproj
