@@ -29,15 +29,8 @@ Task + async দিলে:
 
 
 
-১.গ্লোবাল এক্সেপশন হ্যান্ডলিং (Middleware Approach):
 
-কোডের প্রতিটি লাইনে try-catch না লিখে, 
-আমরা একটি Middleware ব্যবহার করব যা পুরো অ্যাপ্লিকেশনের যেকোনো জায়গায় এরর হলে সেটিকে ধরে ফেলবে 
-এবং ইউজারকে একটি সুন্দর (Friendly) মেসেজ দেবে।
-
-Tools: ASP.NET Core Middleware
-
-২. স্ট্রাকচারড লগিং (Structured Logging with Serilog):
+১. স্ট্রাকচারড লগিং (Structured Logging with Serilog):
 
 সাধারণ টেক্সট লগের চেয়ে Structured Log অনেক বেশি শক্তিশালী। 
 এতে আপনি লগের সাথে মেটাডেটা (যেমন: AccountId, CorrelationId) যুক্ত করতে পারেন।
@@ -48,7 +41,7 @@ Tools: ASP.NET Core Middleware
 
 Tools: Serilog, ELK Stack
 
-৩. কোরিল্যাশন আইডি (Correlation ID Strategy):
+২. কোরিল্যাশন আইডি (Correlation ID Strategy):
 
 মাইক্রোসার্ভিসে একটি রিকোয়েস্ট যখন WebUI থেকে TransactionService-এ যায়, এবং সেখান থেকে AccountService-এ যায়, তখন সব লগে একটি কমন আইডি থাকা উচিত।
 -Process: রিকোয়েস্ট আসার সাথে সাথে একটি ইউনিক আইডি জেনারেট হয়।
@@ -58,7 +51,7 @@ Tools: Serilog, ELK Stack
 Tools: OpenTelemetry, Jaeger
 
 
-4. Health Checks:
+3. Health Checks:
 সার্ভিস বেঁচে আছে কি না তা অটোমেটিক মনিটর করতে।
 	
 Tools:.NET Health Checks
