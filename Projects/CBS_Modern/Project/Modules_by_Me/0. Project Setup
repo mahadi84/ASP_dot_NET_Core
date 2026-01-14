@@ -75,7 +75,7 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 ---
 
-## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer (inner) Connection তৈরি করে।
+## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer (inner/Onion) Connection তৈরি করে।
           
       Web->Infrastructure->Application->Domain
  
@@ -92,9 +92,8 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
      dotnet add src\CBS.Web reference src\CBS.Infrastructure
 
           ## 2.4 Dependency-Reference  চেক করা: 
-          PowerShell
-          cd src/CBS.Infrastructure  # প্রথমে ওই প্রোজেক্টের ফোল্ডারে ঢুকুন
-          dotnet list reference      # রেফারেন্স লিস্ট দেখুন
+           cd src/CBS.Infrastructure  # প্রথমে ওই প্রোজেক্টের ফোল্ডারে ঢুকুন
+           dotnet list reference      # রেফারেন্স লিস্ট দেখুন
 
 
 ## 📁 3. NuGet Packages
