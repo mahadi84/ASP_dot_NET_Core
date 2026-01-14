@@ -56,7 +56,7 @@ cd src
 dotnet new classlib -n CBS.Domain
 dotnet new classlib -n CBS.Application
 dotnet new classlib -n CBS.Infrastructure
-dotnet new webapi   -n CBS.Web
+dotnet new mvc  -n CBS.Web
 
 
 
