@@ -63,12 +63,10 @@ dotnet new mvc -n CBS.Web
 ## Solution file named CBS.sln,a master CONTAINER(Architecture of Whole house)
 ## to manage and build all individual projects (Domain, Infrastructure, API, etc.) as a single unit.
 
+cd ..   # Go back to the main folder (CBS)
 dotnet new sln -n CBS
 
-
-## এখন সব project-কে solution-এ add করি: 
-
-cd ..   # Go back to the main folder (CBS)
+## এখন সব project-কে solution-এ add করি:
 dotnet sln CBS.sln add src\CBS.Domain\CBS.Domain.csproj
 dotnet sln CBS.sln add src\CBS.Application\CBS.Application.csproj
 dotnet sln CBS.sln add src\CBS.Infrastructure\CBS.Infrastructure.csproj
@@ -93,6 +91,11 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
      dotnet add src\CBS.Web reference src\CBS.Infrastructure
 
 
+
+          ## 2.1 Dependency-Reference  চেক করা: 
+          PowerShell
+          cd src/CBS.Infrastructure  # প্রথমে ওই প্রোজেক্টের ফোল্ডারে ঢুকুন
+          dotnet list reference      # রেফারেন্স লিস্ট দেখুন
 
 
 ## 📁 3. ভিতরের Folder Structure and File বানাবো (PowerShell দিয়ে)
