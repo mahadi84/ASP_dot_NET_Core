@@ -1,3 +1,44 @@
 
+### 1. Packages:
 
-Dapper
+dotnet add package Dapper
+dotnet add package MySqlConnector
+
+
+### 2. Connection String (appsettings.json)
+
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=MyDb;User=root;Password=your_password;"
+  }
+}
+
+### 3. Route Configuration (Program.cs)
+.NET 9- Dependency Injection:
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// কানেকশন স্ট্রিংটি রিড করা
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// MySqlDataSource ব্যবহার করা .NET 8/9 এর জন্য সবচেয়ে আধুনিক এবং পারফরম্যান্ট উপায়
+builder.Services.AddMySqlDataSource(connectionString!);
+
+
+
+===================================================== 
+   new MySqlConnection() vs MySqlDataSource
+===================================================== 
+
+new MySqlConnection() FOR ছোট কোনো স্ক্রিপ্ট বা কনসোল অ্যাপ। (পদ্ধতি: প্রতিবার নতুন করে তৈরি করা হয়। ব্যবস্থাপনা:ডেভেলপারকে ম্যানুয়ালি ওপেন/ক্লোজ করতে হয়।)
+MySqlDataSource  latest technology FOR প্রফেশনাল ASP.NET Core Web API বা Web App তৈরি করেন, তবে অবশ্যইব্যবহার করা উচিত। (পদ্ধতি: একবার কনফিগার করে বারবার ব্যবহার করা যায়। ব্যবস্থাপনা: সিস্টেম নিজে থেকেই কানেকশন ম্যানেজ করে।)
+
+
+
+
+
+
+
+.
+
