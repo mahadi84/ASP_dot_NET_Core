@@ -78,14 +78,20 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 ---
 
 ## 🔗 2. Dependency (নির্ভরশীলতা) বা Layer Connection তৈরি করে।
- ## "Application/Infa/Web/Domain লেয়ারকে বলে দাও যে সে Domain লেয়ারের ভেতরের সব কোড ব্যবহার করতে পারবে।"
+ 
+     # 2.১. Application শুধু Domain-কে চিনবে (Entities & Interfaces)
+     dotnet add src\CBS.Application reference src\CBS.Domain
+     
+     # 2.২. Infrastructure শুধু Domain-কে চিনবে (Entities সেভ করার জন্য)
+     # এবং Infrastructure 'Application' কেও চিনবে শুধু ইন্টারফেস ইমপ্লিমেন্ট করার জন্য
+     dotnet add src\CBS.Infrastructure reference src\CBS.Domain
+     dotnet add src\CBS.Infrastructure reference src\CBS.Application
+     
+     # 2.৩. Web API সব লেয়ারকে চিনবে (Dependency Injection বা আঠা দিয়ে জোড়া লাগানোর জন্য)
+     dotnet add src\CBS.Web reference src\CBS.Domain
+     dotnet add src\CBS.Web reference src\CBS.Application
+     dotnet add src\CBS.Web reference src\CBS.Infrastructure
 
-dotnet add src\CBS.Application reference src\CBS.Domain   
-dotnet add src\CBS.Infrastructure reference src\CBS.Domain
-dotnet add src\CBS.Infrastructure reference src\CBS.Application
-dotnet add src\CBS.Web reference src\CBS.Domain
-dotnet add src\CBS.Web reference src\CBS.Application
-dotnet add src\CBS.Web reference src\CBS.Infrastructure
 
 
 
