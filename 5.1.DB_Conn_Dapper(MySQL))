@@ -1,4 +1,5 @@
 
+
 ### 1. Packages:
 
 dotnet add package Dapper
@@ -27,6 +28,50 @@ builder.Services.AddMySqlDataSource(connectionString);
 
 
 
+
+### 4. Use of Dapper
+
+using Dapper;           // Dapper অবশ্যই ইমপোর্ট করতে হবে
+using MySqlConnector;   // MySqlDataSource এর জন্য
+
+public class BranchService
+{
+    private readonly MySqlDataSource _dataSource; // DataSource ইনজেক্ট করা হয়েছে
+
+    // কনস্ট্রাক্টরে MySqlDataSource যুক্ত করা হয়েছে
+    public BranchService(MySqlDataSource dataSource)
+    {
+        _dataSource = dataSource;
+    }
+
+    public async Task<Result<int>> CreateBranchAsyn(BranchCreateDTO bdto, int UserID)
+    {
+        // ১. Dapper ব্যবহার করে Branch Code চেক করা
+        const string sql = "SELECT COUNT(1) FROM Branches WHERE BranchCode = @BranchCode";
+        
+        //Open database connection as we use "using var" no need to close it
+        using var connection = await _dataSource.OpenConnectionAsync();
+        
+        // ExecuteScalarAsync দিয়ে খুব দ্রুত রেজাল্ট আনা যায়
+        var count = await connection.ExecuteScalarAsync<int>(sql, new { BranchCode = bdto.BranchCode });
+
+        if (count > 0)  { return Result<int>.Failure("Branch code already exists"); }
+
+    }
+
+}
+
+
+#####################################################
+                What and Why?
+#####################################################
+
+মেথড,কখন ব্যবহার করবেন?,উদাহরণ
+
+ExecuteScalarAsync-------শুধু একটি ভ্যালুর জন্য।----------------------SELECT COUNT(*), SELECT MAX(Price)
+QueryAsync--------------একাধিক রো বা লিস্টের জন্য।-------------------SELECT * FROM Branches
+QuerySingleAsync--------ঠিক একটি রো আসবে নিশ্চিত হলে।-------------SELECT * FROM Branches WHERE Id = 5
+ExecuteAsync,-----------"ডাটা ইনসার্ট, আপডেট বা ডিলিট করতে।"-------,UPDATE Branches SET Name = @Name
 ===================================================== 
    new MySqlConnection() vs MySqlDataSource
 ===================================================== 
