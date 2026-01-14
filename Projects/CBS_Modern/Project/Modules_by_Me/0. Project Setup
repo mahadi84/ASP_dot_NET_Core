@@ -98,9 +98,9 @@ dotnet sln CBS.sln add src\CBS.Web\CBS.Web.csproj
 
 ## 📁 3. NuGet Packages
 
-dotnet add src\CBS.Infrastructure package MySqlConnector      # এটি মূলত ডাটাবেসের সাথে কথা বলার ড্রাইভার (যেমন: MySqlConnection তৈরি করা)।
-dotnet add src\CBS.Infrastructure package MySqlConnector.DependencyInjection   #এটি ছাড়া কম্পাইলার services অবজেক্টের টাইপ চিনতে পারবে না।
-dotnet add src/CBS.Infrastructure package Microsoft.Extensions.Configuration.Abstractions   #
+dotnet add src\CBS.Infrastructure package MySqlConnector                                    # এটি মূলত ডাটাবেসের সাথে কথা বলার ড্রাইভার (যেমন: MySqlConnection তৈরি করা)।
+dotnet add src\CBS.Infrastructure package MySqlConnector.DependencyInjection                # এটি ছাড়া কম্পাইলার services অবজেক্টের টাইপ চিনতে পারবে না।
+dotnet add src/CBS.Infrastructure package Microsoft.Extensions.Configuration.Abstractions   # এটি ছাড়া কম্পাইলার services-Interface  টাইপ চিনতে পারবে না।
 
 dotnet add src\CBS.Infrastructure package Dapper              # For Dapper
 
