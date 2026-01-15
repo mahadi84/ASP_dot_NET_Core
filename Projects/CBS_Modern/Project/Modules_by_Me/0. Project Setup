@@ -130,6 +130,16 @@ dotnet add src\CBS.Web package Microsoft.EntityFrameworkCore.Design --version 9.
 ** This is for "Clean Architecture"
   as Dependancy Installed in Infrastructre layer and Injection in  Web Route(Program.cs)
 
+ Create a Folder,File & text into .cprog file in Infrastructure layer:
+ --------------------------------------------------------------------
+      Scripts folder>001_Crate_____Table.sql (and put sql with table name and info)
+      Add in CBS.Infrastructure.cprog:
+         <ItemGroup>
+           <EmbeddedResource Include="Scripts\*.sql" />   ## will find Scripts folder and the .sql file in this layer to migrate
+         </ItemGroup>
+
+
+
 Create File_01:
 ---------------
           namespace CBS.Infrastructure.AddToRoute;
