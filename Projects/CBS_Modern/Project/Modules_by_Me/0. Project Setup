@@ -257,10 +257,11 @@ var sql = "DELETE FROM Branches WHERE Id = @Id";
 মেথড,কখন ব্যবহার করবেন?,উদাহরণ
 ---------------------------------
 ExecuteAsync,-----------"ডাটা ইনসার্ট, আপডেট বা ডিলিট করতে।"-------UPDATE Branches SET Name = @Name
-ExecuteScalarAsync-------শুধু একটি ভ্যালুর জন্য(Faster)।--------------SELECT COUNT(*), SELECT MAX(Price)
-
 QueryAsync--------------একাধিক রো বা লিস্টের জন্য।------------------SELECT * FROM Branches
+
+ExecuteScalarAsync-------শুধু একটি ভ্যালুর জন্য(Faster)।--------------SELECT COUNT(*), SELECT MAX(Price)
 QuerySingleAsync--------ঠিক একটি রো আসবে নিশ্চিত হলে।-------------SELECT * FROM Branches WHERE Id = 5
+
 
 
 
