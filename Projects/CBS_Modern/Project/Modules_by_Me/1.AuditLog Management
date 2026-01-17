@@ -1,0 +1,142 @@
+
+
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_code INT NOT NULL,
+    user_id INT NOT NULL,
+    table_name VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    old_value LONGTEXT, -- অথবা JSON
+    new_value LONGTEXT, -- অথবা JSON
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX (table_name), -- সার্চিং দ্রুত করার জন্য
+    INDEX (created_at)  -- রিপোর্ট দ্রুত জেনারেট করার জন্য
+);
+
+
+
+----------- namespace Domain.Entities; -----------
+
+public class AuditLog
+{
+    public long Id { get; set; }
+    public int BranchCode { get; set; }
+    public int UserId { get; set; }
+    public string TableName { get; set; } = null!;
+    public string Action { get; set; } = null!;
+    public string? OldValue { get; set; }
+    public string? NewValue { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+------------------ DTO ----------------
+using System.ComponentModel.DataAnnotations;
+
+namespace CBS.Application.DTO;
+
+public record AuditLogCreateDTO(
+    [Required(ErrorMessage = "Branch ID Required")]
+    int BranchCode,
+
+    [Required(ErrorMessage = "User ID Required")]
+    int UserId,
+
+    [Required(ErrorMessage = "Table Name Required")]
+    string TableName,
+
+    [Required(ErrorMessage = "Action Required")]
+    string Action,
+
+    string? OldValue,
+    string? NewValue
+);
+
+-------------------------- Interface ----------------
+
+using CBS.Application.DTO;
+using CBS.Domain.Common;
+
+namespace CBS.Application.Interfaces;
+
+public interface IAuditLogService
+{
+    Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto);
+}
+
+------------------------- InterfaceService ----------------
+using CBS.Application.DTO;
+using CBS.Application.Interfaces;
+using CBS.Domain.Common;
+using Dapper;
+using MySqlConnector;
+
+namespace CBS.Infrastructure.Services;
+
+public class AuditLogService : IAuditLogService
+{
+    private readonly MySqlDataSource _dataSource;
+
+    public AuditLogService(MySqlDataSource dataSource)
+    {
+        _dataSource = dataSource;
+    }
+
+    public async Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto)
+    {
+        try
+        {
+            using var connection = await _dataSource.OpenConnectionAsync();
+
+            // SQL Syntax ঠিক করা হয়েছে (VALUES কিওয়ার্ড যুক্ত করা হয়েছে)
+            string sql = @"INSERT INTO audit_logs 
+                          (branch_code, user_id, table_name, action, old_value, new_value, created_at) 
+                          VALUES 
+                          (@BranchCode, @UserId, @TableName, @Action, @OldValue, @NewValue, NOW())";
+
+            // Dapper সরাসরি record-এর প্রপার্টিগুলো ম্যাপিং করে নেবে
+            var result = await connection.ExecuteAsync(sql, dto);
+
+            if (result > 0)
+            {
+                return Result<bool>.Success(true, "Audit log created successfully");
+            }
+
+            return Result<bool>.Failure("Failed to insert audit log");
+        }
+        catch (Exception ex)
+        {
+            // ব্যাংকিং সিস্টেমে এখানে অবশ্যই লগিং (Serilog/NLog) থাকা উচিত
+            return Result<bool>.Failure($"Error: {ex.Message}");
+        }
+    }
+
+}
+
+---------------- Use ----------------
+// audit log create(new data save so OldValue=null) 
+var auditDto = new AuditLogCreateDTO(
+    BranchCode: bdto.BranchCode , 
+    UserId: 1,
+    TableName: "branches",
+    Action: "CREATE",
+    OldValue: null,
+    NewValue: $"Id: {newId}, Code: {bdto.BranchCode}, Name: {bdto.BranchName}"
+);
+
+var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
+
+if (!auditResult.IsSuccess)
+{
+    await transaction.RollbackAsync(); //If Audit failed no branch created 
+    return Result<dynamic>.Failure("Audit log failed. Transaction rolled back.");
+}
+
+// commit transaciton if everything is ok
+await transaction.CommitAsync();
+
+
+
+
+
+
+--
