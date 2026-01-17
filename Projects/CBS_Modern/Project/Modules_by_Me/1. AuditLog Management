@@ -87,13 +87,12 @@ public class AuditLogService : IAuditLogService
         {
             using var connection = await _dataSource.OpenConnectionAsync();
 
-            // SQL Syntax ঠিক করা হয়েছে (VALUES কিওয়ার্ড যুক্ত করা হয়েছে)
             string sql = @"INSERT INTO audit_logs 
                           (branch_code, user_id, table_name, action, old_value, new_value, created_at) 
                           VALUES 
                           (@BranchCode, @UserId, @TableName, @Action, @OldValue, @NewValue, NOW())";
 
-            // Dapper সরাসরি record-এর প্রপার্টিগুলো ম্যাপিং করে নেবে
+            // Dapper will map record's data
             var result = await connection.ExecuteAsync(sql, dto);
 
             if (result > 0)
@@ -105,7 +104,7 @@ public class AuditLogService : IAuditLogService
         }
         catch (Exception ex)
         {
-            // ব্যাংকিং সিস্টেমে এখানে অবশ্যই লগিং (Serilog/NLog) থাকা উচিত
+            //Loggin (Serilog/NLog) is must for Banking
             return Result<bool>.Failure($"Error: {ex.Message}");
         }
     }
