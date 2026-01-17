@@ -16,6 +16,27 @@ These tables are needed to ensure:
 
 
 
+================================================================
+              DATABASE 04 -Gl_by_button_press_by_admin
+===============================================================
+
+-- ১. এই টেবিলে ব্যাংকের প্রতিটি শাখার মৌলিক তথ্য এবং প্রধান ভল্টের ব্যালেন্স সংরক্ষিত থাকে।
+-- এটি হেড অফিসকে প্রতিটি শাখার নগদ টাকার প্রবাহ (Liquidity) পর্যবেক্ষণ করতে সাহায্য করে।
+-- সিস্টেমের প্রতিটি লেনদেন বা ইউজারের সাথে একটি নির্দিষ্ট শাখার আইডি যুক্ত করার জন্য এটি প্রধান রেফারেন্স।
+
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code INT(20) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    row_version INT DEFAULT 1, 
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+
 
 
 ================================================================
