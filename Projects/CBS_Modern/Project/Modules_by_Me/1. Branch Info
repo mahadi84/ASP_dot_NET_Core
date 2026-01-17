@@ -3,28 +3,6 @@ Why this module first?
 This module is not dependent to any..
 
 
- CREATE  TABLE branches (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    branch_code VARCHAR(10) UNIQUE NOT NULL,
-    branch_name VARCHAR(100) NOT NULL,
-    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
-    is_active BOOLEAN DEFAULT TRUE
-);
-
-
-CREATE TABLE audit_logs (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    branch_id INT NOT NULL,
-    user_id INT,
-    action VARCHAR(100),
-    old_value VARCHAR(100),
-    new_value VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (branch_id) REFERENCES branches(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-
 
 
 → Domain Layer
@@ -53,6 +31,156 @@ CREATE TABLE audit_logs (
        → Show all (Update | Active | Inactive) → Search+Pagination
        → Update Branch info
 
+
+
+===========================================================
+                         TRY-02
+===========================================================
+
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code INT(20) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    row_version INT DEFAULT 1, 
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+==========================
+     DOMAIN LAYER
+==========================
+
+---------- ENTITIES AND LOGIC----------
+
+using CBS.Domain.Common;
+
+
+namespace CBS.Domain.Entities;
+
+public class Branch
+{
+    public int Id { get; set; }
+    public string BranchCode { get; set; }
+    public string BranchName { get; set; }
+    public decimal VaultBalance { get; private set; }
+    public int RowVersion { get; set; } 
+    public bool IsActive { get; private set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.Now; 
+    public DateTime? UpdatedAt { get; set; } 
+
+    public Result<bool> UpdateVaultBalance(decimal amount)
+    {
+        if (VaultBalance < amount) return Result<bool>.Failure("Insufficient Vault Balance!");
+        VaultBalance -= amount;
+        return Result<bool>.Success(true);
+    }
+
+    public void UpdateInfo(string code, string name)
+    {
+        BranchCode = code;
+        BranchName = name;
+    }
+
+    public void Deactivate() => IsActive = false; // Soft Delete
+    public void Activate() => IsActive = true;
+}
+
+-------------- GLOBAR CARRIER -----------------
+
+namespace CBS.Domain.Common;
+public class Result<T>
+    {
+        public bool IsSuccess { get; }
+        public T Data { get; }
+        public string Message { get; }
+        public List<string> Errors { get; }
+
+        protected Result(bool isSuccess, T data, string message, List<string> errors = null)
+        {
+            IsSuccess = isSuccess;
+            Data = data;
+            Message = message;
+            Errors = errors ?? new List<string>();
+        }
+
+        public static Result<T> Success(T data, string message = "Operation successful")
+            => new Result<T>(true, data, message);
+
+        public static Result<T> Failure(string message, List<string> errors = null)
+            => new Result<T>(false, default, message, errors);
+}
+
+======================================
+          APPLICATION LAYER
+======================================
+
+--DTO--
+--INTERFACE with DTO and Global success/failed message Carrier--
+
+
+======================================
+          INFRASTRUCTURE LAYER
+======================================
+
+---IMPLEMENT INTERFACE from Application Layer ------
+
+
+======================================
+          WEB/PRESENTATION LAYER
+======================================
+
+----- CONTOLLER -------
+CALL INTERFACE from Application Layer
+
+------- VIEWS ---------------
+INCLUDE DTO from Applicaiton Layer
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+===========================================================
+                         TRY-01
+===========================================================
+########## Tables
+
+ CREATE  TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_code VARCHAR(10) UNIQUE NOT NULL,
+    branch_name VARCHAR(100) NOT NULL,
+    vault_balance DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+
+CREATE TABLE audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    user_id INT,
+    action VARCHAR(100),
+    old_value VARCHAR(100),
+    new_value VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
 
 
 
