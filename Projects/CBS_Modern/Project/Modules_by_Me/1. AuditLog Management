@@ -4,6 +4,38 @@ This module is not dependent to any..
 
 
 
+→ Domain Layer
+     → Branch Entities with Business Logic for user and Audit_log
+
+→ Application-Layer
+    → Common global message, show success / failed
+    → Add  Audit_Log
+    → Interface and DTO for
+         → Create
+         → Update
+         → Inactive
+             • soft delete
+
+→ Infrastructure-Layer
+    → Implement of Interfaces from Application-Layer and Audit_Log
+    → DB-conn.
+    → EF installation(DB,Tools, PDF)
+
+→ Presentation-Layer
+    → ViewModel
+    → BranchController with CRUD and RBAC
+    → Implement of Audit_Log
+    → View
+       → Create, Login
+       → Show all (Update | Active | Inactive) → Search+Pagination
+       → Update Branch info
+
+
+----
+
+
+
+
 CREATE TABLE audit_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     branch_code INT NOT NULL,
