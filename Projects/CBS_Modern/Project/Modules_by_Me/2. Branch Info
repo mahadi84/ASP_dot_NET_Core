@@ -63,14 +63,17 @@ public class Branch
 ======================================
 
 --DTO--
---INTERFACE with DTO and Global success/failed message Carrier--
+--INTERFACE connected with DTO as Parameter and Returen Type as Global success/failed message Carrier-- 
 
 
 ======================================
           INFRASTRUCTURE LAYER
 ======================================
 
----IMPLEMENT INTERFACE from Application Layer ------
+---IMPLEMENT INTERFACE from Application Layer 
+      -use db_connection, Dapper query, Transaction(Begain,RollBack,Commit) 
+      -check duplicate
+      -Insert Data,AuditLog and returen last row inserted
 
 
 ======================================
@@ -78,21 +81,12 @@ public class Branch
 ======================================
 
 ----- CONTOLLER -------
-CALL INTERFACE from Application Layer
+Get user request and
+Response form INTERFACE of Application Layer and 
+Pass data into views
 
 ------- VIEWS ---------------
 INCLUDE DTO from Applicaiton Layer
-
-
-
-
-
-
-
-
-
-
-
 
 
 
