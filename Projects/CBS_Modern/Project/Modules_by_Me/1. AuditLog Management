@@ -22,6 +22,21 @@ CREATE TABLE audit_logs (
 
 
 
+----------- namespace Domain.Entities; -----------
+
+public class AuditLog
+{
+    public long Id { get; set; }
+    public int BranchCode { get; set; }
+    public int UserId { get; set; }
+    public string TableName { get; set; } = null!;
+    public string Action { get; set; } = null!;  --DELETE, UPDATE, CREATE
+    public string? OldValue { get; set; }
+    public string? NewValue { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+
 
 -------------- GLOBAL CARRIER -----------------
 
@@ -48,22 +63,6 @@ public class Result<T>
             => new Result<T>(false, default, message, errors);
 }
 
-
-
-
------------ namespace Domain.Entities; -----------
-
-public class AuditLog
-{
-    public long Id { get; set; }
-    public int BranchCode { get; set; }
-    public int UserId { get; set; }
-    public string TableName { get; set; } = null!;
-    public string Action { get; set; } = null!;
-    public string? OldValue { get; set; }
-    public string? NewValue { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-}
 
 ------------------ DTO ----------------
 using System.ComponentModel.DataAnnotations;
