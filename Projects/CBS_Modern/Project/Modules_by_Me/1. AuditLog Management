@@ -1,6 +1,19 @@
 
 Why this module first?
-This module is not dependent to any..
+This module's Database Table's Relationship is not dependent to any..
+
+
+##########################################
+     -Entities
+     -Global Carrier (Success/Faialur)
+     -DTO
+     -Interface (Return type and DTO as parameter)   -Interface's Implementation
+     -Use of Interface(in Web->Controller(User Request & Response))
+     -View(Include DTO) 
+##########################################
+
+
+
 
 
 
@@ -48,18 +61,6 @@ CREATE TABLE audit_logs (
     INDEX (table_name), -- সার্চিং দ্রুত করার জন্য
     INDEX (created_at)  -- রিপোর্ট দ্রুত জেনারেট করার জন্য
 );
-
----------------------
-
-##########################################
-     -Entities
-     -Global Carrier (Success/Faialur)
-     -DTO
-     -Interface (Return type and DTO as parameter)   -Interface's Implementation
-     -Use of Interface(in Web->Controller)
-     -View(Include DTO) 
-##########################################
-
 
 
 ----------- namespace Domain.Entities; -----------
