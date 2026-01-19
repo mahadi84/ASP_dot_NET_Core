@@ -15,7 +15,7 @@
 
 #####################################################
 
-Return type: PagedResult<IEnumerable<T>>
+Return type: PagedResult<IEnumerable<T>> What does it in Pagination?
 PagedResult: এটি একটি Valiable Container) বা ক্লাস। এটি শুধু আসল ডেটাগুলোই বহন করে না, বরং পেজিং সংক্রান্ত তথ্যও (যেমন: মোট কয়টি পেজ আছে, বর্তমান পেজ নম্বর কত) সাথে রাখে।
 <IEnumerable<T>>: এটি একটি ইন্টারফেস যা নির্দেশ করে যে এর ভেতর একগুচ্ছ ডেটার তালিকা (List/Collection) আছে। T মানে হচ্ছে যেকোনো ধরনের অবজেক্ট (যেমন: User, Product ইত্যাদি)।
 
