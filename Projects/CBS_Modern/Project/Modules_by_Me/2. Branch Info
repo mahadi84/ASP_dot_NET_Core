@@ -2,7 +2,7 @@
 
 -ENTITIES AND LOGIC
 -DTO
--INTERFACE (DTO as Parameter and Returen Type as Global success/failed message Carrier)
+-INTERFACE (DTO as Parameter and Returen Type  Result<dynamic> as Global Carrier for success/failer message)
 -IMPLEMENT INTERFACE from Application Layer 
       -use db_connection, Dapper query, Transaction(Begain,RollBack,Commit) 
       -check duplicate
