@@ -6,7 +6,7 @@ This module's Database Table's Relationship is not dependent to any..
 ##########################################
      -Entities
      -Global Carrier (Success/Faialur)
-     -DTO
+     -DTO  (AuditLogCreateDTO(), AuditReportFilterDTO(),AuditReportViewDTO())
      -Interface (Return type-Result<bool>, PagedResult<IEnumerable<T>> and DTO as parameter)   
      -Interface's Implementation
                 -use db_connection, Dapper query, Transaction(Begain,RollBack,Commit) 
