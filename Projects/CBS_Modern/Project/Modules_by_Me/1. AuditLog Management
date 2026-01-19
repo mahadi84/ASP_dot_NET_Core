@@ -49,8 +49,16 @@ CREATE TABLE audit_logs (
     INDEX (created_at)  -- রিপোর্ট দ্রুত জেনারেট করার জন্য
 );
 
+---------------------
 
 
+-Entities
+-Global Carrier (Success/Faialur)
+-DTO
+-Interface (Return type and DTO as parameter) 
+-Interface Implementation
+-Use of Interface(in Web->Controller)
+-View(Include DTO) 
 
 
 
@@ -70,7 +78,11 @@ public class AuditLog
 
 
 
--------------- GLOBAL CARRIER -----------------
+
+
+
+
+------------- GLOBAL CARRIER -----------------
 
 namespace CBS.Domain.Common;
 public class Result<T>
