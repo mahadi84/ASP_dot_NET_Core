@@ -1,6 +1,4 @@
 
-
-
 #####################################################
 
 -ENTITIES AND LOGIC
@@ -17,10 +15,19 @@
 
 RETURN TYPE: 
 ------------
-PagedResult<IEnumerable<T>> What does it in Pagination?
+PagedResult<IEnumerable<T>>,  What does it in Pagination?
 PagedResult: এটি একটি Valiable Container) বা ক্লাস। এটি শুধু আসল ডেটাগুলোই বহন করে না, বরং পেজিং সংক্রান্ত তথ্যও (যেমন: মোট কয়টি পেজ আছে, বর্তমান পেজ নম্বর কত) সাথে রাখে।
 <IEnumerable<T>>: এটি একটি ইন্টারফেস যা নির্দেশ করে যে এর ভেতর একগুচ্ছ ডেটার তালিকা (List/Collection) আছে। T মানে হচ্ছে যেকোনো ধরনের অবজেক্ট (যেমন: User, Product ইত্যাদি)।
-
+----
+Task<IActionResult>:
+দুটি জিনিসের সংমিশ্রণ: Task (অ্যাসিঙ্ক্রোনাস প্রোগ্রামিং) এবং IActionResult (HTTP রেসপন্স)।
+IActionResult আপনাকে এই নমনীয়তা (Flexibility) দেয় যাতে আপনি একই মেথড থেকে বিভিন্ন ধরণের আউটপুট দিতে পারেন।
+      -Ok() (HTTP 200)
+      -NotFound() (HTTP 404)
+      -BadRequest() (HTTP 400)
+      -View() (HTML পেজ দেখানোর জন্য)
+      -যদি ডেটা পাওয়া যায়, তবে আপনি Success (200 OK) পাঠাবেন।
+      -যদি ডেটা না পাওয়া যায়, তবে আপনি Not Found (404) পাঠাবেন।
 ----
 
 SPECIAL QUERY:
