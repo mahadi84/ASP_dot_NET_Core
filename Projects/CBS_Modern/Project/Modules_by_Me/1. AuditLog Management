@@ -55,8 +55,7 @@ CREATE TABLE audit_logs (
      -Entities
      -Global Carrier (Success/Faialur)
      -DTO
-     -Interface (Return type and DTO as parameter) 
-     -Interface Implementation
+     -Interface (Return type and DTO as parameter)   -Interface's Implementation
      -Use of Interface(in Web->Controller)
      -View(Include DTO) 
 ##########################################
