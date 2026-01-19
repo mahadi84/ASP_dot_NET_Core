@@ -1,5 +1,19 @@
 
 
+-ENTITIES AND LOGIC
+-DTO
+-INTERFACE (DTO as Parameter and Returen Type as Global success/failed message Carrier)
+-IMPLEMENT INTERFACE from Application Layer 
+      -use db_connection, Dapper query, Transaction(Begain,RollBack,Commit) 
+      -check duplicate
+      -Insert Data,AuditLog and returen last row inserted
+-Use of Interface in web->Controller(user request and Response)
+-Views (include DTO)
+
+
+
+
+
 
 
 ===========================================================
