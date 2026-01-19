@@ -36,14 +36,17 @@ SPECIAL QUERY:
   FROM audit_logs al
   LEFT JOIN branches b ON al.branch_code = b.branch_code
   WHERE 1=1 ");
-  var parameters = new DynamicParameters();
-  if (filter.BranchCode.HasValue)
-  {
-      sqlBody.Append(" AND al.branch_code = @BranchCode ");
-      parameters.Add("BranchCode", filter.BranchCode);
-  }
- string countSql = $"SELECT COUNT(*) {sqlBody}";
- int totalRecords = await connection.ExecuteScalarAsync<int>(countSql, parameters);
+ 
+var parameters = new DynamicParameters();
+ 
+if (filter.FromDate.HasValue && filter.ToDate.HasValue) {     
+     sqlBody.Append(" AND DATE(al.created_at) BETWEEN DATE(@FromDate) AND DATE(@ToDate) "); // তারিখের ফরম্যাট MySQL এর সাথে মেলানোর জন্য
+     parameters.Add("FromDate", filter.FromDate);
+     parameters.Add("ToDate", filter.ToDate);
+ }
+
+string countSql = $"SELECT COUNT(*) {sqlBody}";
+int totalRecords = await connection.ExecuteScalarAsync<int>(countSql, parameters);
 
 
 ===========================================================
