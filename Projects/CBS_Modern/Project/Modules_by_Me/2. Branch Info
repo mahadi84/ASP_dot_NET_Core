@@ -37,7 +37,7 @@ SPECIAL QUERY:
   LEFT JOIN branches b ON al.branch_code = b.branch_code
   WHERE 1=1 ");
  
-var parameters = new DynamicParameters();
+var parameters = new DynamicParameters();  // DynamicParameters(), এটি একটি ডাইনামিক ব্যাগ বা কন্টেইনারের মতো কাজ করে, যেখানে আপনি ডেটাবেস কোয়েরির জন্য প্রয়োজনীয় বিভিন্ন Parameters (প্যারামিটার) জমা রাখতে পারেন।
  
 if (filter.FromDate.HasValue && filter.ToDate.HasValue) {     
      sqlBody.Append(" AND DATE(al.created_at) BETWEEN DATE(@FromDate) AND DATE(@ToDate) "); // তারিখের ফরম্যাট MySQL এর সাথে মেলানোর জন্য
