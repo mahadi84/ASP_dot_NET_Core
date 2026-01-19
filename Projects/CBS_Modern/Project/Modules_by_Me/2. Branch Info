@@ -1,5 +1,8 @@
 
 
+
+#####################################################
+
 -ENTITIES AND LOGIC
 -DTO
 -INTERFACE (DTO as Parameter and Returen Type  Result<dynamic> as Global Carrier for success/failer message)
@@ -9,6 +12,8 @@
       -Insert Data,AuditLog and returen last row inserted
 -Use of Interface in web->Controller(user request and Response)
 -Views (include DTO)
+
+#####################################################
 
 
 
