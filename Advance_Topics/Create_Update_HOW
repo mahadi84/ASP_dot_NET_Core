@@ -5,6 +5,8 @@
              CREATE Steps 
 #################################### 
 
+Entities->DTO->Interface with DTO and return type->interface implementation->interface call in Web Controller->Web View for form to submit
+
 ## ১. রেস্টুরেন্ট বা বিয়ে বাড়ির খাবার তৈরির অ্যানালজি
 
 এটি সবথেকে জনপ্রিয় উদাহরণ কারণ এখানে ধাপগুলো খুব স্পষ্ট।
