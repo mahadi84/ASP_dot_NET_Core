@@ -1,0 +1,113 @@
+
+
+namespace CBS.Domain.Common
+{
+    public class Result<T>
+    {
+        public bool IsSuccess { get; }
+        public T Data { get; }
+        public string Message { get; }
+        public List<string> Errors { get; }
+
+        protected Result(bool isSuccess, T data, string message, List<string> errors = null)
+        {
+            IsSuccess = isSuccess;
+            Data = data;
+            Message = message;
+            Errors = errors ?? new List<string>();
+        }
+
+        public static Result<T> Success(T data, string message = "Operation successful") 
+            => new Result<T>(true, data, message);
+
+        public static Result<T> Failure(string message, List<string> errors = null) 
+            => new Result<T>(false, default, message, errors);
+    }
+}
+
+
+
+----------------------Example Usage in Controller----------------------
+
+[HttpGet("get-employee/{id}")]
+public async Task<IActionResult> GetEmployee(int id)
+{
+    // ১. সার্ভিসকে (ডাক্তার/কারিগর) বলা হলো ডাটা নিয়ে আসতে
+    Result<EmployeeSearchDTO> result = await _employeeService.GetEmployeeByIdAsync(id);
+
+    // ২. ম্যানেজার (Controller) রেজাল্ট বক্সটি চেক করছেন
+    if (!result.IsSuccess)
+    {
+        // রিপোর্ট যদি 'Abnormal' হয়, তবে কেন হয়েছে সেটা দেখে রেসপন্স দেওয়া
+        // উদাহরণ: যদি ডাটা না পাওয়া যায় (HTTP 404)
+        if (result.Message == "Employee not found") 
+            return NotFound(result); 
+
+        // অন্য কোনো সিরিয়াস সমস্যা হলে (HTTP 400)
+        return BadRequest(result); 
+    }
+
+    // ৩. রিপোর্ট 'Normal' হলে ডাটা কাস্টমারকে দেওয়া (HTTP 200)
+    return Ok(result); 
+}
+
+
+
+
+######################## What and Why #################################
+
+
+১. কী: এটি একটি স্ট্যান্ডার্ড রেসপন্স কন্টেইনার (Wrapper), যা ডাটার সাথে অপারেশনের স্ট্যাটাস (সফল না ব্যর্থ) বহন করে।
+২. কেন: সরাসরি `null` বা ডাটা রিটার্ন না করে একটি স্বচ্ছ ফিডব্যাক দিতে, যাতে কেন কাজটা ফেইল করেছে তা স্পষ্টভাবে জানানো যায়।
+৩. সুবিধা: এটি সব মেথডে একই রকমের রেজাল্ট ফরম্যাট নিশ্চিত করে এবং বারবার `try-catch` লেখার ঝামেলা কমায়।
+৪. অ্যানালজি: এটি একটি স্মার্ট কুরিয়ার বক্সের মতো, যাতে পণ্য (Data) থাকলেও থাকে, আবার না থাকলেও কেন নেই তার চিরকুট (Message) থাকে।
+
+
+মেডিকেল রিপোর্ট অ্যানালজি ব্যবহার করে `Result<T>` ক্লাসের প্রতিটি অংশের জন্য নিচে এক লাইনের কোড উদাহরণ দেওয়া হলো:
+
+---
+
+### ১. `IsSuccess` (রিপোর্টের স্ট্যাটাস)
+- কোড উদাহরণ: `bool status = result.IsSuccess;`
+- ব্যাখ্যা: এটি চেক করে আপনার ল্যাব টেস্টটি কি সফল হয়েছে নাকি এরর এসেছে।
+
+### ২. `T Data` (আসল ফলাফল)
+- কোড উদাহরণ: `var reportData = result.Data;`
+- ব্যাখ্যা: এটি সেই কাঙ্ক্ষিত তথ্য (যেমন: ব্রাঞ্চ ডিটেইলস) যা সফল হলে রিপোর্ট বক্সের ভেতর পাওয়া যায়।
+
+### ৩. `Message` (ডাক্তারের সারসংক্ষেপ)
+- কোড উদাহরণ: `string note = result.Message;`
+- ব্যাখ্যা: ডাটা আসুক বা না আসুক, অপারেশন সম্পর্কে একটি ছোট বর্ণনা (যেমন: "Data found" বা "Internal Error")।
+
+### ৪. `List<string> Errors` (বিস্তারিত সমস্যার তালিকা)
+- কোড উদাহরণ: `var allErrors = result.Errors;`
+- ব্যাখ্যা: যদি অপারেশন ফেইল করে, তবে ঠিক কী কী কারণে ফেইল করেছে তার একটি লিস্ট (যেমন: "Invalid ID", "Permission denied")।
+
+### ৫. `Success()` মেথড (রিপোর্ট হ্যান্ডওভার)
+- কোড উদাহরণ: `return Result<BranchDTO>.Success(branchObj, "Found it!");`
+- ব্যাখ্যা: যখন সবকিছু ঠিক থাকে, তখন ডাটা এবং একটি সাকসেস মেসেজ দিয়ে রেজাল্ট অবজেক্ট তৈরি করা।
+
+### ৬. `Failure()` মেথড (রিপোর্ট রিজেকশন)
+- কোড উদাহরণ: `return Result<BranchDTO>.Failure("Process failed", new List<string> { "Database down" });`
+- ব্যাখ্যা: যখন কোনো সমস্যা হয়, তখন একটি এরর মেসেজ এবং বিস্তারিত কারণ দিয়ে রেজাল্ট অবজেক্ট তৈরি করা।
+
+---
+
+### নতুন সামারি টেবিল (কোডসহ)
+
+| প্রপার্টি/মেথড | মেডিকেল অ্যানালজি | কোড উদাহরণ (Single Line) |
+| --------- | ----------------- | -------------------------------- |
+| IsSuccess | রিপোর্ট পজিটিভ?	    | `if (result.IsSuccess) { ... }` |
+| Data      | রক্তে সুগারের মান    | `var myData = result.Data;` |
+| Message   | ডাক্তারের নোট       | `Console.WriteLine(result.Message);` |
+| Errors    | সমস্যার তালিকা      | `result.Errors.ForEach(e => Log(e));` |
+| Success() | সফল রিপোর্ট প্রদান   | `Result<T>.Success(data, "OK");` |
+| Failure() | ব্যর্থ রিপোর্ট প্রদান    | `Result<T>.Failure("Error", errors);` |
+
+
+
+
+
+
+
+-
