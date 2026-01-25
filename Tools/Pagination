@@ -105,6 +105,8 @@ public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAs
 
         var data = await connection.QueryAsync<AuditReportViewDTO>(selectSql, parameters);
 
+        //একটি লাইব্রেরি বা বইয়ের আলমারির উদাহরণ দিতে পারি। ধরুন, আপনার কাছে ১০০০টি বই আছে, কিন্তু আপনি একবারে টেবিলে মাত্র ১০টি বই রাখতে পারেন।
+        //data (বইয়ের বান্ডিল):যেমন: ১ থেকে ১০ নম্বর বই |-| totalRecords (মোট কতটি বই আছে) |-| filter.PageNumber (কত নম্বর সেট): যেমন: "আমি এখন ৩ নম্বর সেটর বইগুলো দেখছি।" |-| filter.PageSize (একবারে কয়টি বই)
         return new PagedResult<IEnumerable<AuditReportViewDTO>>(data, totalRecords, filter.PageNumber, filter.PageSize);
     }
 
