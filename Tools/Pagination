@@ -8,8 +8,6 @@ public record AuditReportViewDTO(
     long Id,
     string? BranchCode,
     int? CreatedBy,
-    //int? UpdatedBy,
-    //int? ApprovedBy,
     string TableName,
     string Action,
     string? OldValue,
@@ -23,8 +21,6 @@ public record AuditReportViewDTO(
 public record AuditReportFilterDTO(
     string? BranchCode,    // ব্রাঞ্চ কোড দিয়ে সার্চ
     int? CreatedBy,        // নির্দিষ্ট ইউজার দিয়ে সার্চ
-    //int? UpdatedBy,        // নির্দিষ্ট ইউজার দিয়ে সার্চ
-    //int? ApprovedBy,       // নির্দিষ্ট ইউজার দিয়ে সার্চ
     DateTime? FromDate, // শুরুর তারিখ
     DateTime? ToDate,   // শেষ তারিখ
     int PageNumber = 1, // কততম পেজ
@@ -121,8 +117,6 @@ public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAs
         );
 
         var result = await _auditLogService.GetAuditReportAsync(filter);
-
-
 
 
         // এই ভ্যালুগুলো ভিউতে ইনপুট ফিল্ডে পুনরায় দেখানোর জন্য
