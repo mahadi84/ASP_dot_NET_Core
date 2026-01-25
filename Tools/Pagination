@@ -28,10 +28,24 @@ public record AuditReportFilterDTO(
 );
 
 
+=======================================================
+                Interface
+=======================================================
 
+using CBS.Application.DTO;
+using CBS.Domain.Common;
+
+namespace CBS.Application.Interfaces;
+
+public interface IAuditLogService
+{
+    Task<Result<bool>> CreateAuditLogAsync(AuditLogCreateDTO dto);
+    Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAsync(AuditReportFilterDTO filter);
+
+}
 
 ==========================================================
-              Service
+             Interface Implementation's Method
 ==========================================================
 
 public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAsync(AuditReportFilterDTO filter)
@@ -103,13 +117,10 @@ public async Task<PagedResult<IEnumerable<AuditReportViewDTO>>> GetAuditReportAs
     // Show at first load(with pagination) than
     // Search(with branchCode, CreatedBy, from DateTime to DateTime)+Show (with pagination)
     public async Task<IActionResult> Index(string? branchCode, int? createdBy, DateTime? fromDate, DateTime? toDate)
-    //public async Task<IActionResult> Index(string? branchCode, int? createdBy, int? updatedBy, int? approvedBy, DateTime? fromDate, DateTime? toDate)
     {
         var filter = new AuditReportFilterDTO(
             BranchCode: branchCode,
             CreatedBy: createdBy,
-            //UpdatedBy: updatedBy,
-            //ApprovedBy: approvedBy,
             FromDate: fromDate,
             ToDate: toDate,
             PageNumber: 1,
