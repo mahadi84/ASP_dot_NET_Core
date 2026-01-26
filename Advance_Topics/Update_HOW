@@ -1,7 +1,9 @@
 
 
 #################################### 
-             UPDATE Steps 
+          UPDATE Process:
+          -Search and Show first
+          -Update
 #################################### 
 
 
@@ -10,13 +12,409 @@
 -Update DTO হলো "পরিবর্তন করার জন্য" যা বাইরে থেকে ভেতরে যায়।
 -Controller সরাসরি কিছু করে না, সে শুধু নির্দেশ আদান-প্রদান করে।
 
-সহজবোধ্য অ্যানালজি
-------------------------------------------------------------------------
-উপাদানের নাম-- | সংখ্যা--|-,অ্যানালজি ভূমিকা
-Entity         | ১টি,  |  আসল ঘড়ি: যা সিন্দুকে (Database) থাকে।
-Search DTO,    | ১টি,  | ঘড়ির ছবি/ডিটেইলস: যা কাস্টমারকে দেখানোর জন্য তৈরি।
-Update DTO,    | ১টি,  | মেরামতের ফরম: যেখানে শুধু যা যা ঠিক করতে হবে তার তথ্য থাকে।
-Functions,     | ২টি,  | "১. খুঁজে আনা (Get), ২. সেভ করা (Update)।"
-Controller,    | ১টি,  | দোকানের ম্যানেজার: যে কাস্টমারের সাথে কথা বলে।
-View,          | ২টি,  | "১. সার্চ রেজাল্ট পেজ, ২. এডিট করার ফরম পেজ।"
-------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------
+উপাদানের নাম -|- সংখ্যা -|-,অ্যানালজি -|- ভূমিকা
+-------------------------------------------------------------------------------------------------
+Entity        |  ১টি    | আসল রেসিপি/উপাদান: যা রান্নাঘরের ফ্রিজে (Database) সংরক্ষিত থাকে।
+Search DTO    |  ১টি    | মেনু কার্ডের ছবি: কাস্টমারকে দেখানোর জন্য খাবারের নাম ও দামের সংক্ষিপ্ত তালিকা।
+Update DTO    |  ১টি    | কাস্টমাইজেশন স্লিপ: যেখানে গ্রাহক শুধু লবণের পরিমাণ বা ঝাল কতটুকু হবে তা লিখে দেন।
+Functions     |  ২টি    | "১. পরিবেশন করা (Serve), ২. স্বাদ পরিবর্তন করা (Modify)।"
+Controller    |  ১টি    | ওয়েটার: যে কাস্টমারের অর্ডার নেয় এবং রান্নাঘর থেকে খাবার এনে দেয়।
+View,         |  ২টি    | "১. ক্যাশ কাউন্টার ডিসপ্লে, ২. টেবিলের ওপরের অর্ডার মেনু।"
+-------------------------------------------------------------------------------------------------
+
+
+
+
+------------------------------
+            DTO
+------------------------------
+
+
+public class BranchSearchDTO
+{
+    public int Id { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public string BranchCode { get; set; } = string.Empty;
+    public decimal VaultBalance { get; set; }
+    public int RowVersion { get; set; }
+}
+
+
+
+// Used for updating data form
+public record BranchUpdateDTO(
+    [Required(ErrorMessage = "Id is missing")]
+    int Id,
+
+    [Required(ErrorMessage ="Branch Name Required")]
+    [RegularExpression(@"^[a-zA-Z\s]{3,50}$", ErrorMessage = "Branch Name must be 3-50 characters long and contain only letters and spaces")]
+    string BranchName,
+
+    [Required(ErrorMessage ="Branch Code Required")]
+    // Changed to string to allow leading zeros (e.g., '00123')
+    [RegularExpression(@"^\d{3,20}$", ErrorMessage = "Branch Code must be 3-20 digits")]
+    string BranchCode,
+
+    [Required(ErrorMessage ="Branch Vault Required")]
+    [Range(500, 1000000000, ErrorMessage = "Vault balance must be at least 500 Taka")]
+    decimal VaultBalance,
+
+    [Required(ErrorMessage = "RowVersion is missing")]
+    // RowVersion is a number, so we don't need a Regex for it
+    int RowVersion
+);
+
+
+
+------------------------------
+            Interface
+------------------------------
+ Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID);
+ Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO dto, int UserID);
+
+
+ -----------------------------------------------
+            Interface-Implementation
+------------------------------------------------
+
+public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID)
+    {
+        using var conn = await _dataSource.OpenConnectionAsync();
+        using var transaction = await conn.BeginTransactionAsync(); // Banking transaction start
+
+        try
+        {
+
+            const string sql = @"SELECT 
+                        id AS Id, 
+                        branch_code AS BranchCode, 
+                        branch_name AS BranchName, 
+                        vault_balance AS VaultBalance, 
+                        row_version AS RowVersion 
+                     FROM branches 
+                     WHERE branch_code = @BranchCode AND is_active = TRUE";
+
+            //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
+            var branch = await conn.QueryFirstOrDefaultAsync<BranchSearchDTO>(sql, new { BranchCode = branchCode.Trim() }, transaction);
+
+            if (branch == null)
+            {
+                //ওয়েটার খালি হাতে ফিরে এসে চুপচাপ দাঁড়িয়ে থাকলো। আপনি বুঝলেন না কি হয়েছে। এটি হলো null রিটার্ন করা।
+                //কিভাবে রিপোর্ট করছি, যদি কাচ্চি বিরিয়ানি, মাছ না পাওয়া যায়, তবে বক্সে একটি চিরকুট থাকবে: "দুঃখিত, এই কোডের কোনো কাচ্চি বিরিয়ানি,মাছ (ব্রাঞ্চ) নেই।"
+                return Result<BranchSearchDTO>.Failure("Branch not found"); 
+            }
+
+            // 3. audit log create(new data save so OldValue=null) 
+            var auditDto = new AuditLogCreateDTO(
+                BranchCode: branch.BranchCode,
+                CreatedBy: UserID,
+                UpdatedBy: (int?)null,
+                ApprovedBy: (int?)null,
+                TableName: "branches",
+                Action: "READ",
+                OldValue: $"{branch.VaultBalance}",
+                NewValue: $"{branch.VaultBalance}",
+                Description: "Branch Info. Searched by User."
+            );
+
+            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
+
+            if (!auditResult.IsSuccess)
+            {
+                await transaction.RollbackAsync(); 
+                return Result<BranchSearchDTO>.Failure("Audit log failed. Transaction rolled back.");
+            }
+
+            await transaction.CommitAsync();
+            return Result<BranchSearchDTO>.Success(branch); // মাছ পেলে, সুন্দর বক্সে ভরে পাঠাচ্ছেন(Result<>,Wrapper Class)
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return Result<BranchSearchDTO>.Failure("Database Error"+ ex.Message);
+        }
+
+    }
+
+
+
+
+
+
+
+    public async Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO udto, int currentUserId)
+    {
+        try
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var transaction = await conn.BeginTransactionAsync();
+
+            // 1. Fetch current branch data from database for validation and audit trail
+            //const string selectSql = "SELECT * FROM branches WHERE id = @Id AND is_active = 1";
+
+
+            const string selectSql = @"SELECT 
+                                        id AS Id, 
+                                        branch_name AS BranchName, 
+                                        branch_code AS BranchCode, 
+                                        vault_balance AS VaultBalance, 
+                                        created_by AS CreatedBy, 
+                                        updated_by AS UpdatedBy, 
+                                        approved_by AS ApprovedBy, 
+                                        row_version AS RowVersion
+                                      FROM branches WHERE id = @Id AND is_active = 1";
+
+
+            var branch = await conn.QueryFirstOrDefaultAsync<Branch>(selectSql, new { Id = udto.Id }, transaction);
+
+            if (branch == null)
+                return Result<bool>.Failure("Branch not found or is currently inactive.");
+
+            // 2. Capture original values before modification to store in Audit Log
+            string oldVaultBalance = branch.VaultBalance.ToString();
+            string oldBranchCode = branch.BranchCode;
+            string oldBranchName = branch.BranchName;
+
+            // 3. Update entity information using Domain Methods
+            branch.UpdateInfo(udto.BranchCode, udto.BranchName, currentUserId);
+
+            // 4. Validate business rules (e.g., balance limits) before hitting the database
+            var balanceResult = branch.UpdateVaultBalance(udto.VaultBalance);
+            if (!balanceResult.IsSuccess)
+            {
+                return Result<bool>.Failure(balanceResult.Message);
+            }
+
+            // 5. Final Update Query including Optimistic Concurrency check (row_version)
+            const string updateSql = @"UPDATE branches 
+                                   SET branch_name = @BranchName, 
+                                       branch_code = @BranchCode, 
+                                       vault_balance = @VaultBalance, 
+                                       updated_by = @UpdatedBy,
+                                       row_version = row_version + 1 
+                                   WHERE id = @Id AND row_version = @RowVersion";
+
+            // Execute update using data from the modified Domain Entity
+            var affected = await conn.ExecuteAsync(updateSql, new
+            {
+                branch.BranchName,
+                branch.BranchCode,
+                branch.VaultBalance,
+                branch.UpdatedBy,
+                branch.Id,
+                RowVersion = udto.RowVersion // Client-side version to detect concurrent changes
+            }, transaction);
+
+            if (affected <= 0)
+            {
+                await transaction.RollbackAsync();
+                return Result<bool>.Failure("Update failed. The record was modified by another user (Concurrency Conflict).");
+            }
+
+            // 6. Create Audit Log comparing Old Values with New Values
+            var auditDto = new AuditLogCreateDTO(
+                BranchCode: branch.BranchCode,
+                CreatedBy: branch.CreatedBy,
+                UpdatedBy: currentUserId,
+                ApprovedBy: branch.ApprovedBy,
+                TableName: "branches",
+                Action: "UPDATE",
+                OldValue: $"{oldVaultBalance}",
+                NewValue: $"{branch.VaultBalance}",
+                Description: "Branch information updated via user"
+            );
+
+            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
+
+            // 7. Commit transaction only if both Update and Audit Log creation succeed
+            if (auditResult.IsSuccess)
+            {
+                await transaction.CommitAsync();
+                return Result<bool>.Success(true, "Branch updated successfully.");
+            }
+
+            // Rollback if audit logging fails
+            await transaction.RollbackAsync();
+            return Result<bool>.Failure("Update failed due to an error in the audit logging service.");
+
+        }
+        catch (Exception ex)
+        {
+            // Log the exception here (e.g., _logger.LogError(ex, "UpdateBranchAsync failed"))
+            return Result<bool>.Failure("A database error occurred while processing your request.");
+        }
+    }
+
+
+
+    --------------------------------------------------
+           Controller (Waiter in a resturent)
+    --------------------------------------------------
+
+    
+    //SEARCH & SHOW
+
+    [HttpGet]
+    //[ValidateAntiForgeryToken]
+    public async Task<IActionResult> Manage(string? searchCode)
+    {
+
+        //  Use string.IsNullOrWhiteSpace to check for empty search
+        if (string.IsNullOrWhiteSpace(searchCode))
+        {
+            ViewData["Error"] = "Field cannot be empty";
+            return View();
+        }
+
+        int currentUserId = 2;
+        //  Pass the string searchCode to the service
+        var result = await _branchService.GetByBranchCodeAsync(searchCode, currentUserId);
+
+
+        if (!result.IsSuccess)
+        {
+            ViewData["Error"] = result.Message;
+            return View();
+        }
+
+        // Map ResponseDTO to UpdateDTO for the form
+        var updateModel = new BranchUpdateDTO(
+            result.Data.Id,
+            result.Data.BranchName,
+            result.Data.BranchCode,
+            result.Data.VaultBalance,
+            result.Data.RowVersion
+        );
+
+        return View(updateModel);
+    }
+
+
+
+//UPDATE
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Update(BranchUpdateDTO budto)
+    {
+        if (!ModelState.IsValid) return View("Manage", budto);
+
+        int currentUserId = 3;
+
+        var result = await _branchService.UpdateBranchAsync(budto, currentUserId);
+        if (result.IsSuccess)
+        {
+            ViewData["Success"] = result.Message;
+            return RedirectToAction("Manage", new { searchCode = budto.BranchCode });
+        }
+
+        ViewBag.Error = result.Message;
+        return View("Manage", budto);
+    }
+
+
+
+    --------------------------------------------------
+                       VIEW
+    --------------------------------------------------
+
+    @model CBS.Application.DTO.BranchUpdateDTO
+
+<div class="container mt-4">
+    <div class="card border-primary mb-4 shadow-sm">
+        <div class="card-body bg-light">
+            <form method="get" asp-action="Manage" class="row g-3">
+                <div class="col-md-9">
+                    @* type="text" allows users to input leading zeros comfortably *@
+                    <input type="text" name="searchCode" class="form-control form-control-lg"
+                           placeholder="Enter Branch Code (e.g. 0012, 1005)" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">Search Branch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null || ViewBag.Error != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @(TempData["Error"] ?? ViewBag.Error)
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model != null)
+    {
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0">Edit Branch: @Model.BranchName</h5>
+            </div>
+            <div class="card-body p-4">
+
+
+                <form asp-action="Update" method="post">
+                    @Html.AntiForgeryToken()
+
+                    @* Hidden fields required for identifying the record and handling concurrency *@
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="RowVersion" />
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label asp-for="BranchName" class="form-label fw-bold">Branch Name</label>
+                            <input asp-for="BranchName" class="form-control" />
+                            <span asp-validation-for="BranchName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="BranchCode" class="form-label fw-bold">Branch Code</label>
+                            <input asp-for="BranchCode" type="text" class="form-control" />
+                            <span asp-validation-for="BranchCode" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="VaultBalance" class="form-label fw-bold">Vault Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input asp-for="VaultBalance" class="form-control" />
+                            </div>
+                            <span asp-validation-for="VaultBalance" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 border-top pt-3 text-end">
+                        <a asp-action="Manage" class="btn btn-outline-secondary px-4 me-2">Cancel</a>
+                        <button type="submit" class="btn btn-success px-5">Save Changes</button>
+                    </div>
+                </form>
+
+
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+
+
+
+
+
+
+
+
+
+.
