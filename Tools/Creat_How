@@ -1,1 +1,356 @@
-Creat_How
+
+
+
+
+------------------
+      ENTITY
+------------------
+
+public class Branch
+{
+    public int Id { get; set; }
+    public string BranchCode { get; set; }
+    public string BranchName { get; set; }
+    public decimal VaultBalance { get; private set; } // শুধুমাত্র মেথড দিয়ে পরিবর্তন হবে
+    public int RowVersion { get; set; }
+    public bool IsActive { get; private set; } = true;
+    public int CreatedBy { get; set; }
+    public int ApprovedBy { get; set; }
+    public int? UpdatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    public DateTime? UpdatedAt { get; set; }
+
+
+    // Create a new Branch
+    public static Branch Create(string code, string name, decimal initialBalance, int creatorId)
+    {
+        if (initialBalance < 500) throw new Exception("Initial balance must be 500+");
+
+        return new Branch
+        {
+            BranchCode = code,
+            BranchName = name,
+            VaultBalance = initialBalance,
+            CreatedBy = creatorId,
+            CreatedAt = DateTime.Now,
+            IsActive = true
+        };
+    }
+
+   
+  
+    //Update Info (Balance `=` NOT `+=`)
+    public void UpdateGeneralInfo(string code, string name, decimal finalBalance, int updaterId)
+    {
+        if (finalBalance < 500) throw new Exception("Vault balance cannot be less than 500");
+
+        this.BranchCode = code;
+        this.BranchName = name;
+        this.VaultBalance = finalBalance; // এখানে সরাসরি নতুন ভ্যালু বসবে (এটিই ডাবল হওয়া আটকাবে)
+        this.UpdatedBy = updaterId;
+        this.UpdatedAt = DateTime.Now;
+    }
+
+    
+    // Deposit/Withdraw (`+=` OR `-=`) 
+    public Result<bool> ExecuteTransaction(decimal amount)
+    {
+        if (amount <= 0) return Result<bool>.Failure("Amount cannot be zero or negetive");
+
+        if (amount > 0) // Deposit
+        {
+            VaultBalance += amount;
+        }
+        else // Withdraw (amount is negative)
+        {
+            decimal absAmount = Math.Abs(amount);
+            if ((VaultBalance - absAmount) < 500)
+                return Result<bool>.Failure("Insufficient balance! Min 500 required.");
+
+            VaultBalance -= absAmount;
+        }
+        return Result<bool>.Success(true);
+    }
+
+
+    public void Deactivate() => IsActive = false;
+    public void Activate() => IsActive = true;
+}
+
+
+---------------------------
+           DTO
+---------------------------
+
+public record BranchCreateDTO(
+    [Required(ErrorMessage ="Branch Name Required")]
+    [RegularExpression(@"^[a-zA-Z\s]{3,50}$", ErrorMessage = " Branch Name must be 3-50 characters long and contain only letters and spaces")]
+    string BranchName, 
+    
+    [Required(ErrorMessage ="Branch Code Required")]
+    [RegularExpression(@"^\d{3,5}$", ErrorMessage = "Branch Code, Only 3-5 digits allowed")]
+    string BranchCode, 
+    
+    [Required(ErrorMessage ="Branch Vault Required")]
+    [Range(500, 1000000000, ErrorMessage = "Vault balance must be at least 500 Taka")]
+    decimal VaultBalance
+    );
+
+public record BranchResponseDTO(
+   int Id,
+   string BranchName,
+   string BranchCode,
+   decimal VaultBalance
+);
+
+
+
+
+
+-----------------------------------------
+          INTERFACE
+-----------------------------------------
+
+Task<Result<BranchResponseDTO>> CreateBranchAsync(BranchCreateDTO bdto, int UserID);
+
+
+-----------------------------------------
+     INTERFACE-iMPLEMENTATION
+-----------------------------------------
+
+
+    public async Task<Result<BranchResponseDTO>> CreateBranchAsync(BranchCreateDTO bcdto, int UserID)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync();
+        using var transaction = await connection.BeginTransactionAsync();
+
+        try
+        {
+            // 1. Duplicate Branch Check
+            const string checkSql = "SELECT COUNT(1) FROM branches WHERE branch_code = @BranchCode;";
+            var countBranchCode = await connection.ExecuteScalarAsync<int>(checkSql, new { bcdto.BranchCode }, transaction);
+
+            if (countBranchCode > 0)
+            {
+                return Result<BranchResponseDTO>.Failure("Branch code already exists.");
+            }
+
+            // 2. Domain Entity Creation & Business Logic Validation
+            // Using the static factory method to ensure all business rules (e.g., Min Balance 500) are met.
+            Branch newBranch;
+            try
+            {
+                newBranch = Branch.Create(bcdto.BranchCode, bcdto.BranchName, bcdto.VaultBalance, UserID);
+            }
+            catch (Exception ex)
+            {
+                // Catch validation errors thrown by the Domain Entity
+                return Result<BranchResponseDTO>.Failure(ex.Message);
+            }
+
+            // 3. Data Insertion using Entity Properties
+            const string insertSql = @"
+            INSERT INTO branches (branch_code, branch_name, vault_balance, created_by, row_version, is_active, created_at) 
+            VALUES (@BranchCode, @BranchName, @VaultBalance, @CreatedBy, @RowVersion, @IsActive, @CreatedAt);
+            SELECT LAST_INSERT_ID();";
+
+            // Map parameters directly from the validated Entity object
+            var insertParameters = new
+            {
+                newBranch.BranchCode,
+                newBranch.BranchName,
+                newBranch.VaultBalance,
+                newBranch.CreatedBy,
+                newBranch.RowVersion,
+                newBranch.IsActive,
+                newBranch.CreatedAt
+            };
+
+            var newId = await connection.ExecuteScalarAsync<int>(insertSql, insertParameters, transaction);
+
+            if (newId <= 0)
+            {
+                await transaction.RollbackAsync();
+                return Result<BranchResponseDTO>.Failure("Failed! Branch data not saved.");
+            }
+
+            // 4. Audit Log Creation
+            // Recording the 'CREATE' action with final validated values
+            var auditDto = new AuditLogCreateDTO(
+                BranchCode: newBranch.BranchCode,
+                CreatedBy: UserID,
+                UpdatedBy: null,
+                ApprovedBy: null,
+                TableName: "branches",
+                Action: "CREATE",
+                OldValue: "-",
+                NewValue: $"Name: {newBranch.BranchName}, Balance: {newBranch.VaultBalance}, Status: {(newBranch.IsActive ? "Active" : "Inactive")}",
+                Description: "New Branch created"
+            );
+
+            var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
+
+            if (!auditResult.IsSuccess)
+            {
+                // Rollback the entire transaction if the audit log fails
+                await transaction.RollbackAsync();
+                return Result<BranchResponseDTO>.Failure("Audit log failed. Transaction rolled back.");
+            }
+
+            // 5. Commit Transaction
+            // Finalizing the changes in the database
+            await transaction.CommitAsync();
+
+            // 6. Return Response Data for the UI
+            var response= new BranchResponseDTO(
+                Id :newId,
+                BranchName: newBranch.BranchName,
+                BranchCode: newBranch.BranchCode,
+                VaultBalance: newBranch.VaultBalance);
+            return Result<BranchResponseDTO>.Success( response, "Branch created successfully.");
+        }
+        catch (Exception ex)
+        {
+            // Rollback on any unexpected database or system error
+            await transaction.RollbackAsync();
+            return Result<BranchResponseDTO>.Failure("Database Error: " + ex.Message);
+        }
+    }
+
+
+
+
+-----------------------------------------
+    WEB-CONTROLLER
+-----------------------------------------
+
+    // POST: BranchController/Create
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(BranchCreateDTO bdto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View("Index", bdto);
+        }
+
+        int UserID = 1; // পরবর্তীতে সেশন বা ইউজার থেকে আসবে
+        var result = await _branchService.CreateBranchAsync(bdto, UserID);
+
+        if (result.IsSuccess)
+        {
+
+            // get data from dynamic and create message
+            var data = result.Data;
+
+            var id = data.Id;
+            var branchName = data.BranchName;
+            var branchCode = data.BranchCode;
+            var vaultBalance = data.VaultBalance;
+            
+
+            TempData["Success"] = $"{result.Message}, ID:{id}, Branch: {branchName} ({branchCode}), Vault Balance: ({vaultBalance})";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        //pass error message If faild to insert so that user can edit
+        ViewBag.ErrorMessage = result.Message;
+        TempData["Error"] = result.Message;
+
+        return View("Index",bdto);
+    }
+
+
+
+
+-----------------------------------------
+            VIEW
+-----------------------------------------
+
+@model CBS.Application.DTO.BranchCreateDTO
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            @if (TempData["Error"] != null || ViewBag.ErrorMessage != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    @(TempData["Error"] ?? ViewBag.ErrorMessage)
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            }
+
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Create New Branch</h4>
+                </div>
+                <div class="card-body">
+                    @* To show  Validation Summary  *@
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+                    <form asp-action="Create" method="post">
+
+                        <div class="mb-3">
+                            <label asp-for="BranchName" class="form-label">Branch Name</label>
+                            <input asp-for="BranchName" class="form-control" placeholder="Enter branch name">
+                            <span asp-validation-for="BranchName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="BranchCode" class="form-label">Branch Code</label>
+                            <input asp-for="BranchCode" class="form-control" placeholder="e.g. 101">
+                            <span asp-validation-for="BranchCode" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="VaultBalance" class="form-label">Vault Balance</label>
+                            <div class="input-group">
+                                <span class="input-group-text">৳</span>
+                                <input asp-for="VaultBalance" type="number" step="0.01" class="form-control" placeholder="0.00">
+                            </div>
+                            <span asp-validation-for="VaultBalance" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-grid shadow-sm mt-4">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> Save Branch
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center">
+                    <a asp-action="Index" class="btn btn-link btn-sm text-decoration-none">Back to List</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
+
+
+
+
+
+
+
+
+
+
+.
+
