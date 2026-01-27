@@ -7,11 +7,16 @@
 and manage Transactions in the Service layer along with Audit Logging for security."
 
 
+
+
+
+
+
+
 #################################### 
              CREATE Steps 
 #################################### 
-
-Entities->DTO->Interface with DTO and return type->interface implementation->interface call in Web Controller->Web View for form to submit
+DATABASE->Entities->DTO->Interface with DTO and return type->interface implementation->interface call in Web Controller->Web View for form to submit
 
 ## ১. রেস্টুরেন্ট বা বিয়ে বাড়ির খাবার তৈরির অ্যানালজি
 
@@ -45,6 +50,34 @@ Entities->DTO->Interface with DTO and return type->interface implementation->int
 ভ্যালিডেশন,   | ফরমেট ঠিক আছে কি না (যেমন: String Length)। | বিজনেস রুলস ঠিক আছে কি না (যেমন: Min Balance)।
 মেটাডাটা,     | কিছুই না।                                     | "CreatedAt, RowVersion ইত্যাদি ম্যানেজ করা।"
 ----------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+------------------
+      TABLE
+------------------
+
+CREATE TABLE branches (
+    id INT AUTO_INCREMENT PRIMARY KEY,   
+    branch_code VARCHAR(20) NOT NULL, 
+    branch_name VARCHAR(150) NOT NULL,
+    vault_balance DECIMAL(18, 2) NOT NULL DEFAULT 0.00, 
+    row_version INT NOT NULL DEFAULT 1, 
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by INT NOT NULL,
+    updated_by INT DEFAULT NULL, 
+    approved_by INT DEFAULT NULL, 
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Indexing
+    CONSTRAINT uq_branch_code UNIQUE (branch_code),
+    INDEX idx_branch_active (is_active)
+);
 
 
 
