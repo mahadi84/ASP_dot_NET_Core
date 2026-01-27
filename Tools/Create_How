@@ -1,5 +1,11 @@
 
 
+প্রো-টিপ (Freelance Tips):
+
+ফ্রিল্যান্সিং ইন্টারভিউতে যদি কেউ জিজ্ঞাসা করে—"How do you handle data creation?", তবে এভাবে উত্তর দিন:
+"I follow a Domain-Driven approach. I use DTOs for data transfer, Static Factory Methods in the Domain Entity for business validation, 
+and manage Transactions in the Service layer along with Audit Logging for security."
+
 
 
 ------------------
