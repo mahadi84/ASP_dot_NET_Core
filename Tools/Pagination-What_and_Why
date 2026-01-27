@@ -13,6 +13,26 @@ return new PagedResult<IEnumerable<AuditReportViewDTO>>(data, totalRecords, filt
 
 
 
+--------------------
+        ENTITY
+--------------------
+
+public class PagedResult<T>
+{
+    public T Items { get; set; }
+    public int TotalCount { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+
+    public PagedResult(T items, int totalCount, int pageNumber, int pageSize)
+    {
+        Items = items;
+        TotalCount = totalCount;
+        PageNumber = pageNumber;
+        PageSize = pageSize;
+    }
+}
 
 
 
