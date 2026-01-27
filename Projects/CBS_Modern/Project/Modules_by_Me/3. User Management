@@ -69,143 +69,157 @@ CREATE TABLE users (
 
 ###########################################################################################################################
 
- **Clean Architecture** অনুসরণ করে `User Management`-এর জন্য Domain Layer থেকে Presentation Layer পর্যন্ত পুরো কোড সহকারে একটি solution দিচ্ছি, 
-যাতে **Role-based Access Control (RBAC)**, **Audit Log** এবং **Concurrency** সহ সব business logic আছে।
+ Below is copy-paste ready Clean Architecture style using:
 
-এখানে আমি **HoSuperAdmin, BrAdmin, Maker, Checker** রোল অনুযায়ী **User Management** মডিউল গঠন করেছি।
+✅ Dapper + MySQL DataSource (`_dataSource.OpenConnectionAsync()`)
+✅ BCrypt password hashing
+✅ Audit Repository + Audit Service (CREATE / UPDATE / LOGIN_FAIL / LOCK / UNLOCK / LOGIN_SUCCESS)
+✅ Lock user after 3 wrong password attempts (failed_attempts >= 3)
+
+Folders:
+
+- `CBS.Domain`
+- `CBS.Application`
+- `CBS.Infrastructure`
+- `CBS.Web`
 
 ---
 
-### 1) Domain Layer
+# 0) DB: Audit table (required)
 
-#### 1.1) `User` Entity
+Use a simple audit table (you can adjust columns later):
+
+```sql
+CREATE TABLE audit_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  table_name VARCHAR(50) NOT NULL,
+  action VARCHAR(30) NOT NULL,
+  key_value VARCHAR(120) NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  description VARCHAR(255) NULL,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+# 1) CBS.Domain
+
+## 1.1 Result<T> (your global wrapper)
+
+(Use your existing one)
+
+## 1.2 Role Enum
+
+`CBS.Domain/Enums/UserRole.cs`
 
 ```csharp
-namespace CBS.Domain.Users.Entities
+namespace CBS.Domain.Enums
 {
-    public class User
+    public enum UserRole
     {
-        public int Id { get; private set; }
-        public string Username { get; private set; }
-        public string PasswordHash { get; private set; }
-        public UserRole Role { get; private set; }
+        HoSuperAdmin,
+        BrAdmin,
+        Auditor,
+        Maker,
+        Checker
+    }
+}
+```
+
+## 1.3 User Entity (Domain rules + lock logic)
+
+`CBS.Domain/Entities/AppUser.cs`
+
+```csharp
+using CBS.Domain.Common;
+using CBS.Domain.Enums;
+
+namespace CBS.Domain.Entities
+{
+    public class AppUser
+    {
+        public int Id { get; set; }
+        public string Username { get; private set; } = string.Empty;
+        public string PasswordHash { get; private set; } = string.Empty;
+        public UserRole Role { get; private set; } = UserRole.Maker;
         public int BranchId { get; private set; }
-        public int FailedAttempts { get; private set; }
+
+        public int FailedAttempts { get; private set; } = 0;
         public DateTime? LockUntil { get; private set; }
-        public bool IsLocked { get; private set; }
+        public bool IsLocked { get; private set; } = false;
+
         public bool IsActive { get; private set; } = true;
         public DateTime? LastLogin { get; private set; }
-        public int VersionNo { get; private set; } = 1; // For concurrency
 
-        public User(string username, string passwordHash, UserRole role, int branchId)
+        // Create user with domain validation (single source of truth)
+        public static AppUser Create(string username, string passwordHash, UserRole role, int branchId)
         {
-            SetUsername(username);
-            SetPasswordHash(passwordHash);
+            if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
+            if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
+            if (string.IsNullOrWhiteSpace(passwordHash)) throw new Exception("Password hash is missing.");
+            if (branchId <= 0) throw new Exception("BranchId is required.");
+
+            return new AppUser
+            {
+                Username = username.Trim(),
+                PasswordHash = passwordHash,
+                Role = role,
+                BranchId = branchId,
+                FailedAttempts = 0,
+                LockUntil = null,
+                IsLocked = false,
+                IsActive = true,
+                LastLogin = null
+            };
+        }
+
+        // Update general info; password hash optional
+        public void UpdateGeneralInfo(string username, UserRole role, int branchId, bool isActive, string? newPasswordHash = null)
+        {
+            if (string.IsNullOrWhiteSpace(username)) throw new Exception("Username is required.");
+            if (username.Length < 3 || username.Length > 50) throw new Exception("Username must be 3-50 characters.");
+            if (branchId <= 0) throw new Exception("BranchId is required.");
+
+            Username = username.Trim();
             Role = role;
             BranchId = branchId;
+            IsActive = isActive;
+
+            if (!string.IsNullOrWhiteSpace(newPasswordHash))
+                PasswordHash = newPasswordHash;
         }
 
-        public void SetUsername(string username)
+        // Called when password is wrong
+        public void RegisterFailedLogin(int maxAttempts, TimeSpan lockDuration, DateTime nowUtc)
         {
-            username = username.Trim();
-            if (username.Length < 3 || username.Length > 50)
-                throw new ArgumentException("Username must be 3-50 characters.");
-            Username = username;
-            VersionNo++;
-        }
+            FailedAttempts += 1;
 
-        public void SetPasswordHash(string passwordHash)
-        {
-            if (string.IsNullOrWhiteSpace(passwordHash))
-                throw new ArgumentException("Password hash required.");
-            PasswordHash = passwordHash;
-            VersionNo++;
-        }
-
-        public void LockUntilTime(DateTime untilUtc)
-        {
-            IsLocked = true;
-            LockUntil = untilUtc;
-            VersionNo++;
-        }
-
-        public void Unlock()
-        {
-            IsLocked = false;
-            LockUntil = null;
-            FailedAttempts = 0;
-            VersionNo++;
-        }
-
-        public void RecordFailedAttempt(int maxAttempts, TimeSpan lockDuration, DateTime nowUtc)
-        {
-            FailedAttempts++;
+            // If reached max attempts => lock account
             if (FailedAttempts >= maxAttempts)
             {
                 IsLocked = true;
                 LockUntil = nowUtc.Add(lockDuration);
             }
-            VersionNo++;
         }
 
-        public void RecordSuccessfulLogin(DateTime nowUtc)
+        // Called when login successful
+        public void RegisterSuccessfulLogin(DateTime nowUtc)
         {
             FailedAttempts = 0;
             IsLocked = false;
             LockUntil = null;
             LastLogin = nowUtc;
-            VersionNo++;
         }
 
-        public bool IsCurrentlyLocked(DateTime nowUtc)
+        // Unlock manually (admin)
+        public void Unlock()
         {
-            if (!IsLocked) return false;
-            if (LockUntil == null) return true;
-            if (nowUtc < LockUntil.Value) return true;
-
-            // lock time expired → auto unlock
+            FailedAttempts = 0;
             IsLocked = false;
             LockUntil = null;
-            FailedAttempts = 0;
-            VersionNo++;
-            return false;
-        }
-    }
-
-    public enum UserRole
-    {
-        HoSuperAdmin = 1,
-        BrAdmin = 2,
-        Maker = 3,
-        Checker = 4,
-        Auditor = 5
-    }
-}
-```
-
-#### 1.2) `AuditLog` Entity
-
-```csharp
-namespace CBS.Domain.Audits.Entities
-{
-    public class AuditLog
-    {
-        public long Id { get; private set; }
-        public int BranchId { get; private set; }
-        public int? UserId { get; private set; }
-        public string Action { get; private set; }
-        public string? OldValue { get; private set; }
-        public string? NewValue { get; private set; }
-        public DateTime CreatedAt { get; private set; }
-
-        public AuditLog(int branchId, int? userId, string action, string? oldValue, string? newValue, DateTime createdAtUtc)
-        {
-            BranchId = branchId;
-            UserId = userId;
-            Action = action;
-            OldValue = oldValue;
-            NewValue = newValue;
-            CreatedAt = createdAtUtc;
         }
     }
 }
@@ -213,243 +227,255 @@ namespace CBS.Domain.Audits.Entities
 
 ---
 
-### 2) Application Layer
+# 2) CBS.Application
 
-#### 2.1) Command Models (Create/Update/Lock/Unlock/Reset Password)
+## 2.1 DTOs
+
+`CBS.Application/DTO/Users/UserDTOs.cs`
 
 ```csharp
-namespace CBS.Application.Users.Commands
+using System.ComponentModel.DataAnnotations;
+using CBS.Domain.Enums;
+
+namespace CBS.Application.DTO.Users
 {
-    public class CreateUser
-    {
-        public string Username { get; }
-        public string Password { get; }
-        public UserRole Role { get; }
-        public int BranchId { get; }
+    public record UserCreateDTO(
+        [Required, StringLength(50, MinimumLength = 3)]
+        string Username,
 
-        public CreateUser(string username, string password, UserRole role, int branchId)
-        {
-            Username = username;
-            Password = password;
-            Role = role;
-            BranchId = branchId;
-        }
+        [Required, StringLength(100, MinimumLength = 6)]
+        string Password,
+
+        [Required]
+        UserRole Role,
+
+        [Required, Range(1, int.MaxValue)]
+        int BranchId
+    );
+
+    public record UserResponseDTO(
+        int Id,
+        string Username,
+        UserRole Role,
+        int BranchId,
+        bool IsActive,
+        bool IsLocked,
+        int FailedAttempts,
+        DateTime? LockUntil,
+        DateTime? LastLogin
+    );
+
+    public class UserSearchDTO
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public UserRole Role { get; set; }
+        public int BranchId { get; set; }
+        public int FailedAttempts { get; set; }
+        public DateTime? LockUntil { get; set; }
+        public bool IsLocked { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? LastLogin { get; set; }
     }
 
-    public class UpdateUser
+    public record UserUpdateDTO(
+        [Required] int Id,
+        [Required, StringLength(50, MinimumLength = 3)] string Username,
+        [Required] UserRole Role,
+        [Required, Range(1, int.MaxValue)] int BranchId,
+        [Required] bool IsActive,
+
+        // optional password reset by admin
+        [StringLength(100, MinimumLength = 6)] string? NewPassword
+    );
+
+    // Login input
+    public record UserLoginDTO(
+        [Required] string Username,
+        [Required] string Password
+    );
+
+    // Login output
+    public record LoginResultDTO(
+        int UserId,
+        string Username,
+        UserRole Role,
+        int BranchId,
+        bool IsLocked,
+        DateTime? LockUntil,
+        string Message
+    );
+}
+```
+
+---
+
+## 2.2 Audit DTO + Interfaces
+
+`CBS.Application/DTO/Audit/AuditLogCreateDTO.cs`
+
+```csharp
+namespace CBS.Application.DTO.Audit
+{
+    public record AuditLogCreateDTO(
+        string TableName,
+        string Action,
+        string? KeyValue,
+        string? OldValue,
+        string? NewValue,
+        string? Description,
+        int? CreatedBy
+    );
+}
+```
+
+`CBS.Application/Interfaces/IAuditLogRepository.cs`
+
+```csharp
+using CBS.Application.DTO.Audit;
+using CBS.Domain.Common;
+
+namespace CBS.Application.Interfaces
+{
+    public interface IAuditLogRepository
     {
-        public int Id { get; }
-        public string Username { get; }
-        public int BranchId { get; }
-
-        public UpdateUser(int id, string username, int branchId)
-        {
-            Id = id;
-            Username = username;
-            BranchId = branchId;
-        }
-    }
-
-    public class LockUnlockUser
-    {
-        public int Id { get; }
-        public bool Lock { get; }
-        public int LockMinutes { get; }
-
-        public LockUnlockUser(int id, bool lockUser, int lockMinutes)
-        {
-            Id = id;
-            Lock = lockUser;
-            LockMinutes = lockMinutes;
-        }
-    }
-
-    public class ResetPassword
-    {
-        public int Id { get; }
-        public string NewPassword { get; }
-
-        public ResetPassword(int id, string newPassword)
-        {
-            Id = id;
-            NewPassword = newPassword;
-        }
+        Task<Result<int>> CreateAsync(AuditLogCreateDTO dto);
     }
 }
 ```
 
-#### 2.2) DTO (UserDto)
+`CBS.Application/Interfaces/IAuditLogService.cs`
 
 ```csharp
-namespace CBS.Application.Users.DTOs
+using CBS.Application.DTO.Audit;
+using CBS.Domain.Common;
+
+namespace CBS.Application.Interfaces
 {
-    public class UserDto
+    public interface IAuditLogService
     {
-        public int Id { get; }
-        public string Username { get; }
-        public UserRole Role { get; }
-        public int BranchId { get; }
-        public bool IsActive { get; }
-        public bool IsLocked { get; }
-        public DateTime? LockUntil { get; }
-        public DateTime? LastLogin { get; }
-
-        public UserDto(int id, string username, UserRole role, int branchId, bool isActive, bool isLocked, DateTime? lockUntil, DateTime? lastLogin)
-        {
-            Id = id;
-            Username = username;
-            Role = role;
-            BranchId = branchId;
-            IsActive = isActive;
-            IsLocked = isLocked;
-            LockUntil = lockUntil;
-            LastLogin = lastLogin;
-        }
-    }
-}
-```
-
-#### 2.3) Services (User Service)
-
-```csharp
-using CBS.Application.Users.Commands;
-using CBS.Application.Users.DTOs;
-using CBS.Domain.Users.Entities;
-using CBS.Domain.Users.Repositories;
-using CBS.Domain.Audits.Repositories;
-using CBS.Domain.Users.Services;
-
-namespace CBS.Application.Users.Services
-{
-    public class UserService
-    {
-        private readonly IUserRepository _userRepository;
-        private readonly IAuditLogRepository _auditLogRepository;
-        private readonly IUserPasswordHasher _passwordHasher;
-        private readonly IClock _clock;
-
-        private const int MaxFailedAttempts = 3;
-        private static readonly TimeSpan LockDuration = TimeSpan.FromMinutes(5);
-
-        public UserService(IUserRepository userRepository, IAuditLogRepository auditLogRepository, IUserPasswordHasher passwordHasher, IClock clock)
-        {
-            _userRepository = userRepository;
-            _auditLogRepository = auditLogRepository;
-            _passwordHasher = passwordHasher;
-            _clock = clock;
-        }
-
-        public async Task<Result<UserDto>> CreateUserAsync(CreateUser command, CancellationToken ct)
-        {
-            var username = command.Username.Trim();
-            var passwordHash = _passwordHasher.Hash(command.Password);
-
-            var user = new User(username, passwordHash, command.Role, command.BranchId);
-
-            await _userRepository.AddAsync(user, ct);
-            await _userRepository.SaveChangesAsync(ct);
-
-            // Log Audit
-            var auditLog = new AuditLog(command.BranchId, null, "User Created", null, user.Username, _clock.UtcNow);
-            await _auditLogRepository.AddAsync(auditLog, ct);
-            await _auditLogRepository.SaveChangesAsync(ct);
-
-            var userDto = new UserDto(user.Id, user.Username, user.Role, user.BranchId, user.IsActive, user.IsLocked, user.LockUntil, user.LastLogin);
-            return Result<UserDto>.Success(userDto, "User successfully created.");
-        }
-
-        public async Task<Result<UserDto>> LockUnlockUserAsync(LockUnlockUser command, CancellationToken ct)
-        {
-            var user = await _userRepository.GetByIdAsync(command.Id, ct);
-            if (user == null)
-                return Result<UserDto>.Fail("User not found.", "USER_NOT_FOUND");
-
-            if (command.Lock)
-            {
-                user.LockUntilTime(_clock.UtcNow.AddMinutes(command.LockMinutes));
-                await _userRepository.SaveChangesAsync(ct);
-
-                var auditLog = new AuditLog(user.BranchId, user.Id, "User Locked", null, user.Username, _clock.UtcNow);
-                await _auditLogRepository.AddAsync(auditLog, ct);
-                await _auditLogRepository.SaveChangesAsync(ct);
-
-                return Result<UserDto>.Success(new UserDto(user.Id, user.Username, user.Role, user.BranchId, user.IsActive, user.IsLocked, user.LockUntil, user.LastLogin), "User locked.");
-            }
-
-            user.Unlock();
-            await _userRepository.SaveChangesAsync(ct);
-
-            var unlockLog = new AuditLog(user.BranchId, user.Id, "User Unlocked", null, user.Username, _clock.UtcNow);
-            await _auditLogRepository.AddAsync(unlockLog, ct);
-            await _auditLogRepository.SaveChangesAsync(ct);
-
-            return Result<UserDto>.Success(new UserDto(user.Id, user.Username, user.Role, user.BranchId, user.IsActive, user.IsLocked, user.LockUntil, user.LastLogin), "User unlocked.");
-        }
-
-        public async Task<Result<UserDto>> ResetPasswordAsync(ResetPassword command, CancellationToken ct)
-        {
-            var user = await _userRepository.GetByIdAsync(command.Id, ct);
-            if (user == null)
-                return Result<UserDto>.Fail("User not found.", "USER_NOT_FOUND");
-
-            user.SetPasswordHash(_passwordHasher.Hash(command.NewPassword));
-            user.Unlock();
-            await _userRepository.SaveChangesAsync(ct);
-
-            var auditLog = new AuditLog(user.BranchId, user.Id, "Password Reset", null, user.Username, _clock.UtcNow);
-            await _auditLogRepository.AddAsync(auditLog, ct);
-            await _auditLogRepository.SaveChangesAsync(ct);
-
-            return Result<UserDto>.Success(new UserDto(user.Id, user.Username, user.Role, user.BranchId, user.IsActive, user.IsLocked, user.LockUntil, user.LastLogin), "Password reset successful.");
-        }
+        Task<Result<int>> CreateAuditLogAsync(AuditLogCreateDTO dto);
     }
 }
 ```
 
 ---
 
-### 3) Infrastructure Layer
+## 2.3 User service interface
 
-#### 3.1) DbContext
+`CBS.Application/Interfaces/IUserService.cs`
 
 ```csharp
-using CBS.Domain.Users.Entities;
-using CBS.Domain.Audits.Entities;
-using Microsoft.EntityFrameworkCore;
+using CBS.Application.DTO.Users;
+using CBS.Domain.Common;
+
+namespace CBS.Application.Interfaces
+{
+    public interface IUserService
+    {
+        Task<Result<UserResponseDTO>> CreateUserAsync(UserCreateDTO dto, int currentUserId);
+        Task<Result<UserSearchDTO>> GetByUsernameAsync(string username, int currentUserId);
+        Task<Result<bool>> UpdateUserAsync(UserUpdateDTO dto, int currentUserId);
+
+        // Login will enforce lock after 3 wrong attempts
+        Task<Result<LoginResultDTO>> LoginAsync(UserLoginDTO dto);
+    }
+}
+```
+
+---
+
+# 3) CBS.Infrastructure (Dapper + MySQL)
+
+## 3.1 DataSource interface (if you already have, keep yours)
+
+`CBS.Infrastructure/Persistence/IDataSource.cs`
+
+```csharp
+using MySqlConnector;
 
 namespace CBS.Infrastructure.Persistence
 {
-    public class CbsDbContext : DbContext
+    public interface IDataSource
     {
-        public CbsDbContext(DbContextOptions<CbsDbContext> options) : base(options) { }
+        Task<MySqlConnection> OpenConnectionAsync();
+    }
+}
+```
 
-        public DbSet<User> Users => Set<User>();
-        public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+> You already have something similar. Use your existing one.
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+---
+
+## 3.2 Audit Repository (Dapper)
+
+`CBS.Infrastructure/Repositories/AuditLogRepository.cs`
+
+```csharp
+using CBS.Application.DTO.Audit;
+using CBS.Application.Interfaces;
+using CBS.Domain.Common;
+using CBS.Infrastructure.Persistence;
+using Dapper;
+
+namespace CBS.Infrastructure.Repositories
+{
+    public class AuditLogRepository : IAuditLogRepository
+    {
+        private readonly IDataSource _dataSource;
+
+        public AuditLogRepository(IDataSource dataSource)
         {
-            // User
-            modelBuilder.Entity<User>()
-                .HasKey(x => x.Id);
+            _dataSource = dataSource;
+        }
 
-            modelBuilder.Entity<User>()
-                .Property(x => x.Username)
-                .HasMaxLength(50)
-                .IsRequired();
+        public async Task<Result<int>> CreateAsync(AuditLogCreateDTO dto)
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
 
-            modelBuilder.Entity<User>()
-                .Property(x => x.PasswordHash)
-                .HasMaxLength(255)
-                .IsRequired();
+            const string sql = @"
+INSERT INTO audit_logs (table_name, action, key_value, old_value, new_value, description, created_by)
+VALUES (@TableName, @Action, @KeyValue, @OldValue, @NewValue, @Description, @CreatedBy);
+SELECT LAST_INSERT_ID();";
 
-            // AuditLog
-            modelBuilder.Entity<AuditLog>()
-                .HasKey(x => x.Id);
+            try
+            {
+                int id = await conn.ExecuteScalarAsync<int>(sql, dto);
+                return Result<int>.Success(id, "Audit log created.");
+            }
+            catch (Exception ex)
+            {
+                return Result<int>.Failure("Audit error: " + ex.Message);
+            }
+        }
+    }
+}
+```
 
-            modelBuilder.Entity<AuditLog>()
-                .Property(x => x.Action)
-                .HasMaxLength(100)
-                .IsRequired();
+## 3.3 Audit Service
+
+`CBS.Infrastructure/Services/AuditLogService.cs`
+
+```csharp
+using CBS.Application.DTO.Audit;
+using CBS.Application.Interfaces;
+using CBS.Domain.Common;
+
+namespace CBS.Infrastructure.Services
+{
+    public class AuditLogService : IAuditLogService
+    {
+        private readonly IAuditLogRepository _repo;
+
+        public AuditLogService(IAuditLogRepository repo)
+        {
+            _repo = repo;
+        }
+
+        public Task<Result<int>> CreateAuditLogAsync(AuditLogCreateDTO dto)
+        {
+            // Keeps audit logic centralized (future: enrich DTO, add IP, etc.)
+            return _repo.CreateAsync(dto);
         }
     }
 }
@@ -457,342 +483,814 @@ namespace CBS.Infrastructure.Persistence
 
 ---
 
-### 4) Presentation Layer
+## 3.4 UserService (Create + Update + Login lock after 3 wrong)
 
-#### 4.1) UserController (CRUD & RBAC)
+`CBS.Infrastructure/Services/UserService.cs`
 
 ```csharp
+using CBS.Application.DTO.Audit;
+using CBS.Application.DTO.Users;
+using CBS.Application.Interfaces;
+using CBS.Domain.Common;
+using CBS.Domain.Entities;
+using CBS.Domain.Enums;
+using CBS.Infrastructure.Persistence;
+using Dapper;
+
+namespace CBS.Infrastructure.Services
+{
+    public class UserService : IUserService
+    {
+        private readonly IDataSource _dataSource;
+        private readonly IAuditLogService _audit;
+
+        // Login policy
+        private const int MAX_WRONG_ATTEMPTS = 3;
+        private static readonly TimeSpan LOCK_DURATION = TimeSpan.FromMinutes(15);
+
+        public UserService(IDataSource dataSource, IAuditLogService audit)
+        {
+            _dataSource = dataSource;
+            _audit = audit;
+        }
+
+        public async Task<Result<UserResponseDTO>> CreateUserAsync(UserCreateDTO dto, int currentUserId)
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1) Duplicate username check
+                const string dupSql = "SELECT COUNT(1) FROM users WHERE username = @Username;";
+                int exists = await conn.ExecuteScalarAsync<int>(dupSql, new { Username = dto.Username.Trim() }, tx);
+                if (exists > 0)
+                    return Result<UserResponseDTO>.Failure("Username already exists.");
+
+                // 2) Hash password using BCrypt
+                string hash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+
+                // 3) Domain entity creation (business validation in one place)
+                AppUser user;
+                try
+                {
+                    user = AppUser.Create(dto.Username, hash, dto.Role, dto.BranchId);
+                }
+                catch (Exception ex)
+                {
+                    return Result<UserResponseDTO>.Failure(ex.Message);
+                }
+
+                // 4) Insert user
+                const string insertSql = @"
+INSERT INTO users (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login)
+VALUES (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin);
+SELECT LAST_INSERT_ID();";
+
+                int newId = await conn.ExecuteScalarAsync<int>(insertSql, new
+                {
+                    Username = user.Username,
+                    PasswordHash = user.PasswordHash,
+                    Role = user.Role.ToString(), // store enum as string matching DB enum
+                    BranchId = user.BranchId,
+                    FailedAttempts = user.FailedAttempts,
+                    LockUntil = user.LockUntil,
+                    IsLocked = user.IsLocked,
+                    IsActive = user.IsActive,
+                    LastLogin = user.LastLogin
+                }, tx);
+
+                if (newId <= 0)
+                {
+                    await tx.RollbackAsync();
+                    return Result<UserResponseDTO>.Failure("Failed! User not created.");
+                }
+
+                // 5) Audit log inside same transaction behaviour (if you want strict consistency)
+                var auditDto = new AuditLogCreateDTO(
+                    TableName: "users",
+                    Action: "CREATE",
+                    KeyValue: $"id={newId}",
+                    OldValue: "-",
+                    NewValue: $"Username:{user.Username}, Role:{user.Role}, BranchId:{user.BranchId}, Active:{user.IsActive}",
+                    Description: "New user created",
+                    CreatedBy: currentUserId
+                );
+
+                var auditRes = await _audit.CreateAuditLogAsync(auditDto);
+                if (!auditRes.IsSuccess)
+                {
+                    await tx.RollbackAsync();
+                    return Result<UserResponseDTO>.Failure("Audit log failed. Transaction rolled back.");
+                }
+
+                await tx.CommitAsync();
+
+                var response = new UserResponseDTO(
+                    Id: newId,
+                    Username: user.Username,
+                    Role: user.Role,
+                    BranchId: user.BranchId,
+                    IsActive: user.IsActive,
+                    IsLocked: user.IsLocked,
+                    FailedAttempts: user.FailedAttempts,
+                    LockUntil: user.LockUntil,
+                    LastLogin: user.LastLogin
+                );
+
+                return Result<UserResponseDTO>.Success(response, "User created successfully.");
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return Result<UserResponseDTO>.Failure("Database Error: " + ex.Message);
+            }
+        }
+
+        public async Task<Result<UserSearchDTO>> GetByUsernameAsync(string username, int currentUserId)
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                const string sql = @"
+SELECT
+  id AS Id,
+  username AS Username,
+  role AS Role,
+  branch_id AS BranchId,
+  failed_attempts AS FailedAttempts,
+  lock_until AS LockUntil,
+  is_locked AS IsLocked,
+  is_active AS IsActive,
+  last_login AS LastLogin
+FROM users
+WHERE username = @Username;";
+
+                var user = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { Username = username.Trim() }, tx);
+                if (user == null)
+                    return Result<UserSearchDTO>.Failure("User not found.");
+
+                // Convert Role string -> enum (Dapper maps string to enum if property type is enum usually; if not, you can do manual)
+                // If needed, change Role in DTO to string.
+
+                // Audit READ
+                var auditDto = new AuditLogCreateDTO(
+                    TableName: "users",
+                    Action: "READ",
+                    KeyValue: $"username={user.Username}",
+                    OldValue: "-",
+                    NewValue: $"Viewed user profile: {user.Username}",
+                    Description: "User searched by username",
+                    CreatedBy: currentUserId
+                );
+
+                var auditRes = await _audit.CreateAuditLogAsync(auditDto);
+                if (!auditRes.IsSuccess)
+                {
+                    await tx.RollbackAsync();
+                    return Result<UserSearchDTO>.Failure("Audit log failed. Transaction rolled back.");
+                }
+
+                await tx.CommitAsync();
+                return Result<UserSearchDTO>.Success(user);
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return Result<UserSearchDTO>.Failure("Database Error: " + ex.Message);
+            }
+        }
+
+        public async Task<Result<bool>> UpdateUserAsync(UserUpdateDTO dto, int currentUserId)
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1) Load current user for old values + domain updates
+                const string selectSql = @"
+SELECT
+  id AS Id,
+  username AS Username,
+  password_hash AS PasswordHash,
+  role AS Role,
+  branch_id AS BranchId,
+  failed_attempts AS FailedAttempts,
+  lock_until AS LockUntil,
+  is_locked AS IsLocked,
+  is_active AS IsActive,
+  last_login AS LastLogin
+FROM users
+WHERE id = @Id;";
+
+                // Using Domain entity to reuse logic
+                var user = await conn.QueryFirstOrDefaultAsync<AppUserRow>(selectSql, new { dto.Id }, tx);
+                if (user == null)
+                    return Result<bool>.Failure("User not found.");
+
+                // old data for audit
+                string oldData = $"Username:{user.Username}, Role:{user.Role}, BranchId:{user.BranchId}, Active:{user.IsActive}, Locked:{user.IsLocked}, Failed:{user.FailedAttempts}";
+
+                // 2) Duplicate username check (if changed)
+                const string dupSql = "SELECT COUNT(1) FROM users WHERE username=@Username AND id<>@Id;";
+                int dup = await conn.ExecuteScalarAsync<int>(dupSql, new { Username = dto.Username.Trim(), Id = dto.Id }, tx);
+                if (dup > 0)
+                    return Result<bool>.Failure("Username already exists.");
+
+                // 3) Build new password hash if provided
+                string? newHash = null;
+                if (!string.IsNullOrWhiteSpace(dto.NewPassword))
+                    newHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+                // 4) Domain-like validation (simple here)
+                if (dto.BranchId <= 0) return Result<bool>.Failure("BranchId is required.");
+
+                // 5) Update DB
+                const string updateSql = @"
+UPDATE users
+SET
+  username = @Username,
+  password_hash = @PasswordHash,
+  role = @Role,
+  branch_id = @BranchId,
+  is_active = @IsActive
+WHERE id = @Id;";
+
+                string finalHash = newHash ?? user.PasswordHash;
+
+                int affected = await conn.ExecuteAsync(updateSql, new
+                {
+                    Id = dto.Id,
+                    Username = dto.Username.Trim(),
+                    PasswordHash = finalHash,
+                    Role = dto.Role.ToString(),
+                    BranchId = dto.BranchId,
+                    IsActive = dto.IsActive
+                }, tx);
+
+                if (affected <= 0)
+                {
+                    await tx.RollbackAsync();
+                    return Result<bool>.Failure("Update failed.");
+                }
+
+                // 6) Audit UPDATE
+                string newData = $"Username:{dto.Username.Trim()}, Role:{dto.Role}, BranchId:{dto.BranchId}, Active:{dto.IsActive}";
+                var auditDto = new AuditLogCreateDTO(
+                    TableName: "users",
+                    Action: "UPDATE",
+                    KeyValue: $"id={dto.Id}",
+                    OldValue: oldData,
+                    NewValue: newData,
+                    Description: "User updated",
+                    CreatedBy: currentUserId
+                );
+
+                var auditRes = await _audit.CreateAuditLogAsync(auditDto);
+                if (!auditRes.IsSuccess)
+                {
+                    await tx.RollbackAsync();
+                    return Result<bool>.Failure("Audit log failed. Transaction rolled back.");
+                }
+
+                await tx.CommitAsync();
+                return Result<bool>.Success(true, "User updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return Result<bool>.Failure("Database Error: " + ex.Message);
+            }
+        }
+
+        // -----------------------------
+        // LOGIN + 3 wrong attempts lock
+        // -----------------------------
+        public async Task<Result<LoginResultDTO>> LoginAsync(UserLoginDTO dto)
+        {
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var tx = await conn.BeginTransactionAsync();
+
+            try
+            {
+                // 1) Load user by username
+                const string sql = @"
+SELECT
+  id AS Id,
+  username AS Username,
+  password_hash AS PasswordHash,
+  role AS Role,
+  branch_id AS BranchId,
+  failed_attempts AS FailedAttempts,
+  lock_until AS LockUntil,
+  is_locked AS IsLocked,
+  is_active AS IsActive,
+  last_login AS LastLogin
+FROM users
+WHERE username = @Username;";
+
+                var user = await conn.QueryFirstOrDefaultAsync<AppUserRow>(sql, new { Username = dto.Username.Trim() }, tx);
+
+                if (user == null)
+                {
+                    // Do NOT reveal if username exists (security)
+                    return Result<LoginResultDTO>.Failure("Invalid username or password.");
+                }
+
+                // 2) If inactive => stop
+                if (!user.IsActive)
+                    return Result<LoginResultDTO>.Failure("Account is inactive.");
+
+                // 3) If locked and lock_until in future => stop
+                var nowUtc = DateTime.UtcNow;
+                if (user.IsLocked && user.LockUntil.HasValue && user.LockUntil.Value > nowUtc)
+                {
+                    return Result<LoginResultDTO>.Failure($"Account locked until {user.LockUntil.Value:u}");
+                }
+
+                // 4) Verify password using BCrypt
+                bool ok = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+
+                if (!ok)
+                {
+                    // WRONG password => increment attempts and maybe lock
+                    int newFailed = user.FailedAttempts + 1;
+
+                    bool willLock = newFailed >= MAX_WRONG_ATTEMPTS;
+                    DateTime? newLockUntil = willLock ? nowUtc.Add(LOCK_DURATION) : user.LockUntil;
+
+                    const string updateFailSql = @"
+UPDATE users
+SET
+  failed_attempts = @FailedAttempts,
+  is_locked = @IsLocked,
+  lock_until = @LockUntil
+WHERE id = @Id;";
+
+                    await conn.ExecuteAsync(updateFailSql, new
+                    {
+                        Id = user.Id,
+                        FailedAttempts = newFailed,
+                        IsLocked = willLock,
+                        LockUntil = newLockUntil
+                    }, tx);
+
+                    // Audit LOGIN_FAIL
+                    await _audit.CreateAuditLogAsync(new AuditLogCreateDTO(
+                        TableName: "users",
+                        Action: "LOGIN_FAIL",
+                        KeyValue: $"id={user.Id}",
+                        OldValue: $"FailedAttempts:{user.FailedAttempts}, Locked:{user.IsLocked}, LockUntil:{user.LockUntil}",
+                        NewValue: $"FailedAttempts:{newFailed}, Locked:{willLock}, LockUntil:{newLockUntil}",
+                        Description: willLock ? "Wrong password. Account locked (3 attempts)." : "Wrong password attempt.",
+                        CreatedBy: user.Id
+                    ));
+
+                    await tx.CommitAsync();
+
+                    // Return generic message
+                    if (willLock)
+                        return Result<LoginResultDTO>.Failure("Account locked due to 3 wrong password attempts.");
+
+                    return Result<LoginResultDTO>.Failure("Invalid username or password.");
+                }
+
+                // 5) Password OK => reset failed attempts + unlock + update last login
+                const string updateSuccessSql = @"
+UPDATE users
+SET
+  failed_attempts = 0,
+  is_locked = FALSE,
+  lock_until = NULL,
+  last_login = @LastLogin
+WHERE id = @Id;";
+
+                await conn.ExecuteAsync(updateSuccessSql, new
+                {
+                    Id = user.Id,
+                    LastLogin = nowUtc
+                }, tx);
+
+                // Audit LOGIN_SUCCESS
+                await _audit.CreateAuditLogAsync(new AuditLogCreateDTO(
+                    TableName: "users",
+                    Action: "LOGIN_SUCCESS",
+                    KeyValue: $"id={user.Id}",
+                    OldValue: "-",
+                    NewValue: $"LastLogin:{nowUtc:u}",
+                    Description: "User logged in successfully",
+                    CreatedBy: user.Id
+                ));
+
+                await tx.CommitAsync();
+
+                // build response
+                var roleEnum = Enum.Parse<UserRole>(user.Role);
+                var response = new LoginResultDTO(
+                    UserId: user.Id,
+                    Username: user.Username,
+                    Role: roleEnum,
+                    BranchId: user.BranchId,
+                    IsLocked: false,
+                    LockUntil: null,
+                    Message: "Login successful."
+                );
+
+                return Result<LoginResultDTO>.Success(response, "Login successful.");
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                return Result<LoginResultDTO>.Failure("Database Error: " + ex.Message);
+            }
+        }
+
+        // Helper row model for Dapper mapping (since AppUser uses private setters + enum)
+        private class AppUserRow
+        {
+            public int Id { get; set; }
+            public string Username { get; set; } = "";
+            public string PasswordHash { get; set; } = "";
+            public string Role { get; set; } = "Maker";
+            public int BranchId { get; set; }
+            public int FailedAttempts { get; set; }
+            public DateTime? LockUntil { get; set; }
+            public bool IsLocked { get; set; }
+            public bool IsActive { get; set; }
+            public DateTime? LastLogin { get; set; }
+        }
+    }
+}
+```
+
+---
+
+# 4) CBS.Web (MVC Controller + Views)
+
+## 4.1 Controller
+
+`CBS.Web/Controllers/UserController.cs`
+
+```csharp
+using CBS.Application.DTO.Users;
+using CBS.Application.Interfaces;
+using CBS.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
-using CBS.Application.Users.Services;
-using CBS.Application.Users.Commands;
 
 namespace CBS.Web.Controllers
 {
-    [Authorize]
     public class UserController : Controller
     {
-        private readonly UserService _userService;
+        private readonly IUserService _service;
 
-        public UserController(UserService userService)
+        public UserController(IUserService service)
         {
-            _userService = userService;
+            _service = service;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create(CreateUser command, CancellationToken ct)
-        {
-            var result = await _userService.CreateUserAsync(command, ct);
-            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> LockUnlock(LockUnlockUser command, CancellationToken ct)
-        {
-            var result = await _userService.LockUnlockUserAsync(command, ct);
-            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> ResetPassword(ResetPassword command, CancellationToken ct)
-        {
-            var result = await _userService.ResetPasswordAsync(command, ct);
-            TempData[result.IsSuccess ? "Success" : "Error"] = result.Message;
-            return RedirectToAction(nameof(Index));
-        }
-
+        // -------------------------
+        // CREATE
+        // -------------------------
         [HttpGet]
-        public IActionResult Index() => View();
+        public IActionResult Index()
+            => View(new UserCreateDTO("", "", UserRole.Maker, 0));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(UserCreateDTO dto)
+        {
+            if (!ModelState.IsValid) return View("Index", dto);
+
+            int currentUserId = 1; // TODO: get from session/auth
+            var result = await _service.CreateUserAsync(dto, currentUserId);
+
+            if (result.IsSuccess)
+            {
+                TempData["Success"] = $"{result.Message} | ID:{result.Data.Id} | Username:{result.Data.Username}";
+                return RedirectToAction(nameof(Index));
+            }
+
+            TempData["Error"] = result.Message;
+            return View("Index", dto);
+        }
+
+        // -------------------------
+        // MANAGE (Search) + UPDATE
+        // -------------------------
+        [HttpGet]
+        public async Task<IActionResult> Manage(string? username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                ViewData["Error"] = "Username cannot be empty.";
+                return View();
+            }
+
+            int currentUserId = 2;
+            var result = await _service.GetByUsernameAsync(username, currentUserId);
+            if (!result.IsSuccess)
+            {
+                ViewData["Error"] = result.Message;
+                return View();
+            }
+
+            var model = new UserUpdateDTO(
+                Id: result.Data.Id,
+                Username: result.Data.Username,
+                Role: result.Data.Role,
+                BranchId: result.Data.BranchId,
+                IsActive: result.Data.IsActive,
+                NewPassword: null
+            );
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Update(UserUpdateDTO dto)
+        {
+            if (!ModelState.IsValid) return View("Manage", dto);
+
+            int currentUserId = 3;
+            var result = await _service.UpdateUserAsync(dto, currentUserId);
+
+            if (result.IsSuccess)
+            {
+                TempData["Success"] = result.Message;
+                return RedirectToAction("Manage", new { username = dto.Username });
+            }
+
+            TempData["Error"] = result.Message;
+            return View("Manage", dto);
+        }
+
+        // -------------------------
+        // LOGIN (lock after 3 wrong)
+        // -------------------------
+        [HttpGet]
+        public IActionResult Login()
+            => View(new UserLoginDTO("", ""));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(UserLoginDTO dto)
+        {
+            if (!ModelState.IsValid) return View(dto);
+
+            var result = await _service.LoginAsync(dto);
+            if (result.IsSuccess)
+            {
+                TempData["Success"] = result.Message;
+                // TODO: set session/cookie
+                return RedirectToAction("Index");
+            }
+
+            TempData["Error"] = result.Message;
+            return View(dto);
+        }
     }
 }
 ```
 
 ---
 
-## Conclusion:
+## 4.2 Views
 
-এখন আপনার `User Management` module যা **HoSuperAdmin**, **BrAdmin**, **Maker**, **Checker** role অনুযায়ী **Role-based Access Control (RBAC)**, **Audit Log** (user actions tracking), **Concurrency control** (versioning) সহ সম্পূর্ণভাবে তৈরি।
-**User** CRUD operations এর সাথে **password reset**, **lock/unlock**, **soft delete**, এবং **search with pagination** সবই তৈরি হয়ে গেছে।
+### Create View: `Views/User/Index.cshtml`
 
-আপনি চাইলে **UI (View)** সহ পরবর্তী কোড যোগ করতে পারেন, বা আরও কিছু clarification চান—আমি সাহায্য করতে পারি।
+```cshtml
+@using CBS.Domain.Enums
+@model CBS.Application.DTO.Users.UserCreateDTO
 
-########################################################################################
-                                                  UI
-########################################################################################
+<div class="container mt-5">
+  <div class="col-md-6 mx-auto">
 
-Here is the complete UI for the **User Management Module** under the **Web Layer**, including all necessary views for **Create User**, **User Listing with Pagination & Search**, **Update User**, **Lock/Unlock User**, **Password Reset**, and **Role-based Access Control (RBAC)**.
+    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
 
-We'll be using **Bootstrap 5** for responsive and stylish design. Additionally, I'll include the necessary **modals**, **forms**, and **pagination**.
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">Create New User</div>
+      <div class="card-body">
 
-### 1) **Create User Modal**: This modal allows you to create a new user and assign roles.
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
-```html
-<!-- Create User Modal -->
-<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="post" asp-controller="User" asp-action="Create">
-                @Html.AntiForgeryToken()
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createUserModalLabel">Create User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input name="username" class="form-control" required minlength="3" maxlength="50" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Password</label>
-                            <input name="password" type="password" class="form-control" required minlength="6" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Role</label>
-                            <select name="role" class="form-select" required>
-                                <option value="Maker">Maker</option>
-                                <option value="Checker">Checker</option>
-                                <option value="Auditor">Auditor</option>
-                                <option value="Admin">Admin</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Branch</label>
-                            <input name="branchId" type="number" class="form-control" value="1" min="1" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Admin Scope</label>
-                            <select name="adminScope" class="form-select">
-                                <option value="BR">BR (Branch Admin)</option>
-                                <option value="HO">HO (HoSuperAdmin)</option>
-                            </select>
-                            <div class="form-text">Only meaningful when Role = Admin.</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Create</button>
-                </div>
-            </form>
-        </div>
+        <form asp-action="Create" method="post">
+          @Html.AntiForgeryToken()
+
+          <div class="mb-3">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" />
+            <span asp-validation-for="Username" class="text-danger small"></span>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" type="password" class="form-control" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="Role" class="form-label"></label>
+            <select asp-for="Role" class="form-select">
+              <option value="@UserRole.HoSuperAdmin">HoSuperAdmin</option>
+              <option value="@UserRole.BrAdmin">BrAdmin</option>
+              <option value="@UserRole.Auditor">Auditor</option>
+              <option value="@UserRole.Maker">Maker</option>
+              <option value="@UserRole.Checker">Checker</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="BranchId" class="form-label"></label>
+            <input asp-for="BranchId" type="number" class="form-control" />
+            <span asp-validation-for="BranchId" class="text-danger small"></span>
+          </div>
+
+          <button class="btn btn-success w-100" type="submit">Save</button>
+        </form>
+      </div>
+      <div class="card-footer text-center">
+        <a asp-action="Manage">Manage User</a> | <a asp-action="Login">Login</a>
+      </div>
     </div>
+  </div>
 </div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
 ```
 
-### 2) **User Listing with Pagination & Search**
+### Manage/Update View: `Views/User/Manage.cshtml`
 
-This page allows you to list all users with options for **searching** by username and **pagination**.
-
-```html
-@using CBS.Application.Users.DTOs
-@using CBS.Domain.Users.Enums
-@model PagedResult<UserDto>
-
-@{
-    ViewData["Title"] = "User Management";
-}
+```cshtml
+@using CBS.Domain.Enums
+@model CBS.Application.DTO.Users.UserUpdateDTO
 
 <div class="container mt-4">
-    <h3 class="mb-4">User Management</h3>
 
-    @* Global success/error messages *@
-    @if (TempData["Success"] != null)
-    {
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  <div class="card mb-3">
+    <div class="card-body">
+      <form method="get" asp-action="Manage" class="row g-2">
+        <div class="col-md-9">
+          <input type="text" name="username" class="form-control" placeholder="Search username" />
         </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            @TempData["Error"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="col-md-3">
+          <button class="btn btn-primary w-100">Search</button>
         </div>
-    }
-
-    <div class="card shadow-sm mb-3">
-        <div class="card-body d-flex gap-2 align-items-center">
-            <form method="get" class="d-flex gap-2">
-                <input type="text" name="q" class="form-control" placeholder="Search by username..." value="@Request.Query["q"]" />
-                <button class="btn btn-primary" type="submit">Search</button>
-            </form>
-
-            <div class="ms-auto">
-                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createUserModal">+ Create User</button>
-            </div>
-        </div>
+      </form>
+      @if (ViewData["Error"] != null) { <div class="text-danger mt-2">@ViewData["Error"]</div> }
     </div>
+  </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <strong>Total Users:</strong> @Model.TotalCount
-                </div>
+  @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+  @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
 
-                <div>
-                    <form method="get" class="d-flex gap-2">
-                        <select name="pageSize" class="form-select form-select-sm" onchange="this.form.submit()">
-                            <option value="10" selected="@(Model.PageSize == 10)">10</option>
-                            <option value="20" selected="@(Model.PageSize == 20)">20</option>
-                            <option value="50" selected="@(Model.PageSize == 50)">50</option>
-                        </select>
-                    </form>
-                </div>
-            </div>
+  @if (Model != null)
+  {
+    <div class="card shadow">
+      <div class="card-header bg-dark text-white">Edit User: @Model.Username</div>
+      <div class="card-body">
+        <form asp-action="Update" method="post">
+          @Html.AntiForgeryToken()
+          <input type="hidden" asp-for="Id" />
 
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Role</th>
-                            <th>Active</th>
-                            <th>Locked</th>
-                            <th>Last Login</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var user in Model.Items)
-                    {
-                        <tr>
-                            <td>@user.Username</td>
-                            <td>@user.Role</td>
-                            <td>@(user.IsActive ? "Active" : "Inactive")</td>
-                            <td>@(user.IsLocked ? "Locked" : "Unlocked")</td>
-                            <td>@(user.LastLogin?.ToString("yyyy-MM-dd HH:mm") ?? "N/A")</td>
-                            <td>
-                                <form method="post" asp-controller="User" asp-action="LockUnlock">
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    <button type="submit" class="btn btn-sm @(user.IsLocked ? "btn-outline-info" : "btn-outline-danger")">
-                                        @(user.IsLocked ? "Unlock" : "Lock 5m")
-                                    </button>
-                                </form>
-                                <form method="post" asp-controller="User" asp-action="ResetPassword" class="d-inline">
-                                    <input type="hidden" name="id" value="@user.Id" />
-                                    <button type="submit" class="btn btn-sm btn-outline-warning">Reset Password</button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
+          <div class="mb-3">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" />
+            <span asp-validation-for="Username" class="text-danger small"></span>
+          </div>
 
-            <nav>
-                <ul class="pagination justify-content-center">
-                    <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
-                        <a class="page-link" href="?page=@(Model.Page - 1)">Previous</a>
-                    </li>
+          <div class="mb-3">
+            <label asp-for="Role" class="form-label"></label>
+            <select asp-for="Role" class="form-select">
+              <option value="@UserRole.HoSuperAdmin">HoSuperAdmin</option>
+              <option value="@UserRole.BrAdmin">BrAdmin</option>
+              <option value="@UserRole.Auditor">Auditor</option>
+              <option value="@UserRole.Maker">Maker</option>
+              <option value="@UserRole.Checker">Checker</option>
+            </select>
+          </div>
 
-                    @for (int i = 1; i <= (int)Math.Ceiling((double)Model.TotalCount / Model.PageSize); i++)
-                    {
-                        <li class="page-item @(Model.Page == i ? "active" : "")">
-                            <a class="page-link" href="?page=@i">@i</a>
-                        </li>
-                    }
+          <div class="mb-3">
+            <label asp-for="BranchId" class="form-label"></label>
+            <input asp-for="BranchId" type="number" class="form-control" />
+          </div>
 
-                    <li class="page-item @(Model.Page == Model.TotalCount / Model.PageSize ? "disabled" : "")">
-                        <a class="page-link" href="?page=@(Model.Page + 1)">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+          <div class="mb-3">
+            <label asp-for="IsActive" class="form-label"></label>
+            <select asp-for="IsActive" class="form-select">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="NewPassword" class="form-label">New Password (optional)</label>
+            <input asp-for="NewPassword" type="password" class="form-control" />
+            <span asp-validation-for="NewPassword" class="text-danger small"></span>
+          </div>
+
+          <button class="btn btn-success">Save Changes</button>
+        </form>
+      </div>
     </div>
+  }
 </div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
 ```
 
-### 3) **User Update Modal**: This modal allows you to edit user information.
+### Login View: `Views/User/Login.cshtml`
 
-```html
-<!-- Update User Modal -->
-<div class="modal fade" id="updateUserModal" tabindex="-1" aria-labelledby="updateUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form method="post" asp-controller="User" asp-action="Update">
-                @Html.AntiForgeryToken()
-                <div class="modal-header">
-                    <h5 class="modal-title" id="updateUserModalLabel">Update User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="id" id="updateUserId" />
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input name="username" id="updateUsername" class="form-control" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Branch</label>
-                            <input name="branchId" id="updateBranchId" class="form-control" required />
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
+```cshtml
+@model CBS.Application.DTO.Users.UserLoginDTO
+
+<div class="container mt-5">
+  <div class="col-md-5 mx-auto">
+
+    @if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+    @if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">Login</div>
+      <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        <form asp-action="Login" method="post">
+          @Html.AntiForgeryToken()
+
+          <div class="mb-3">
+            <label asp-for="Username" class="form-label"></label>
+            <input asp-for="Username" class="form-control" />
+            <span asp-validation-for="Username" class="text-danger small"></span>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="Password" class="form-label"></label>
+            <input asp-for="Password" type="password" class="form-control" />
+            <span asp-validation-for="Password" class="text-danger small"></span>
+          </div>
+
+          <button class="btn btn-success w-100">Login</button>
+        </form>
+      </div>
     </div>
+
+  </div>
 </div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
 ```
-
-### 4) **Reset Password Modal**: For resetting the user password.
-
-```html
-<!-- Reset Password Modal -->
-<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" asp-controller="User" asp-action="ResetPassword">
-                @Html.AntiForgeryToken()
-                <div class="modal-header">
-                    <h5 class="modal-title" id="resetPasswordModalLabel">Reset Password</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="id" id="resetPasswordUserId" />
-                    <div class="mb-3">
-                        <label class="form-label">New Password</label>
-                        <input type="password" name="newPassword" class="form-control" required minlength="6" />
-                        <div class="form-text">Password must be at least 6 characters long.</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Reset Password</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-```
-
-### 5) **Admin Panel Access Control**: RBAC (Role-based access control) is enforced, so only **HoSuperAdmin** can create admins, and **BrAdmin** can only create users within their branch.
 
 ---
 
-### Conclusion
+# 5) Dependency Injection (Infrastructure)
 
-This **UI** is designed with **Bootstrap 5** to be user-friendly and responsive.
-You have the full functionality for **User Management**, **Search**, **Pagination**, **Create/Update/Lock/Unlock/Password Reset** functionalities for each role (**HoSuperAdmin**, **BrAdmin**, **Maker**, **Checker**).
+Register repositories/services in `CBS.Web/Program.cs` (or your DI extension):
 
-The **modals** ensure that users can perform actions without reloading the page, improving the UX significantly.
+```csharp
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IUserService, UserService>();
+```
 
-Let me know if you need further adjustments or specific functionality!
+---
 
+# 6) What you now have (English explanation)
 
+- CreateUserAsync
 
+  - Checks duplicate username
+  - Hashes password using BCrypt
+  - Inserts into `users`
+  - Writes audit log CREATE
 
+- UpdateUserAsync
 
+  - Loads current user
+  - Prevents duplicate username
+  - Optionally re-hashes password if `NewPassword` provided
+  - Updates DB
+  - Writes audit log UPDATE
 
+- LoginAsync (3 wrong attempts lock)
 
+  - If password wrong → increments `failed_attempts`
+  - On 3rd wrong → sets `is_locked = true`, `lock_until = now+15min`
+  - Writes audit log LOGIN_FAIL and LOCK info in NewValue
+  - If password correct → resets failed attempts, unlocks, sets `last_login`
+  - Writes audit log LOGIN_SUCCESS
 
+---
+
+If you want, I can also add:
+
+- Unlock endpoint (admin) with audit UNLOCK
+- Checker/Maker approval pattern (like branch approved_by)
+- BranchId dropdown from `branches` table (instead of typing ID)
 
 
 
