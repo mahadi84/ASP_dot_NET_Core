@@ -27,10 +27,11 @@ View,         |  ২টি    | "১. ক্যাশ কাউন্টার �
 
 
 
-------------------------------
-            DTO
-------------------------------
 
+
+-------------------
+DTO
+-------------------
 
 public class BranchSearchDTO
 {
@@ -39,7 +40,12 @@ public class BranchSearchDTO
     public string BranchCode { get; set; } = string.Empty;
     public decimal VaultBalance { get; set; }
     public int RowVersion { get; set; }
+
+    public bool IsActive { get; set; }
 }
+
+
+
 
 
 
@@ -63,23 +69,26 @@ public record BranchUpdateDTO(
 
     [Required(ErrorMessage = "RowVersion is missing")]
     // RowVersion is a number, so we don't need a Regex for it
-    int RowVersion
+    int RowVersion,
+
+    [Required(ErrorMessage = "Selection is missing")]
+    // RowVersion is a number, so we don't need a Regex for it
+    bool IsActive
 );
 
 
-
-------------------------------
-            Interface
-------------------------------
+----------------------
+INTERFACE
+----------------------
  Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID);
  Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO dto, int UserID);
 
+ ----------------------------------
+INTERFACE-implementation
+-----------------------------------
 
- -----------------------------------------------
-            Interface-Implementation
-------------------------------------------------
 
-public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID)
+    public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCode, int UserID)
     {
         using var conn = await _dataSource.OpenConnectionAsync();
         using var transaction = await conn.BeginTransactionAsync(); // Banking transaction start
@@ -87,22 +96,21 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
         try
         {
 
-            const string sql = @"SELECT 
+           const string sql = @"SELECT 
                         id AS Id, 
                         branch_code AS BranchCode, 
                         branch_name AS BranchName, 
                         vault_balance AS VaultBalance, 
-                        row_version AS RowVersion 
+                        row_version AS RowVersion,
+                        is_active AS IsActive
                      FROM branches 
-                     WHERE branch_code = @BranchCode AND is_active = TRUE";
+                     WHERE branch_code = @BranchCode";
 
             //<BranchSearchDTO>কি,কি অর্ডার (কাচ্চি বিরিয়ানি,মাছ)
             var branch = await conn.QueryFirstOrDefaultAsync<BranchSearchDTO>(sql, new { BranchCode = branchCode.Trim() }, transaction);
 
             if (branch == null)
             {
-                //ওয়েটার খালি হাতে ফিরে এসে চুপচাপ দাঁড়িয়ে থাকলো। আপনি বুঝলেন না কি হয়েছে। এটি হলো null রিটার্ন করা।
-                //কিভাবে রিপোর্ট করছি, যদি কাচ্চি বিরিয়ানি, মাছ না পাওয়া যায়, তবে বক্সে একটি চিরকুট থাকবে: "দুঃখিত, এই কোডের কোনো কাচ্চি বিরিয়ানি,মাছ (ব্রাঞ্চ) নেই।"
                 return Result<BranchSearchDTO>.Failure("Branch not found"); 
             }
 
@@ -144,76 +152,83 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
 
 
 
+
+
+
     public async Task<Result<bool>> UpdateBranchAsync(BranchUpdateDTO udto, int currentUserId)
     {
+        using var conn = await _dataSource.OpenConnectionAsync();
+        using var transaction = await conn.BeginTransactionAsync();
+
         try
         {
-            using var conn = await _dataSource.OpenConnectionAsync();
-            using var transaction = await conn.BeginTransactionAsync();
-
-            // 1. Fetch current branch data from database for validation and audit trail
-            //const string selectSql = "SELECT * FROM branches WHERE id = @Id AND is_active = 1";
-
-
+            // 1. Fetch the current record from the database
             const string selectSql = @"SELECT 
-                                        id AS Id, 
-                                        branch_name AS BranchName, 
-                                        branch_code AS BranchCode, 
-                                        vault_balance AS VaultBalance, 
-                                        created_by AS CreatedBy, 
-                                        updated_by AS UpdatedBy, 
-                                        approved_by AS ApprovedBy, 
-                                        row_version AS RowVersion
-                                      FROM branches WHERE id = @Id AND is_active = 1";
-
-
+                                          id AS Id,
+                                          branch_name AS BranchName,
+                                          branch_code AS BranchCode,
+                                          vault_balance AS VaultBalance,
+                                          created_by AS CreatedBy,
+                                          approved_by AS ApprovedBy,
+                                          row_version AS RowVersion,
+                                          is_active AS IsActive
+                                        FROM branches
+                                        WHERE id = @Id;
+                                        ";
+            //<Branch> is because we need to use the Entity's methods later
             var branch = await conn.QueryFirstOrDefaultAsync<Branch>(selectSql, new { Id = udto.Id }, transaction);
 
             if (branch == null)
-                return Result<bool>.Failure("Branch not found or is currently inactive.");
+                return Result<bool>.Failure("Branch not found.");
 
-            // 2. Capture original values before modification to store in Audit Log
-            string oldVaultBalance = branch.VaultBalance.ToString();
-            string oldBranchCode = branch.BranchCode;
-            string oldBranchName = branch.BranchName;
+            // 2. Capture old values for Audit Logging before updating
+            string oldData = $"Name: {branch.BranchName}, Code: {branch.BranchCode}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}";
 
-            // 3. Update entity information using Domain Methods
-            branch.UpdateInfo(udto.BranchCode, udto.BranchName, currentUserId);
-
-            // 4. Validate business rules (e.g., balance limits) before hitting the database
-            var balanceResult = branch.UpdateVaultBalance(udto.VaultBalance);
-            if (!balanceResult.IsSuccess)
+            // 3. Update the Domain Entity using its internal logic
+            // The advantage: business rules only need to be updated in one place within the Entity.
+            try
             {
-                return Result<bool>.Failure(balanceResult.Message);
+                branch.UpdateGeneralInfo(udto.BranchCode, udto.BranchName, udto.VaultBalance, currentUserId);
+
+                //enabling trigger extra actions (like notifications or balance checks) whenever a status changes, all from a single location in the Entity."
+                if (udto.IsActive) branch.Activate(); else branch.Deactivate();
+            }
+            catch (Exception ex)
+            {
+                return Result<bool>.Failure(ex.Message);
             }
 
-            // 5. Final Update Query including Optimistic Concurrency check (row_version)
+            // 4. Final Update query with Optimistic Concurrency check
             const string updateSql = @"UPDATE branches 
                                    SET branch_name = @BranchName, 
                                        branch_code = @BranchCode, 
                                        vault_balance = @VaultBalance, 
+                                       is_active = @IsActive,
                                        updated_by = @UpdatedBy,
+                                       updated_at = @UpdatedAt,
                                        row_version = row_version + 1 
                                    WHERE id = @Id AND row_version = @RowVersion";
 
-            // Execute update using data from the modified Domain Entity
             var affected = await conn.ExecuteAsync(updateSql, new
             {
                 branch.BranchName,
                 branch.BranchCode,
                 branch.VaultBalance,
+                branch.IsActive,
                 branch.UpdatedBy,
+                branch.UpdatedAt,
                 branch.Id,
-                RowVersion = udto.RowVersion // Client-side version to detect concurrent changes
+                RowVersion = udto.RowVersion // Use the RowVersion from DTO to prevent concurrency issues
             }, transaction);
 
+            // If affected is 0, it means the RowVersion has changed (someone else updated it)
             if (affected <= 0)
             {
                 await transaction.RollbackAsync();
-                return Result<bool>.Failure("Update failed. The record was modified by another user (Concurrency Conflict).");
+                return Result<bool>.Failure("Update failed. Data was modified by another user (Concurrency Error).");
             }
 
-            // 6. Create Audit Log comparing Old Values with New Values
+            // 5. Create Audit Log
             var auditDto = new AuditLogCreateDTO(
                 BranchCode: branch.BranchCode,
                 CreatedBy: branch.CreatedBy,
@@ -221,41 +236,44 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
                 ApprovedBy: branch.ApprovedBy,
                 TableName: "branches",
                 Action: "UPDATE",
-                OldValue: $"{oldVaultBalance}",
-                NewValue: $"{branch.VaultBalance}",
-                Description: "Branch information updated via user"
+                OldValue: oldData,
+                NewValue: $"Name: {branch.BranchName}, Balance: {branch.VaultBalance}, Status: {(branch.IsActive ? "Active" : "Inactive")}",
+                Description: "Branch information updated successfully"
             );
 
             var auditResult = await _auditLogService.CreateAuditLogAsync(auditDto);
 
-            // 7. Commit transaction only if both Update and Audit Log creation succeed
-            if (auditResult.IsSuccess)
+            if (!auditResult.IsSuccess)
             {
-                await transaction.CommitAsync();
-                return Result<bool>.Success(true, "Branch updated successfully.");
+                await transaction.RollbackAsync();
+                return Result<bool>.Failure("Update failed due to audit logging error.");
             }
 
-            // Rollback if audit logging fails
-            await transaction.RollbackAsync();
-            return Result<bool>.Failure("Update failed due to an error in the audit logging service.");
-
+            // 6. Commit transaction if everything is successful
+            await transaction.CommitAsync();
+            return Result<bool>.Success(true, "Branch updated successfully.");
         }
         catch (Exception ex)
         {
-            // Log the exception here (e.g., _logger.LogError(ex, "UpdateBranchAsync failed"))
-            return Result<bool>.Failure("A database error occurred while processing your request.");
+            await transaction.RollbackAsync();
+            return Result<bool>.Failure("Database Error: " + ex.Message);
         }
     }
 
 
 
-    --------------------------------------------------
-           Controller (Waiter in a resturent)
-    --------------------------------------------------
+
+
+
+
+
+
+
+    ----------------------------------------
+    Web->Controller
+    ----------------------------------------
 
     
-    //SEARCH & SHOW
-
     [HttpGet]
     //[ValidateAntiForgeryToken]
     public async Task<IActionResult> Manage(string? searchCode)
@@ -285,15 +303,14 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
             result.Data.BranchName,
             result.Data.BranchCode,
             result.Data.VaultBalance,
-            result.Data.RowVersion
+            result.Data.RowVersion,
+            result.Data.IsActive
         );
 
         return View(updateModel);
     }
 
 
-
-//UPDATE
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -316,9 +333,13 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
 
 
 
-    --------------------------------------------------
-                       VIEW
-    --------------------------------------------------
+
+
+
+
+    ----------------------------------------
+    Web->Controller
+    ----------------------------------------
 
     @model CBS.Application.DTO.BranchUpdateDTO
 
@@ -390,6 +411,31 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
                             </div>
                             <span asp-validation-for="VaultBalance" class="text-danger small"></span>
                         </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Branch Status</label>
+                            <div class="input-group">
+                                <div class="form-control d-flex align-items-center">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="radio" asp-for="IsActive" value="true" id="statusActive">
+                                        <label class="form-check-label text-success fw-bold" for="statusActive">
+                                            Active <span class="ms-1">&#10004;</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-control d-flex align-items-center">
+                                    <div class="form-check form-check-inline mb-0">
+                                        <input class="form-check-input" type="radio" asp-for="IsActive" value="false" id="statusInactive">
+                                        <label class="form-check-label text-danger fw-bold" for="statusInactive">
+                                            Inactive <span class="ms-1">&#10006;</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <span asp-validation-for="IsActive" class="text-danger small"></span>
+                        </div>
+
                     </div>
 
                     <div class="mt-4 border-top pt-3 text-end">
@@ -407,10 +453,6 @@ public async Task<Result<BranchSearchDTO>> GetByBranchCodeAsync(string branchCod
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-
-
-
-
 
 
 
