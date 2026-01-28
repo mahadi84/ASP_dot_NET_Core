@@ -312,54 +312,6 @@ namespace CBS.Application.DTO.Users
 
 ## 2.2 Audit DTO + Interfaces
 
-`CBS.Application/DTO/Audit/AuditLogCreateDTO.cs`
-
-```csharp
-namespace CBS.Application.DTO.Audit
-{
-    public record AuditLogCreateDTO(
-        string TableName,
-        string Action,
-        string? KeyValue,
-        string? OldValue,
-        string? NewValue,
-        string? Description,
-        int? CreatedBy
-    );
-}
-```
-
-`CBS.Application/Interfaces/IAuditLogRepository.cs`
-
-```csharp
-using CBS.Application.DTO.Audit;
-using CBS.Domain.Common;
-
-namespace CBS.Application.Interfaces
-{
-    public interface IAuditLogRepository
-    {
-        Task<Result<int>> CreateAsync(AuditLogCreateDTO dto);
-    }
-}
-```
-
-`CBS.Application/Interfaces/IAuditLogService.cs`
-
-```csharp
-using CBS.Application.DTO.Audit;
-using CBS.Domain.Common;
-
-namespace CBS.Application.Interfaces
-{
-    public interface IAuditLogService
-    {
-        Task<Result<int>> CreateAuditLogAsync(AuditLogCreateDTO dto);
-    }
-}
-```
-
----
 
 ## 2.3 User service interface
 
@@ -473,9 +425,9 @@ namespace CBS.Infrastructure.Services
 
                 // 4) Insert user
                 const string insertSql = @"
-INSERT INTO users (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login)
-VALUES (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin);
-SELECT LAST_INSERT_ID();";
+                                        INSERT INTO users (username, password_hash, role, branch_id, failed_attempts, lock_until, is_locked, is_active, last_login)
+                                        VALUES (@Username, @PasswordHash, @Role, @BranchId, @FailedAttempts, @LockUntil, @IsLocked, @IsActive, @LastLogin);
+                                        SELECT LAST_INSERT_ID();";
 
                 int newId = await conn.ExecuteScalarAsync<int>(insertSql, new
                 {
@@ -545,18 +497,18 @@ SELECT LAST_INSERT_ID();";
             try
             {
                 const string sql = @"
-SELECT
-  id AS Id,
-  username AS Username,
-  role AS Role,
-  branch_id AS BranchId,
-  failed_attempts AS FailedAttempts,
-  lock_until AS LockUntil,
-  is_locked AS IsLocked,
-  is_active AS IsActive,
-  last_login AS LastLogin
-FROM users
-WHERE username = @Username;";
+                                   SELECT
+                                     id AS Id,
+                                     username AS Username,
+                                     role AS Role,
+                                     branch_id AS BranchId,
+                                     failed_attempts AS FailedAttempts,
+                                     lock_until AS LockUntil,
+                                     is_locked AS IsLocked,
+                                     is_active AS IsActive,
+                                     last_login AS LastLogin
+                                   FROM users
+                                   WHERE username = @Username;";
 
                 var user = await conn.QueryFirstOrDefaultAsync<UserSearchDTO>(sql, new { Username = username.Trim() }, tx);
                 if (user == null)
@@ -602,19 +554,19 @@ WHERE username = @Username;";
             {
                 // 1) Load current user for old values + domain updates
                 const string selectSql = @"
-SELECT
-  id AS Id,
-  username AS Username,
-  password_hash AS PasswordHash,
-  role AS Role,
-  branch_id AS BranchId,
-  failed_attempts AS FailedAttempts,
-  lock_until AS LockUntil,
-  is_locked AS IsLocked,
-  is_active AS IsActive,
-  last_login AS LastLogin
-FROM users
-WHERE id = @Id;";
+                                        SELECT
+                                          id AS Id,
+                                          username AS Username,
+                                          password_hash AS PasswordHash,
+                                          role AS Role,
+                                          branch_id AS BranchId,
+                                          failed_attempts AS FailedAttempts,
+                                          lock_until AS LockUntil,
+                                          is_locked AS IsLocked,
+                                          is_active AS IsActive,
+                                          last_login AS LastLogin
+                                        FROM users
+                                        WHERE id = @Id;";
 
                 // Using Domain entity to reuse logic
                 var user = await conn.QueryFirstOrDefaultAsync<AppUserRow>(selectSql, new { dto.Id }, tx);
@@ -640,14 +592,14 @@ WHERE id = @Id;";
 
                 // 5) Update DB
                 const string updateSql = @"
-UPDATE users
-SET
-  username = @Username,
-  password_hash = @PasswordHash,
-  role = @Role,
-  branch_id = @BranchId,
-  is_active = @IsActive
-WHERE id = @Id;";
+                                        UPDATE users
+                                        SET
+                                          username = @Username,
+                                          password_hash = @PasswordHash,
+                                          role = @Role,
+                                          branch_id = @BranchId,
+                                          is_active = @IsActive
+                                        WHERE id = @Id;";
 
                 string finalHash = newHash ?? user.PasswordHash;
 
@@ -708,19 +660,19 @@ WHERE id = @Id;";
             {
                 // 1) Load user by username
                 const string sql = @"
-SELECT
-  id AS Id,
-  username AS Username,
-  password_hash AS PasswordHash,
-  role AS Role,
-  branch_id AS BranchId,
-  failed_attempts AS FailedAttempts,
-  lock_until AS LockUntil,
-  is_locked AS IsLocked,
-  is_active AS IsActive,
-  last_login AS LastLogin
-FROM users
-WHERE username = @Username;";
+                                   SELECT
+                                     id AS Id,
+                                     username AS Username,
+                                     password_hash AS PasswordHash,
+                                     role AS Role,
+                                     branch_id AS BranchId,
+                                     failed_attempts AS FailedAttempts,
+                                     lock_until AS LockUntil,
+                                     is_locked AS IsLocked,
+                                     is_active AS IsActive,
+                                     last_login AS LastLogin
+                                   FROM users
+                                   WHERE username = @Username;";
 
                 var user = await conn.QueryFirstOrDefaultAsync<AppUserRow>(sql, new { Username = dto.Username.Trim() }, tx);
 
@@ -753,12 +705,12 @@ WHERE username = @Username;";
                     DateTime? newLockUntil = willLock ? nowUtc.Add(LOCK_DURATION) : user.LockUntil;
 
                     const string updateFailSql = @"
-UPDATE users
-SET
-  failed_attempts = @FailedAttempts,
-  is_locked = @IsLocked,
-  lock_until = @LockUntil
-WHERE id = @Id;";
+                                                  UPDATE users
+                                                  SET
+                                                    failed_attempts = @FailedAttempts,
+                                                    is_locked = @IsLocked,
+                                                    lock_until = @LockUntil
+                                                  WHERE id = @Id;";
 
                     await conn.ExecuteAsync(updateFailSql, new
                     {
@@ -790,13 +742,13 @@ WHERE id = @Id;";
 
                 // 5) Password OK => reset failed attempts + unlock + update last login
                 const string updateSuccessSql = @"
-UPDATE users
-SET
-  failed_attempts = 0,
-  is_locked = FALSE,
-  lock_until = NULL,
-  last_login = @LastLogin
-WHERE id = @Id;";
+                                                  UPDATE users
+                                                  SET
+                                                    failed_attempts = 0,
+                                                    is_locked = FALSE,
+                                                    lock_until = NULL,
+                                                    last_login = @LastLogin
+                                                  WHERE id = @Id;";
 
                 await conn.ExecuteAsync(updateSuccessSql, new
                 {
