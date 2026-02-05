@@ -4,6 +4,14 @@
 
 USER_entity_dto_interfaceService
 
+
+string myText = ""; if (!string.IsNullOrWhiteSpace(myText))  //String-এর ক্ষেত্রে (Blank চেক করা)
+int myNumber = 10; if (myNumber != 0)                        //Number-এর ক্ষেত্রে (0 চেক করা)
+bool isActive = true; if (isActive)                          //Boolean-এর ক্ষেত্রে (True/False চেক করা)
+if (myValue is not null and not 0 and not false)            // C# ৯.০ বা তার পরের আধুনিক পদ্ধতি (Pattern Matching)
+
+
+
 তোমার overall approach (DTO → Domain validation → BCrypt hash → Dapper parameterized query → audit log) বেশ ভালো দিকেই আছে, 
 কিন্তু কয়েকটা জায়গায় সত্যিকারের **bug + security/consistency gap** আছে—এগুলো ঠিক না করলে production-এ সমস্যা হবে বা data inconsistency/lock bypass হয়ে যেতে পারে।
 
