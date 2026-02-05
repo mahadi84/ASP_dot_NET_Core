@@ -53,7 +53,7 @@ Best practice হলো `WHERE id=@Id AND row_version=@ExpectedRowVersion` দ�
 Audit “must be atomic” হলে audit log insert-ও ওই একই transaction/connection-এ চলা উচিত, অথবা audit log fail হলেও main transaction commit করার সিদ্ধান্ত নিতে হবে (অনেক সিস্টেমে audit best-effort হয়)। 
 তোমার ক্ষেত্রে তুমি “audit fail => rollback” করছো, তাই audit-কে atomic করতেই হবে—মানে audit service-এ `IDbConnection + IDbTransaction` pass করার design দরকার।
 
-06. Security(returen Message/ex.Message)
+06. Security(returen Message/ex.Message, password-regex issue)
 BCrypt ব্যবহার করা ভালো, কিন্তু আরও কিছু জিনিস খেয়াল করা জরুরি।
 তুমি exception message সরাসরি client-এ ফেরত দিচ্ছো: `return Result.Failure("Critical Error: " + ex.Message);`
 —এটা production-এ **information leakage** (SQL error, table/column name, stack hints) দিতে পারে। Client-এ generic message দাও, আর detailed message server logs-এ রাখো।
