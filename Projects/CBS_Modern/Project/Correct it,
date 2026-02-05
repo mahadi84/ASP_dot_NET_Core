@@ -15,11 +15,15 @@ if (myValue is not null and not 0 and not false)            // C# ৯.০ বা
 তোমার overall approach (DTO → Domain validation → BCrypt hash → Dapper parameterized query → audit log) বেশ ভালো দিকেই আছে, 
 কিন্তু কয়েকটা জায়গায় সত্যিকারের **bug + security/consistency gap** আছে—এগুলো ঠিক না করলে production-এ সমস্যা হবে বা data inconsistency/lock bypass হয়ে যেতে পারে।
 
-তোমার `AppUser` entity-তে প্রথম বড় সমস্যা হলো-
+
+01. তোমার `AppUser` entity-তে প্রথম বড় সমস্যা হলো- (Validation)
 `branchId` টাইপ `int` কিন্তু তুমি `Create()` আর `UpdateGeneralInfo()`-তে `if (branchId == null)` চেক করছো—এটা কখনোই true হবে না।
 তুমি আসলে “required + positive” validate করতে চাইলে `branchId <= 0` চেক করা উচিত। একইভাবে `UpdateGeneralInfo()`-তে `if (RowVersion == null)` লিখেছো, 
 কিন্তু এখানে তুমি parameter `rowVersion` নিয়েছো আর property `RowVersion` আছে—এই লাইনে তুমি ভুল জিনিস চেক করছো (এবং `int` কখনো null হবে না)। 
-এর ফলে optimistic concurrency logic তোমার domain-এ ঠিকমতো enforce হচ্ছে না। আরেকটা consistency issue: `Create()`-এ username length 3–50, 
+এর ফলে optimistic concurrency logic তোমার domain-এ ঠিকমতো enforce হচ্ছে না।
+
+02. আরেকটা consistency issue: 
+`Create()`-এ username length 3–50, 
 কিন্তু `UserCreateDTO` regex 5–50; `UpdateGeneralInfo()`-এ 5–50, কিন্তু `UserUpdateDTO` `[StringLength(50, MinimumLength = 3)]`
 —মানে UI/DTO/Domain তিন জায়গায় তিন রকম rule, এতে “কখনো form pass করবে কিন্তু domain ফেল করবে” বা উল্টোটা হবে।
 
