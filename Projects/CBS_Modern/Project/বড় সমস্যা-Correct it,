@@ -27,12 +27,14 @@ if (myValue is not null and not 0 and not false)            // C# ৯.০ বা
 কিন্তু `UserCreateDTO` regex 5–50; `UpdateGeneralInfo()`-এ 5–50, কিন্তু `UserUpdateDTO` `[StringLength(50, MinimumLength = 3)]`
 —মানে UI/DTO/Domain তিন জায়গায় তিন রকম rule, এতে “কখনো form pass করবে কিন্তু domain ফেল করবে” বা উল্টোটা হবে।
 
-03. `UserService.UpdateUserAsync()`-এ একটা খুব বড় SQL bug(Role vs @Role) আছে: 
+03. `UserService.UpdateUserAsync()`-এ একটা খুব বড় SQL bug(Role vs @Role and concurrency NOT verify properly) আছে: 
 তোমার `updateSql`-এ `role = Role` লেখা—এটা `@Role` হওয়া উচিত। 
 এখনকার কোডে MySQL “role কলামে Role কলামের মান বসাও” টাইপ কিছু ধরতে পারে, অথবা error দেবে, অথবা unexpected behavior হবে। 
-এটাকে `role = @Role` করতেই হবে। একই method-এ concurrency/security gap হলো তুমি `row_version` ব্যবহার করছো, কিন্তু DB update-এ **expected row version match করছো না**। 
+এটাকে `role = @Role` করতেই হবে। 
+--একই method-এ concurrency/security gap হলো তুমি `row_version` ব্যবহার করছো, কিন্তু DB update-এ **expected row version match করছো না**। 
 মানে দুইজন একই user edit করলে “last write wins” হয়ে যাবে, আর তুমি `dto.RowVersion` দিয়ে entity-তে version বাড়ালেও DB-তে কে আগে ছিল সেটা verify হচ্ছেই না। 
-Best practice হলো `WHERE id=@Id AND row_version=@ExpectedRowVersion` দিয়ে update করা, তারপর affectedRows যদি 0 হয়, তাহলে “Data changed by another user” দেখানো। এইটাই real optimistic concurrency।
+Best practice হলো `WHERE id=@Id AND row_version=@ExpectedRowVersion` দিয়ে update করা, তারপর affectedRows যদি 0 হয়, তাহলে “Data changed by another user” দেখানো। 
+এইটাই real optimistic concurrency।
 
 04. আরেকটা গুরুত্বপূর্ণ issue(Entity-Property-র `private set but data from direct-dto): 
 `checkSql` থেকে তুমি `role, branch_id, is_active, is_locked, row_version` select করে `AppUser`-এ map করছো। 
@@ -64,7 +66,7 @@ Username duplicate check-এ তুমি স্পষ্টভাবে “User
 `GetByUsernameAsync()`-এ failure message “Branch not found” লেখা—এটা copy-paste ভুল, এবং UX-এ বিভ্রান্ত করবে। `GetByUsernameAsync()`-এ query parameter নামও mismatch: SQL-এ `@userName`, 
 কিন্তু anonymous object-এ `new { UserName = ... }`—Dapper সাধারণত case-insensitive হওয়ায় কাজ করবে, কিন্তু consistent রাখাই ভালো।
 
-08. সবশেষে(concurrency bypass-RowVersion value NOT check), 
+08. সবশেষে(concurrency bypass-RowVersion+1 why?), 
 তোমার `RowVersion` increment logic-ও একটু অদ্ভুত: তুমি `UpdateGeneralInfo(..., int rowVersion, ...)` নিয়ে `RowVersion = rowVersion + 1` করছো, 
 কিন্তু DTO থেকে আসা `dto.RowVersion` trusted ধরে নিচ্ছো। Optimistic concurrency ঠিক রাখতে হলে DTO থেকে আসা version “expected” হিসেবে WHERE-এ match করবে, 
 আর DB-এ increment হবে (SET row_version = row_version + 1)। Domain-এ increment করে value পাঠানোও করা যায়, কিন্তু তখনও WHERE-এ expected version match করতে হবে—না হলে concurrency bypass হবে।
