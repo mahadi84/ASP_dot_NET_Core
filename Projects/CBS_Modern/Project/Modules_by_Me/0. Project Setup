@@ -102,8 +102,8 @@ dotnet add src\CBS.Infrastructure package MySqlConnector                        
 dotnet add src\CBS.Infrastructure package MySqlConnector.DependencyInjection                # এটি ছাড়া কম্পাইলার services অবজেক্টের টাইপ চিনতে পারবে না।
 dotnet add src\CBS.Infrastructure package Microsoft.Extensions.Configuration.Abstractions   # এটি ছাড়া কম্পাইলার services-Interface  টাইপ চিনতে পারবে না।+
 
-dotnet add src\CBS.Infrastructure package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.13    ** For authentication
-dotnet add src\CBS.Infrastructure package Microsoft.AspNetCore.Http.Abstractions                                **
+dotnet add src\CBS.Infrastructure package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.13    ** For authentication thes two
+dotnet add src\CBS.Infrastructure package Microsoft.AspNetCore.Authentication.Cookies                                
       
 
 
