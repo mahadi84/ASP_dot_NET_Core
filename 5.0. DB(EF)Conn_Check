@@ -1,8 +1,8 @@
 
 
 
-01.### Create a new Folder->Enter-> and open CMD:
-            dotnet new mvc -n BankServerCrud   Optional(-f net9.0)
+01.### Create a new Folder->Enter-> and open CMD typing in URL:
+            dotnet new mvc -n BankServerCrud   **Optional(-f net9.0)
             cd MyMvcApp    ** to enter into the project folder
 
 02. ### Install Required NuGet Packages **Entity Framework Core (EF Core)
@@ -52,7 +52,7 @@ public class AppDbContext : DbContext
 
 
 ######### 
-06.MySQL DATABASE(Workbench):
+06.MySQL DATABASE(MySQL Workbench):
 
 CREATE DATABASE bank_server_db;
 use bank_server_db;
@@ -153,6 +153,67 @@ catch (Exception ex)
 
 
 
+
+
+
+=========================== In Real Apps DB Connection is like this ============================
+
+┌────────────────────────────┐
+│      appsettings.json      │
+│                            │
+│ ConnectionStrings          │
+│ DefaultConnection          │
+└─────────────┬──────────────┘
+              │
+              │ reads connection string
+              ▼
+┌────────────────────────────┐
+│        Program.cs          │
+│                            │
+│ builder.Configuration      │
+│ .GetConnectionString()     │
+└─────────────┬──────────────┘
+              │
+              │ registers DbContext
+              ▼
+┌────────────────────────────┐
+│       AppDbContext         │
+│                            │
+│ EF Core database gateway   │
+│ DbSet<BankServer>          │
+└─────────────┬──────────────┘
+              │
+              │ EF Core sends SQL query
+              ▼
+┌────────────────────────────┐
+│        MySQL Server        │
+│                            │
+│ Database: Emp              │
+│ Table: bank_servers        │
+└─────────────┬──────────────┘
+              │
+              │ returns data
+              ▼
+┌────────────────────────────┐
+│        Controller          │
+│                            │
+│ BankServersController      │
+│ uses AppDbContext          │
+└─────────────┬──────────────┘
+              │
+              │ sends model data
+              ▼
+┌────────────────────────────┐
+│           View             │
+│                            │
+│ Index.cshtml               │
+│ shows data to user         │
+└────────────────────────────┘
+
+
+
+
+.
 
 
 .
