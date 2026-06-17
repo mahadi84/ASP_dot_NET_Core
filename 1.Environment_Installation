@@ -36,10 +36,5 @@ IDE বলতে বোঝায় Integrated Development Environment 💻।
   - ASP.NET Core ওয়েব অ্যাপ তৈরির সম্পূর্ণ সাপোর্ট
 
 
-######################
-02. executing migrations
-dotnet tool install --global dotnet-ef --version 9.0.11
-
-
 
 .
