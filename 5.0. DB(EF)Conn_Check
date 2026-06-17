@@ -14,25 +14,24 @@ dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migr
 dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   ** used for EF Core commands like adding migrations and updating the database.
 
 
-04. ### Create a data Folder and File
-Now its look like this:
+04. ### Create a data Folder and file AppDbContext.cs
+Now it should look like this:
 
 BankServerCrud
 │
 ├── Models
-│   └── BankServer.cs
 │
 ├── Data
 │   └── AppDbContext.cs
-.
 .
 .
 ├── Program.cs
 └── BankServerCrud.csproj
 
 
-05. ##########
+05. ########## 
 Copy and paste the code below and update DB info into: AppDbContext.cs
+
 
 using Microsoft.EntityFrameworkCore;
 namespace BankServerCrud.Data;
@@ -54,8 +53,25 @@ public class AppDbContext : DbContext
 
 ######### 
 06.MySQL DATABASE(Workbench):
+
 CREATE DATABASE bank_server_db;
 use bank_server_db;
+
+CREATE TABLE bank_servers (
+    server_id INT PRIMARY KEY AUTO_INCREMENT,
+    server_name VARCHAR(100) NOT NULL,
+    purpose VARCHAR(255) NOT NULL
+);
+
+INSERT INTO bank_servers (server_name, purpose)
+VALUES 
+('Core Banking Server', 'Handles customer accounts and transactions'),
+('ATM Switch Server', 'Processes ATM transactions'),
+('Database Server', 'Stores banking data');
+
+SELECT * FROM bank_servers;
+
+
 
 
 ############
@@ -65,7 +81,7 @@ using BankServerCrud.Data;
 using Microsoft.EntityFrameworkCore;
 
 Console.WriteLine("====================================");
-Console.WriteLine("     MySQL Database Connectivity");
+Console.WriteLine("   Show Data from MySQL Table");
 Console.WriteLine("====================================");
 
 try
@@ -76,48 +92,64 @@ try
 
     bool isConnected = db.Database.CanConnect();
 
-    if (isConnected)
-    {
-        Console.WriteLine("Database connected successfully.");
-
-        var connection = db.Database.GetDbConnection();
-
-        connection.Open();
-
-        using var command = connection.CreateCommand();
-
-        command.CommandText = "SELECT DATABASE(), VERSION();";
-
-        using var reader = command.ExecuteReader();
-
-        if (reader.Read())
-        {
-            string databaseName = reader.GetString(0);
-            string mysqlVersion = reader.GetString(1);
-
-            Console.WriteLine("------------------------------------");
-            Console.WriteLine($"Connected Database : {databaseName}");
-            Console.WriteLine($"MySQL Version      : {mysqlVersion}");
-            Console.WriteLine("------------------------------------");
-        }
-
-        connection.Close();
-    }
-    else
+    if (!isConnected)
     {
         Console.WriteLine("Database connection failed.");
+        return;
     }
+
+    Console.WriteLine("Database connected successfully.");
+    Console.WriteLine();
+
+    var connection = db.Database.GetDbConnection();
+
+    connection.Open();
+
+    using var command = connection.CreateCommand();
+
+    command.CommandText = @"
+        SELECT server_id, server_name, purpose
+        FROM bank_servers
+        ORDER BY server_id;
+    ";
+
+    using var reader = command.ExecuteReader();
+
+    Console.WriteLine("{0,-10} {1,-25} {2,-40}", "ID", "Server Name", "Purpose");
+    Console.WriteLine(new string('-', 80));
+
+    bool hasData = false;
+
+    while (reader.Read())
+    {
+        hasData = true;
+
+        int serverId = reader.GetInt32(0);
+        string serverName = reader.GetString(1);
+        string purpose = reader.GetString(2);
+
+        Console.WriteLine(
+            "{0,-10} {1,-25} {2,-40}",
+            serverId,
+            serverName,
+            purpose
+        );
+    }
+
+    if (!hasData)
+    {
+        Console.WriteLine("No data found in bank_servers table.");
+    }
+
+    connection.Close();
 }
 catch (Exception ex)
 {
-    Console.WriteLine("Database connection error.");
+    Console.WriteLine("Error occurred.");
     Console.WriteLine("------------------------------------");
     Console.WriteLine($"Error Message: {ex.Message}");
     Console.WriteLine("------------------------------------");
 }
-
-
-
 
 
 
