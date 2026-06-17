@@ -51,6 +51,7 @@ dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0   # MySQL �
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  # Visual Studio Package Manager Console-এ EF Core কমান্ড চালানোর জন্য
 dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migration এবং Scaffolding-এর মতো Design-time টাস্ক ইঞ্জিন সচল করার জন্
 dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
+                                                  **var hasher = new PasswordHasher<string>(); string hashedPassword = hasher.HashPassword("user123", "SecretPassword125");
 
 dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** Help to create view for Login,Register and many more.
 dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
