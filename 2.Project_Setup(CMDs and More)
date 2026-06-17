@@ -47,9 +47,12 @@ The query lives inside MySQL under the name GetUserById. You simply pass the par
 ** OR Direct Folder-CMD-LINE OR
 .NET CLI:(View>Terminal>Select:Developer Command Prompt) Select:Developer Command Prompt)
 
-dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0   # MySQL ডাটাবেস প্রোভাইডার (EF Core-কে MySQL-এর সাথে কানেক্ট করার জন্য)
+dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0   # MySQL-এর সাথে কানেক্ট করার জন্য
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migration এবং Scaffolding-এর মতো Design-time টাস্ক ইঞ্জিন সচল করার জন্য
+dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   ** used for EF Core commands like adding migrations and updating the database.
+
+
 dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  # Visual Studio Package Manager Console-এ EF Core কমান্ড চালানোর জন্য
-dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migration এবং Scaffolding-এর মতো Design-time টাস্ক ইঞ্জিন সচল করার জন্
 dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
                                                   **var hasher = new PasswordHasher<string>(); string hashedPassword = hasher.HashPassword("user123", "SecretPassword125");
 
