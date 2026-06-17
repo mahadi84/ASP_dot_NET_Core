@@ -1,0 +1,126 @@
+
+
+
+01.### Create a new Folder->Enter-> and open CMD:
+            dotnet new mvc -n BankServerCrud   Optional(-f net9.0)
+            cd MyMvcApp    ** to enter into the project folder
+
+02. ### Install Required NuGet Packages **Entity Framework Core (EF Core)
+** OR Direct Folder-CMD-LINE OR
+.NET CLI:(View>Terminal>Select:Developer Command Prompt) Select:Developer Command Prompt)
+
+dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0   # MySQL-এর সাথে কানেক্ট করার জন্য
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migration এবং Scaffolding-এর মতো Design-time টাস্ক ইঞ্জিন সচল করার জন্য
+dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   ** used for EF Core commands like adding migrations and updating the database.
+
+
+04. ### Create a data Folder and File
+Now its look like this:
+
+BankServerCrud
+│
+├── Models
+│   └── BankServer.cs
+│
+├── Data
+│   └── AppDbContext.cs
+.
+.
+.
+├── Program.cs
+└── BankServerCrud.csproj
+
+
+05. ##########
+Copy and paste the code below and update DB info into: AppDbContext.cs
+
+using Microsoft.EntityFrameworkCore;
+namespace BankServerCrud.Data;
+
+public class AppDbContext : DbContext
+{
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        string connectionString =
+            "Server=localhost;Port=3306;Database=bank_server_db;User=root;Password=Mahadi@123;";
+
+        optionsBuilder.UseMySql(
+            connectionString,
+            ServerVersion.AutoDetect(connectionString)
+        );
+    }
+}
+
+
+######### 
+06.MySQL DATABASE(Workbench):
+CREATE DATABASE bank_server_db;
+use bank_server_db;
+
+
+############
+07. Delete everything and paste this in: Program.cs
+
+using BankServerCrud.Data;
+using Microsoft.EntityFrameworkCore;
+
+Console.WriteLine("====================================");
+Console.WriteLine("     MySQL Database Connectivity");
+Console.WriteLine("====================================");
+
+try
+{
+    using var db = new AppDbContext();
+
+    Console.WriteLine("Trying to connect to MySQL...");
+
+    bool isConnected = db.Database.CanConnect();
+
+    if (isConnected)
+    {
+        Console.WriteLine("Database connected successfully.");
+
+        var connection = db.Database.GetDbConnection();
+
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = "SELECT DATABASE(), VERSION();";
+
+        using var reader = command.ExecuteReader();
+
+        if (reader.Read())
+        {
+            string databaseName = reader.GetString(0);
+            string mysqlVersion = reader.GetString(1);
+
+            Console.WriteLine("------------------------------------");
+            Console.WriteLine($"Connected Database : {databaseName}");
+            Console.WriteLine($"MySQL Version      : {mysqlVersion}");
+            Console.WriteLine("------------------------------------");
+        }
+
+        connection.Close();
+    }
+    else
+    {
+        Console.WriteLine("Database connection failed.");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Database connection error.");
+    Console.WriteLine("------------------------------------");
+    Console.WriteLine($"Error Message: {ex.Message}");
+    Console.WriteLine("------------------------------------");
+}
+
+
+
+
+
+
+
+
+.
