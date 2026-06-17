@@ -2,16 +2,16 @@
 
 
 01.### Create a new Folder->Enter-> and open CMD typing in URL:
-            dotnet new mvc -n BankServerCrud   **Optional(-f net9.0)
-            cd MyMvcApp    ** to enter into the project folder
+            dotnet new mvc -n BankServerCrud   # Optional(-f net9.0)
+            cd MyMvcApp                        # Enter into the project folder
 
 02. ### Install Required NuGet Packages **Entity Framework Core (EF Core)
 ** OR Direct Folder-CMD-LINE OR
 .NET CLI:(View>Terminal>Select:Developer Command Prompt) Select:Developer Command Prompt)
 
-dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0   # MySQL-এর সাথে কানেক্ট করার জন্য
-dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # Migration এবং Scaffolding-এর মতো Design-time টাস্ক ইঞ্জিন সচল করার জন্য
-dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   ** used for EF Core commands like adding migrations and updating the database.
+dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0       # To connect MySQL
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # To run Migration and Scaffolding
+dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   # For EF Core commands like adding migrations and updating the database.
 
 
 04. ### Create a data Folder and file AppDbContext.cs
