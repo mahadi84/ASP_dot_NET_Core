@@ -15,7 +15,8 @@ Required Packages' Name
 
 ------------------------------
 
-### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup):           CMD in project folder:
+### প্রাথমিক প্রজেক্ট সেটআপ (Initial Project Setup):           
+            CMD in project folder:
             dotnet new mvc -n MyMvcApp   Optional(-f net9.0)
             cd MyMvcApp
                 dotnet run      **(প্রয়োজনে restore+build) + অবশেষে প্রোগ্রাম চালানো
@@ -38,6 +39,31 @@ You write the raw SQL query, but Dapper instantly maps the columns directly into
 
 3.Stored Procedure called via Dapper (Database-Level)
 The query lives inside MySQL under the name GetUserById. You simply pass the parameter over the network.
+
+
+
+
+
+### প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) **Entity Framework Core (EF Core)
+
+** .NET CLI:(View>Terminal>Select:Developer Command Prompt)
+Select:Developer Command Prompt)
+dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
+dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
+
+dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
+
+dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** Help to create view for Login,Register and many more.
+dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
+
+OR
+
+**Tools>NetGut Package Manager> Package Manager Console
+   Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
+   Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।      
+
+
+
 
 
 
@@ -107,26 +133,6 @@ Check installed packages version CMD:
 
 
 
-
-
-### প্রয়োজনীয় NuGet প্যাকেজ ইনস্টল করা (Install Required NuGet Packages) **Entity Framework Core (EF Core)
-
-** .NET CLI:(View>Terminal>Select:Developer Command Prompt)
-Select:Developer Command Prompt)
-dotnet add package Pomelo.EntityFrameworkCore.MySql   --version 9.0.0   **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।  
-dotnet add package Microsoft.EntityFrameworkCore.Tools --version 9.0.0  **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।
-
-dotnet add package Microsoft.AspNetCore.Identity  ** No version required, যদিও আপনি পুরো Identity ব্যবহার করছেন না, তবুও এর হ্যাশিং ইউটিলিটি ক্লাসটি ব্যবহার করতে পারেন।
-
-
-dotnet add package Microsoft.AspNetCore.Identity.UI  --version 9.0.0                     ** Help to create view for Login,Register and many more.
-dotnet add package Microsoft.AspNetCore.Identity.EntityFrameworkCore  --version 9.0.0    ** For authentication
-
-OR
-
-**Tools>NetGut Package Manager> Package Manager Console
-   Install-Package Pomelo.EntityFrameworkCore.MySql      **MySQL ডাটাবেসের জন্য বিশেষ EF Core প্রোভাইডার। এই প্যাকেজটি MySQL-এর সাথে সংযোগ স্থাপন করে।                        
-   Install-Package Microsoft.EntityFrameworkCore.Tools   **EF Core মাইগ্রেশন এবং অন্যান্য কমান্ড চালানোর জন্য।      
 
 
 
