@@ -46,8 +46,31 @@ BankServerCrud
 └── BankServerCrud.csproj
 
 
+05. ##########
+AppDbContext.cs
+
+using Microsoft.EntityFrameworkCore;
+namespace BankServerCrud.Data;
+
+public class AppDbContext : DbContext
+{
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        string connectionString =
+            "Server=localhost;Port=3306;Database=bank_server_db;User=root;Password=Mahadi@123;";
+
+        optionsBuilder.UseMySql(
+            connectionString,
+            ServerVersion.AutoDetect(connectionString)
+        );
+    }
+}
 
 
+
+06.######### MySQL DATABASE(Workbench):
+CREATE DATABASE bank_server_db;
+use bank_server_db;
 
 
 
