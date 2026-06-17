@@ -158,13 +158,22 @@ catch (Exception ex)
 
 =========================== In Real Apps DB Connection is like this ============================
 
-appsettings.json = stores the connection string
-Program.cs = reads the connection string and registers the DbContext
-AppDbContext = represents the database connection layer
-Controller = uses DbContext to get/save data
-View = shows data to the user
-MySQL = stores real data
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Part             | Definition                                                                        | One-line example                                                                                                                          |
+| ---------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| appsettings.json | Stores application settings, including the database connection string.            | `"DefaultConnection": "Server=localhost;Database=Emp;User=root;Password=Mahadi@123;"`                                                     |
+| Program.cs       | Reads the connection string and registers `AppDbContext` in dependency injection. | `builder.Services.AddDbContext<AppDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));` |
+| AppDbContext     | Represents the database connection layer between the app and MySQL using EF Core. | `public DbSet<BankServer> BankServers { get; set; }`                                                                                      |
+| Controller       | Handles user requests and uses `DbContext` to get, save, update, or delete data.  | `var servers = await _context.BankServers.ToListAsync();`                                                                                 |
+| View             | Shows data to the user through Razor `.cshtml` pages.                             | `@foreach (var server in Model) { <td>@server.ServerName</td> }`                                                                                                              |
+| MySQL            | Stores the real data inside tables.                                               | `SELECT * FROM bank_servers;`                                                                                                             |
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+Flow:
+appsettings.json → Program.cs → AppDbContext → Controller → View(Index.cshtml) → User
+                                      ↓
+                                    MySQL
 
 ---------- DIAGRAM --------------------
 
