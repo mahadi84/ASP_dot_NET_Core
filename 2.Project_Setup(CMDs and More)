@@ -28,6 +28,12 @@ DB connection:
 --------------
  Install EF(Core + MySQL)/Dapper/ADO.NET/Stored Procedure(Dapper/ADO.NET) → Data Folder (AppDbContext.cs) → Route(add service) → Dependancy Injectoin(to use connection)
 
+EF Core: Zero manual SQL writing. Use for standard apps where you want maximum development speed and automated database tables.
+Dapper: Manual SQL queries writing. Use for high-traffic dashboards and APIs where you need blazing-fast performance.
+Stored Procedures (via Dapper): Use for heavy, multi-row background data processing to eliminate network lag by running code directly inside MySQL.
+
+** Use EF Core. If your primary goal is the flexibility to swap out MySQL for another database (like PostgreSQL, SQL Server, or Oracle) in the future without rewriting your application, you should use EF Core.
+
 
 Migration:
 ----------
