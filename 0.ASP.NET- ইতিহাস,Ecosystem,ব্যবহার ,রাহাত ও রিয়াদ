@@ -38,7 +38,7 @@ Instead of writing code from scratch to handle basic web functions
 You just write the specific logic for your app.
 
 Analogy:
-Think of a framework like buying a Ready Flat.
+Think of a framework like a Ready Flat.
 The plumbing, electricity, security system, and Wi-Fi are already installed and Ready-made tools(routing, databases, logins). 
 All you have to do is show up, hang your personal photos, and arrange the furniture (your specific app logic).
 ---
