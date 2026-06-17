@@ -67,10 +67,70 @@ public class AppDbContext : DbContext
 }
 
 
-
-06.######### MySQL DATABASE(Workbench):
+######### 
+06.MySQL DATABASE(Workbench):
 CREATE DATABASE bank_server_db;
 use bank_server_db;
+
+
+############
+07. Delete everything and paste this in: Program.cs
+
+using BankServerCrud.Data;
+using Microsoft.EntityFrameworkCore;
+
+Console.WriteLine("====================================");
+Console.WriteLine("     MySQL Database Connectivity");
+Console.WriteLine("====================================");
+
+try
+{
+    using var db = new AppDbContext();
+
+    Console.WriteLine("Trying to connect to MySQL...");
+
+    bool isConnected = db.Database.CanConnect();
+
+    if (isConnected)
+    {
+        Console.WriteLine("Database connected successfully.");
+
+        var connection = db.Database.GetDbConnection();
+
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+
+        command.CommandText = "SELECT DATABASE(), VERSION();";
+
+        using var reader = command.ExecuteReader();
+
+        if (reader.Read())
+        {
+            string databaseName = reader.GetString(0);
+            string mysqlVersion = reader.GetString(1);
+
+            Console.WriteLine("------------------------------------");
+            Console.WriteLine($"Connected Database : {databaseName}");
+            Console.WriteLine($"MySQL Version      : {mysqlVersion}");
+            Console.WriteLine("------------------------------------");
+        }
+
+        connection.Close();
+    }
+    else
+    {
+        Console.WriteLine("Database connection failed.");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine("Database connection error.");
+    Console.WriteLine("------------------------------------");
+    Console.WriteLine($"Error Message: {ex.Message}");
+    Console.WriteLine("------------------------------------");
+}
+
 
 
 
