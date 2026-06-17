@@ -9,7 +9,7 @@ new = বাড়ি বানানো
 
 
 
-I installed dot.net 9, SDK, IDE, and MySQL packages. 
+I installed dot.net 9, SDK, IDE, and MySQL packages(EF Core (High Abstraction, C# Only)). 
 Now I  want to create a CRUD app connecting to a MySQL DB. 
 What steps do I have to follow now for creating a menu to show, create, update, and DELETE data from DB. 
 Guide me step by step. Do not miss any step that creates a problem in implementing this.
