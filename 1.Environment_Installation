@@ -3,7 +3,7 @@ Date: 17 Nov 2025
 
 💻 Prerequisites and Installation
 
-## .NET SDK ইনস্টল করা
+01 .NET SDK ইনস্টল করা
 .NET Software Development Kit (SDK) হলো .NET ডেভেলপমেন্টের **সবচেয়ে গুরুত্বপূর্ণ অংশ**।
 এতে .NET অ্যাপ্লিকেশন তৈরি ও চালানোর জন্য প্রয়োজনীয় **সবকিছু** থাকে, যেমন:
   * ASP.NET Core ফ্রেমওয়ার্ক
@@ -17,8 +17,8 @@ SDK ইনস্টল করলে স্বয়ংক্রিয়ভাবে �
   - ASP.NET Core কম্পোনেন্ট ইনস্টল হয়ে যায়।
 
 ---
-
-## একটি IDE নির্বাচন ও ইনস্টল করা (Visual Studio 2022 Community Edition)
+######################
+02. একটি IDE নির্বাচন ও ইনস্টল করা (Visual Studio 2022 Community Edition)
 
 IDE বলতে বোঝায় Integrated Development Environment 💻।
 এটি এমন একটি সফটওয়্যার যেখানে কোড লেখা, রান করা ও ডিবাগ করা যায়।
@@ -36,7 +36,9 @@ IDE বলতে বোঝায় Integrated Development Environment 💻।
   - ASP.NET Core ওয়েব অ্যাপ তৈরির সম্পূর্ণ সাপোর্ট
 
 
-
+######################
+02. executing migrations
+dotnet tool install --global dotnet-ef --version 9.0.11
 
 
 
