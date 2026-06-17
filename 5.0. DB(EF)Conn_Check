@@ -175,61 +175,6 @@ appsettings.json → Program.cs → AppDbContext → Controller → View(Index.c
                                       ↓
                                     MySQL
 
----------- DIAGRAM --------------------
-
-┌────────────────────────────┐
-│      appsettings.json      │
-│                            │
-│ ConnectionStrings          │
-│ DefaultConnection          │
-└─────────────┬──────────────┘
-              │
-              │ reads connection string
-              ▼
-┌────────────────────────────┐
-│        Program.cs          │
-│                            │
-│ builder.Configuration      │
-│ .GetConnectionString()     │
-└─────────────┬──────────────┘
-              │
-              │ registers DbContext
-              ▼
-┌────────────────────────────┐
-│       AppDbContext         │
-│                            │
-│ EF Core database gateway   │
-│ DbSet<BankServer>          │
-└─────────────┬──────────────┘
-              │
-              │ EF Core sends SQL query
-              ▼
-┌────────────────────────────┐
-│        MySQL Server        │
-│                            │
-│ Database: Emp              │
-│ Table: bank_servers        │
-└─────────────┬──────────────┘
-              │
-              │ returns data
-              ▼
-┌────────────────────────────┐
-│        Controller          │
-│                            │
-│ BankServersController      │
-│ uses AppDbContext          │
-└─────────────┬──────────────┘
-              │
-              │ sends model data
-              ▼
-┌────────────────────────────┐
-│           View             │
-│                            │
-│ Index.cshtml               │
-│ shows data to user         │
-└────────────────────────────┘
-
-
 
 .
 
