@@ -158,6 +158,16 @@ catch (Exception ex)
 
 =========================== In Real Apps DB Connection is like this ============================
 
+appsettings.json = stores the connection string
+Program.cs = reads the connection string and registers the DbContext
+AppDbContext = represents the database connection layer
+Controller = uses DbContext to get/save data
+View = shows data to the user
+MySQL = stores real data
+
+
+---------- DIAGRAM --------------------
+
 ┌────────────────────────────┐
 │      appsettings.json      │
 │                            │
@@ -209,7 +219,6 @@ catch (Exception ex)
 │ Index.cshtml               │
 │ shows data to user         │
 └────────────────────────────┘
-
 
 
 
