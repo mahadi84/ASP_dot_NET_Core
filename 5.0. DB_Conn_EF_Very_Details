@@ -283,13 +283,13 @@ To create a new database table using EF Core migrations, you follow a simple thr
 ### The Table Creation Flow
 
 
-[1. Add C# Model & DbSet]  ## You define the table structure using a C# class, 
+[1. Add C# Model & DbSet]  ## I define the table structure using a C# class, 
           │
           ▼
 [2. CMD: dotnet ef migrations add CreateProductsTable] ──> (Generates the C# table schema)    ## Generate the migration blueprint
           │
           ▼
-[3. CMD: dotnet ef database update]                    ──> (Executes MySQL 'CREATE TABLE')    ## Then apply it to MySQL.
+[3. CMD: dotnet ef database update]                    ──> (Executes MySQL 'CREATE TABLE')    ## Finally, pply it to MySQL.
 
 
 
