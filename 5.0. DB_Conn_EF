@@ -36,10 +36,18 @@ cd MyMvcApp                        # Enter into the project folder
 ** OR Direct Folder-CMD-LINE OR
 .NET CLI:(View>Terminal>Select:Developer Command Prompt) Select:Developer Command Prompt)
 
+dotnet tool install --global dotnet-ef --version 9.0.0                    # The Steering Wheel-This installs a global command-line tool on my computer.
+dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # The Engine, development library directly into your specific project file (.csproj).
 dotnet add package Pomelo.EntityFrameworkCore.MySql --version 9.0.0       # To connect MySQL
-dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # To run Migration and Scaffolding
-dotnet tool install --global dotnet-ef --version 9.0.0                    # For EF Core commands like adding migrations and updating the database.
 
+
+[You Type Command e.g: "dotnet ef migrations add AddUserTable"] 
+       │
+       ▼
+[dotnet-ef Tool] (Reads your command, verifies the "migrations add" syntax, and locates your project)  ## If I miss the tool, your terminal will say "Command not found"
+       │
+       ▼
+[EFCore.Design Package] (Compiles your project, scans your model classes, and writes the C# migration files)      ##If you miss the design package, the tool will crash and say "Your startup project doesn't reference Microsoft.EntityFrameworkCore.Design".
 
 
 
