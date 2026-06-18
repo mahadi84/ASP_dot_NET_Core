@@ -1,13 +1,13 @@
 
 
-Command to Create DB, Table, Data insert into Table, and Show
-How to create a project?
-How to install dotnet packages and WHY are these packages needed?
-How to check Database Connectivity and show data from the database table?
-How in real project a database we connect? 
-Migration, what is it? Without migration, what problems will we face?
+01 Command to Create DB, Table, Data insert into Table, and Show
 
-Development vs Production Version of a Software with packages used?
+02. How to create a project and  install the .NET necessary packages, and WHY are these packages needed?
+03. How to check Database Connectivity and show data from the database table?
+
+04. How in real project a database we connect? 
+05. Migration, what is it? Without migration, what problems will we face?
+06. Development vs Production Version of a Software with packages used?
 
 
 
