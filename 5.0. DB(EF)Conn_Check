@@ -1,16 +1,38 @@
 
 
+===========================================================================
+MySQL DATABASE(MySQL Workbench): Create DB,TABLE and INSERT and CHECK DATA
+===========================================================================
 
-01.### Create a new Folder->Enter-> and open CMD typing in URL:
-            dotnet new mvc -n BankServerCrud   # Optional(-f net9.0)
-            cd MyMvcApp                        # Enter into the project folder
+CREATE DATABASE bank_server_db;
+use bank_server_db;
+
+CREATE TABLE bank_servers (
+    server_id INT PRIMARY KEY AUTO_INCREMENT,
+    server_name VARCHAR(100) NOT NULL,
+    purpose VARCHAR(255) NOT NULL
+);
+
+INSERT INTO bank_servers (server_name, purpose)
+VALUES 
+('Core Banking Server', 'Handles customer accounts and transactions'),
+('ATM Switch Server', 'Processes ATM transactions'),
+('Database Server', 'Stores banking data');
+
+SELECT * FROM bank_servers;
+
+
+============================ .NET Core  =============================
+
+
+### 01. Create a new Folder->Enter-> and open CMD typing in URL:
+dotnet new mvc -n BankServerCrud   # Optional(-f net9.0)
+cd MyMvcApp                        # Enter into the project folder
 
 
 
 
-
-
-02. ### Install Required NuGet Packages **Entity Framework Core (EF Core)
+### 02. Install Required NuGet Packages **Entity Framework Core (EF Core)
 ** OR Direct Folder-CMD-LINE OR
 .NET CLI:(View>Terminal>Select:Developer Command Prompt) Select:Developer Command Prompt)
 
@@ -22,7 +44,7 @@ dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   # For 
 
 
 
-03. ### Create a data Folder and file AppDbContext.cs
+###  03. Create a data Folder and file AppDbContext.cs
 Now it should look like this:
 
 BankServerCrud
@@ -39,10 +61,7 @@ BankServerCrud
 
 
 
-
-
-04. ########## 
-Copy and paste the code below and update DB info into: AppDbContext.cs
+###  04. Copy and paste the code below and update DB info into: AppDbContext.cs
 
 
 using Microsoft.EntityFrameworkCore;
@@ -64,34 +83,7 @@ public class AppDbContext : DbContext
 
 
 
-
-
-######### 
-05.MySQL DATABASE(MySQL Workbench):
-
-CREATE DATABASE bank_server_db;
-use bank_server_db;
-
-CREATE TABLE bank_servers (
-    server_id INT PRIMARY KEY AUTO_INCREMENT,
-    server_name VARCHAR(100) NOT NULL,
-    purpose VARCHAR(255) NOT NULL
-);
-
-INSERT INTO bank_servers (server_name, purpose)
-VALUES 
-('Core Banking Server', 'Handles customer accounts and transactions'),
-('ATM Switch Server', 'Processes ATM transactions'),
-('Database Server', 'Stores banking data');
-
-SELECT * FROM bank_servers;
-
-
-
-
-
-############
-06. Delete everything and paste this in: Program.cs
+#### 05. Delete everything and paste this in: Program.cs
 
 using BankServerCrud.Data;
 using Microsoft.EntityFrameworkCore;
@@ -166,6 +158,13 @@ catch (Exception ex)
     Console.WriteLine($"Error Message: {ex.Message}");
     Console.WriteLine("------------------------------------");
 }
+
+
+
+
+
+
+
 
 
 
