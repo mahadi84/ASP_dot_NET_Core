@@ -1,6 +1,6 @@
 
 
-01. Command to Create DB, Table, Data insert into Table, and Show
+01. MySQL Command to Create DB, Table, Data insert into Table, and Show
 
 02. How to create a project and  install the .NET necessary packages, and WHY are these packages needed?
 03. How to check Database Connectivity and show data from the database table?
@@ -8,6 +8,8 @@
 04. How in real project a database we connect? 
 05. Migration, what is it? Without migration, what problems will we face?
 06. Development vs Production Version of a Software with packages used?
+
+07. How to create a Database-Table using this?
 
 
 
@@ -262,6 +264,99 @@ When you publish your API or Web App and ship it to a server (like AWS, Azure, o
 | `Microsoft.EntityFrameworkCore.Design`   | YES (To generate C# code files)     | NO                                |
 | `Pomelo.EntityFrameworkCore.MySql`       | YES (To connect locally)            | YES (To connect live)             |
 ----------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+======================================================================================================
+          07. How to create a Database-Table using this?          
+======================================================================================================
+
+To create a new database table using EF Core migrations, you follow a simple three-step workflow. 
+
+,
+
+### The Table Creation Flow
+
+
+[1. Add C# Model & DbSet]  ## You define the table structure using a C# class, 
+          │
+          ▼
+[2. CMD: dotnet ef migrations add CreateProductsTable] ──> (Generates the C# table schema)    ## Generate the migration blueprint
+          │
+          ▼
+[3. CMD: dotnet ef database update]                    ──> (Executes MySQL 'CREATE TABLE')    ## Then apply it to MySQL.
+
+
+
+
+
+
+Here is exactly how to do it:
+
+---
+
+### Step 1: Create Your C# Model Class
+
+Create a standard C# class that represents your new table. For example, let's create a `Product` table.
+
+csharp
+public class Product
+{
+    public int Id { get; set; } // EF Core automatically recognizes "Id" as the Primary Key
+    public string Name { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+
+
+Next, open your `ApplicationDbContext.cs` file and expose this class as a `DbSet`:
+
+csharp
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    public DbSet<Product> Products { get; set; } // This line tells EF Core to make a "Products" table
+}
+
+
+
+---
+
+### Step 2: Generate the Migration (The Blueprint)
+
+Open your terminal at your project root directory and run the `migrations add` command. Give it a descriptive name like `CreateProductsTable`.
+
+dotnet ef migrations add CreateProductsTable
+
+ What happens behind the scenes: 
+ `EFCore.Design` looks at your `DbContext`, notices the new `Products` DbSet, 
+ and automatically writes a C# file inside your `Migrations/` folder containing instructions to build a table with columns for `Id`, `Name`, `Price`, and `CreatedAt`.
+
+---
+
+### Step 3: Run the Migration (Apply to MySQL)
+
+Now, execute the command to push this blueprint to your real MySQL database.
+
+dotnet ef database update
+
+
+ What happens behind the scenes: 
+ `Pomelo.EntityFrameworkCore.MySql` reads that C# blueprint file, translates it into a native MySQL script (`CREATE TABLE Products (...);`), 
+ and executes it right on your MySQL server.
+
+
+
+
+---
+
 
 
 
