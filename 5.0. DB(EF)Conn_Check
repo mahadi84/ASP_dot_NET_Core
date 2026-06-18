@@ -14,7 +14,7 @@ dotnet add package Microsoft.EntityFrameworkCore.Design --version 9.0.0   # To r
 dotnet tool install --global dotnet-ef --version 9.0.11 --version 9.0.0   # For EF Core commands like adding migrations and updating the database.
 
 
-04. ### Create a data Folder and file AppDbContext.cs
+03. ### Create a data Folder and file AppDbContext.cs
 Now it should look like this:
 
 BankServerCrud
@@ -29,7 +29,7 @@ BankServerCrud
 └── BankServerCrud.csproj
 
 
-05. ########## 
+04. ########## 
 Copy and paste the code below and update DB info into: AppDbContext.cs
 
 
@@ -52,7 +52,7 @@ public class AppDbContext : DbContext
 
 
 ######### 
-06.MySQL DATABASE(MySQL Workbench):
+05.MySQL DATABASE(MySQL Workbench):
 
 CREATE DATABASE bank_server_db;
 use bank_server_db;
@@ -75,7 +75,7 @@ SELECT * FROM bank_servers;
 
 
 ############
-07. Delete everything and paste this in: Program.cs
+06. Delete everything and paste this in: Program.cs
 
 using BankServerCrud.Data;
 using Microsoft.EntityFrameworkCore;
